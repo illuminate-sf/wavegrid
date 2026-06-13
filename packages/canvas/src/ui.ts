@@ -227,6 +227,38 @@ export function getCanvasHTML(): string {
     .sym-btn:hover { border-color: var(--text2); }
     .sym-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(74,124,255,0.1); }
 
+    /* ─── Drops Mode ─── */
+    .drops-controls {
+      display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    }
+    .spectrum-bar-wrap {
+      position: relative; width: 180px; height: 28px;
+      border-radius: 8px; overflow: hidden;
+      border: 1px solid var(--border); cursor: pointer;
+    }
+    .spectrum-bar {
+      width: 100%; height: 100%;
+    }
+    .spectrum-handle {
+      position: absolute; top: 0; bottom: 0; width: 3px;
+      background: #fff; pointer-events: none;
+      box-shadow: 0 0 4px rgba(0,0,0,0.8);
+    }
+    .drops-param {
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+    }
+    .drops-param label {
+      font-size: 10px; color: var(--text2); letter-spacing: 0.04em;
+    }
+    .drops-slider {
+      width: 80px; height: 4px; -webkit-appearance: none; appearance: none;
+      background: var(--border); border-radius: 2px;
+    }
+    .drops-slider::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 14px; height: 14px;
+      border-radius: 50%; background: var(--text); cursor: pointer;
+    }
+
     /* ─── Hidden tool panels ─── */
     .tool-panel { display: none; }
     .tool-panel.visible { display: flex; align-items: center; gap: 16px; }
@@ -269,6 +301,7 @@ export function getCanvasHTML(): string {
       <div class="mode-tab" data-mode="energy">Energy</div>
       <div class="mode-tab" data-mode="scenes">Scenes</div>
       <div class="mode-tab" data-mode="motion">Motion</div>
+      <div class="mode-tab" data-mode="drops">Drops</div>
       <div class="mode-tab" data-mode="symmetry">Symmetry</div>
     </div>
     <div class="tool-area">
@@ -345,6 +378,32 @@ export function getCanvasHTML(): string {
         </div>
       </div>
 
+      <!-- Drops -->
+      <div class="tool-panel" id="panel-drops">
+        <div class="drops-controls">
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <label style="font-size:10px;color:var(--text2)">SPECTRUM</label>
+            <div class="spectrum-bar-wrap" id="spectrum-bar-wrap">
+              <canvas class="spectrum-bar" id="spectrum-bar" width="180" height="28"></canvas>
+              <div class="spectrum-handle" id="spectrum-start-handle" style="left:0%"></div>
+              <div class="spectrum-handle" id="spectrum-end-handle" style="left:50%"></div>
+            </div>
+          </div>
+          <div class="drops-param">
+            <label>Speed</label>
+            <input type="range" class="drops-slider" id="drops-speed" min="1" max="10" value="5">
+          </div>
+          <div class="drops-param">
+            <label>Decay</label>
+            <input type="range" class="drops-slider" id="drops-decay" min="1" max="10" value="5">
+          </div>
+          <div class="drops-param">
+            <label>Width</label>
+            <input type="range" class="drops-slider" id="drops-width" min="1" max="5" value="2">
+          </div>
+        </div>
+      </div>
+
       <!-- Symmetry -->
       <div class="tool-panel" id="panel-symmetry">
         <div class="symmetry-tools">
@@ -381,6 +440,15 @@ let motionRecording = false;
 let motionPlaying = false;
 let motionFrame = 0;
 let motionTimer = null;
+
+// Drops/Ripple state
+let drops = [];
+let dropsSpectrumStart = 0;
+let dropsSpectrumEnd = 180;
+let dropsSpeed = 5;
+let dropsDecay = 5;
+let dropsWidth = 2;
+let dropsTimer = null;
 
 // Gradient state
 let gradientStops = [
@@ -628,6 +696,14 @@ function handleSculptureStart(e) {
   const { x, y } = getCanvasXY(e);
   const idx = cannonAtXY(x, y);
 
+  if (currentMode === 'drops') {
+    if (idx >= 0) {
+      drops.push({ origin: idx, tick: 0 });
+      if (!dropsTimer) startDropsAnimation();
+    }
+    return;
+  }
+
   if (currentMode === 'motion' && motionRecording) {
     if (idx >= 0 && (motionPath.length === 0 || motionPath[motionPath.length - 1] !== idx)) {
       motionPath.push(idx);
@@ -654,6 +730,14 @@ function handleSculptureMove(e) {
   const { x, y } = getCanvasXY(e);
   const idx = cannonAtXY(x, y);
   if (idx < 0 || idx === lastPaintedIdx) return;
+
+  if (currentMode === 'drops') {
+    if (idx >= 0) {
+      drops.push({ origin: idx, tick: 0 });
+    }
+    lastPaintedIdx = idx;
+    return;
+  }
 
   if (currentMode === 'motion' && motionRecording) {
     if (motionPath.length === 0 || motionPath[motionPath.length - 1] !== idx) {
@@ -974,11 +1058,136 @@ document.getElementById('gradient-bar-wrap').addEventListener('click', (e) => {
 });
 
 // ═══════════════════════════════════════════════════
+// Drops / Ripple Engine
+// ═══════════════════════════════════════════════════
+function drawSpectrumBar() {
+  const canvas = document.getElementById('spectrum-bar');
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  for (let x = 0; x < w; x++) {
+    const hue = (x / w) * 360;
+    ctx.fillStyle = hsl(hue, 90, 50);
+    ctx.fillRect(x, 0, 1, h);
+  }
+  // Update handle positions
+  document.getElementById('spectrum-start-handle').style.left = (dropsSpectrumStart / 360 * 100) + '%';
+  document.getElementById('spectrum-end-handle').style.left = (dropsSpectrumEnd / 360 * 100) + '%';
+}
+
+(function setupSpectrumBar() {
+  const wrap = document.getElementById('spectrum-bar-wrap');
+  let dragging = null; // 'start' or 'end'
+  wrap.addEventListener('pointerdown', (e) => {
+    const rect = wrap.getBoundingClientRect();
+    const pos = (e.clientX - rect.left) / rect.width;
+    const hue = pos * 360;
+    // Determine which handle is closer
+    const dStart = Math.abs(hue - dropsSpectrumStart);
+    const dEnd = Math.abs(hue - dropsSpectrumEnd);
+    dragging = dStart < dEnd ? 'start' : 'end';
+    if (dragging === 'start') dropsSpectrumStart = Math.max(0, Math.min(360, hue));
+    else dropsSpectrumEnd = Math.max(0, Math.min(360, hue));
+    drawSpectrumBar();
+  });
+  window.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    const rect = wrap.getBoundingClientRect();
+    const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const hue = pos * 360;
+    if (dragging === 'start') dropsSpectrumStart = hue;
+    else dropsSpectrumEnd = hue;
+    drawSpectrumBar();
+  });
+  window.addEventListener('pointerup', () => { dragging = null; });
+})();
+
+document.getElementById('drops-speed').addEventListener('input', function() { dropsSpeed = parseInt(this.value); });
+document.getElementById('drops-decay').addEventListener('input', function() { dropsDecay = parseInt(this.value); });
+document.getElementById('drops-width').addEventListener('input', function() { dropsWidth = parseInt(this.value); });
+
+function startDropsAnimation() {
+  if (dropsTimer) return;
+  dropsTimer = setInterval(tickDrops, 80);
+}
+
+function stopDropsAnimation() {
+  if (dropsTimer) { clearInterval(dropsTimer); dropsTimer = null; }
+}
+
+function tickDrops() {
+  if (drops.length === 0) { stopDropsAnimation(); return; }
+
+  // Accumulate brightness contributions per cannon
+  const contrib = new Float32Array(NUM);
+  const hues = new Float32Array(NUM);
+  const sats = new Float32Array(NUM);
+  const counts = new Float32Array(NUM);
+
+  const maxRadius = GRID * 1.5; // max distance before drop dies
+  const decayRate = 0.6 + (10 - dropsDecay) * 0.06; // higher decay slider = slower decay
+  const speedMult = 0.3 + dropsSpeed * 0.15;
+  const ringWidth = dropsWidth;
+
+  for (let d = drops.length - 1; d >= 0; d--) {
+    const drop = drops[d];
+    const radius = drop.tick * speedMult;
+    if (radius > maxRadius + ringWidth) {
+      drops.splice(d, 1);
+      continue;
+    }
+
+    const oRow = Math.floor(drop.origin / GRID);
+    const oCol = drop.origin % GRID;
+
+    for (let i = 0; i < NUM; i++) {
+      const r = Math.floor(i / GRID);
+      const c = i % GRID;
+      const dist = Math.sqrt((r - oRow) * (r - oRow) + (c - oCol) * (c - oCol));
+
+      // How close is this cannon to the current wavefront?
+      const delta = Math.abs(dist - radius);
+      if (delta > ringWidth) continue;
+
+      // Intensity: peaks at wavefront center, fades with ring width and age
+      const ringFalloff = 1 - (delta / ringWidth);
+      const ageFalloff = Math.pow(decayRate, drop.tick * 0.3);
+      const intensity = ringFalloff * ageFalloff * currentBright;
+
+      if (intensity < 1) continue;
+
+      // Hue: cycles through spectrum based on distance from origin
+      const specRange = dropsSpectrumEnd - dropsSpectrumStart;
+      const hue = (dropsSpectrumStart + (dist / maxRadius) * specRange + 360) % 360;
+
+      contrib[i] += intensity;
+      hues[i] += hue * intensity;
+      sats[i] += 90 * intensity;
+      counts[i] += intensity;
+    }
+
+    drop.tick++;
+  }
+
+  // Send updates for affected cannons
+  for (let i = 0; i < NUM; i++) {
+    if (counts[i] > 0) {
+      const h = (hues[i] / counts[i] + 360) % 360;
+      const s = sats[i] / counts[i];
+      const b = Math.min(100, contrib[i]);
+      send({ type: 'cannon', index: i, h, s, b });
+    }
+  }
+
+  if (drops.length === 0) stopDropsAnimation();
+}
+
+// ═══════════════════════════════════════════════════
 // Init
 // ═══════════════════════════════════════════════════
 resizeSculpture();
 updateColorPreview();
 drawGradientBar();
+drawSpectrumBar();
 drawSculpture();
 window.addEventListener('resize', resizeSculpture);
 </script>
