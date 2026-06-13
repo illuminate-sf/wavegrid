@@ -9,7 +9,7 @@
   "homepage": "https://github.com/constructive-io/Illuminate",
   "license": "SEE LICENSE IN LICENSE",
   "publishConfig": {
-    "access": "restricted",
+    "access": "public",
     "directory": "dist"
   },
   "repository": {
@@ -42,5 +42,6 @@
   "devDependencies": {
     "@types/ws": "^8.5.13",
     "makage": "^0.3.0"
-  }
+  },
+  "gitHead": "5d71ea2c19cc1f48676f65a40aac29ecdd44bc20"
 }
