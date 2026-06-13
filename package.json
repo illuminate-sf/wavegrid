@@ -22,6 +22,7 @@
     "dev": "pnpm --filter @illuminate/simulator run dev",
     "dev:sim": "pnpm --filter @illuminate/simulator run dev",
     "dev:canvas": "pnpm --filter @illuminate/canvas run dev",
+    "dev:receiver": "pnpm --filter @illuminate/receiver run dev",
     "deps": "pnpm up -r -i -L"
   },
   "devDependencies": {
