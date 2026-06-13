@@ -2,8 +2,8 @@
  * OSC output adapters for Pangolin BEYOND and FB4 hardware.
  *
  * These adapters convert the internal HSB grid state to OSC messages
- * and send them via UDP. Each adapter is configurable and follows the
- * OutputAdapter interface so it can be swapped in without modifying
+ * and send them via UDP. Each adapter implements the OutputAdapter
+ * interface from wavegrid so it can be swapped in without modifying
  * the receiver core.
  *
  * OSC addressing follows Pangolin's documented schemas:
@@ -11,9 +11,10 @@
  *   FB4:    /FB4-{serial}/{command}
  */
 
-import { CannonState } from './filter';
+import { Client } from 'node-osc';
+import { CannonState, OutputAdapter } from 'wavegrid';
+
 import { hsbToRgb100, hsbToRgb255 } from './color';
-import { OutputAdapter } from './adapters';
 
 // ═══════════════════════════════════════════════════
 // Types
@@ -25,9 +26,6 @@ export interface OscMessage {
   value: number;
 }
 
-/** Extracts OSC messages from a grid tick (for testing/inspection). */
-export type OscEncoder = (grid: CannonState[]) => OscMessage[];
-
 // ═══════════════════════════════════════════════════
 // BEYOND OSC Output Adapter
 // ═══════════════════════════════════════════════════
@@ -38,7 +36,7 @@ export interface BeyondOscConfig {
   /** UDP target port (BEYOND OSC receive port, configurable in BEYOND). */
   port: number;
   /**
-   * Map of logical grid index (0–48) → BEYOND projector list index.
+   * Map of logical grid index → BEYOND projector list index.
    * Only mapped cannons are sent; unmapped indices are skipped.
    */
   projectorMap: Record<number, number>;
@@ -84,7 +82,7 @@ export function encodeBeyondMessages(
 }
 
 export class BeyondOscOutput implements OutputAdapter {
-  private client: { send(address: string, value: number): Promise<void>; close(): Promise<void> } | null = null;
+  private client: Client | null = null;
   private config: BeyondOscConfig;
   private frameCount = 0;
   private sendInterval: number;
@@ -96,8 +94,6 @@ export class BeyondOscOutput implements OutputAdapter {
 
   /** Initialize the UDP client. Call before receiver.start(). */
   connect(): void {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { Client } = require('node-osc') as typeof import('node-osc');
     this.client = new Client(this.config.host, this.config.port);
   }
 
@@ -130,7 +126,7 @@ export interface FB4OscConfig {
   /** UDP target port (FB4 listens on 8000). Default: 8000. */
   port?: number;
   /**
-   * Map of logical grid index (0–48) → 5-digit FB4 serial string.
+   * Map of logical grid index → 5-digit FB4 serial string.
    * Only mapped cannons are sent; unmapped indices are skipped.
    */
   serialMap: Record<number, string>;
@@ -169,7 +165,7 @@ export function encodeFB4Messages(
 }
 
 export class FB4OscOutput implements OutputAdapter {
-  private client: { send(address: string, value: number): Promise<void>; close(): Promise<void> } | null = null;
+  private client: Client | null = null;
   private config: Required<Pick<FB4OscConfig, 'host' | 'port' | 'serialMap'>> & Pick<FB4OscConfig, 'sendEveryNFrames'>;
   private frameCount = 0;
   private sendInterval: number;
@@ -183,8 +179,6 @@ export class FB4OscOutput implements OutputAdapter {
   }
 
   connect(): void {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { Client } = require('node-osc') as typeof import('node-osc');
     this.client = new Client(this.config.host, this.config.port);
   }
 
@@ -224,7 +218,7 @@ export interface OscTarget {
  * Maps a single logical cannon to its physical target.
  */
 export interface CannonRoute {
-  /** Logical grid index (0–48). */
+  /** Logical grid index. */
   logical: number;
   /** Name of the target in the targets map. */
   target: string;
@@ -255,30 +249,20 @@ export interface RoutingConfig {
  * Creates an OutputAdapter from a routing config.
  * Internally builds BEYOND and FB4 adapters for each target
  * and dispatches per-cannon state to the right adapter.
- *
- * Usage:
- *   const config = JSON.parse(fs.readFileSync('routing.json', 'utf8'));
- *   const output = createRoutedOutput(config);
- *   output.connect();
- *   const receiver = new Receiver({ output, ... });
  */
 export function createRoutedOutput(config: RoutingConfig): RoutedOscOutput {
   return new RoutedOscOutput(config);
 }
 
 export class RoutedOscOutput implements OutputAdapter {
-  private config: RoutingConfig;
   private adapters: Map<string, BeyondOscOutput | FB4OscOutput> = new Map();
-  private cannonTargetMap: Map<number, { targetName: string; projectorIndex?: number; fb4Serial?: string }> = new Map();
   private frameCount = 0;
   private sendInterval: number;
 
   constructor(config: RoutingConfig) {
-    this.config = config;
     const flushHz = config.flushHz ?? 30;
     this.sendInterval = Math.max(1, Math.round(60 / flushHz));
 
-    // Build per-target sub-adapters with full projector/serial maps
     const beyondMaps: Record<string, Record<number, number>> = {};
     const fb4Maps: Record<string, Record<number, string>> = {};
 
@@ -286,12 +270,6 @@ export class RoutedOscOutput implements OutputAdapter {
       if (cannon.safeDisabled) continue;
       const target = config.targets[cannon.target];
       if (!target) continue;
-
-      this.cannonTargetMap.set(cannon.logical, {
-        targetName: cannon.target,
-        projectorIndex: cannon.projectorIndex,
-        fb4Serial: cannon.fb4Serial
-      });
 
       if (target.type === 'beyond' && cannon.projectorIndex !== undefined) {
         if (!beyondMaps[cannon.target]) beyondMaps[cannon.target] = {};
@@ -308,7 +286,7 @@ export class RoutedOscOutput implements OutputAdapter {
         host: target.host,
         port: target.port,
         projectorMap,
-        sendEveryNFrames: 1 // RoutedOscOutput handles throttling
+        sendEveryNFrames: 1
       }));
     }
 

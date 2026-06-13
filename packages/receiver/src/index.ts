@@ -4,33 +4,11 @@ export { CallbackOutput, ConsoleOutput, MultiOutput, WebSocketInput, WebSocketOu
 
 // Filter
 export type { CannonState, FilteredCannon } from './filter';
-export { angleDelta, applyUpstreamState, createFilteredGrid, DEFAULT_RECEIVER_ALPHA, tickFilter } from './filter';
+export { angleDelta, applyUpstreamState, createFilteredGrid, DEFAULT_GRID_COLUMNS, DEFAULT_NUM_CANNONS, DEFAULT_RECEIVER_ALPHA, tickFilter } from './filter';
 
 // Fallback
 export type { FallbackConfig } from './fallback';
 export { computeFallbackFrame, DEFAULT_FALLBACK_CONFIG } from './fallback';
-
-// Color conversion
-export type { RGB } from './color';
-export { hsbToRgb, hsbToRgb100, hsbToRgb255 } from './color';
-
-// OSC adapters
-export type {
-  BeyondOscConfig,
-  CannonRoute,
-  FB4OscConfig,
-  OscMessage,
-  OscTarget,
-  RoutingConfig
-} from './osc-adapters';
-export {
-  BeyondOscOutput,
-  FB4OscOutput,
-  RoutedOscOutput,
-  createRoutedOutput,
-  encodeBeyondMessages,
-  encodeFB4Messages
-} from './osc-adapters';
 
 // Receiver
 export type { ReceiverConfig, ReceiverState, ReceiverStatus, ShardConfig } from './receiver';

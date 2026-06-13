@@ -1,6 +1,6 @@
 import { Server as OscServer } from 'node-osc';
+import { CannonState } from 'wavegrid';
 
-import { CannonState } from '../src/filter';
 import {
   BeyondOscOutput,
   FB4OscOutput,
@@ -73,6 +73,16 @@ describe('encodeBeyondMessages', () => {
     const messages = encodeBeyondMessages(grid, { 0: 0 });
     expect(messages[3]).toEqual({ address: '/beyond/projector/0/livecontrol/brightness', value: 50 });
   });
+
+  it('should work with arbitrary grid sizes (not just 49)', () => {
+    const grid: CannonState[] = Array.from({ length: 100 }, (_, i) => ({
+      h: i * 3.6, s: 100, b: 100
+    }));
+    const map: Record<number, number> = { 0: 0, 99: 99 };
+    const messages = encodeBeyondMessages(grid, map);
+    expect(messages).toHaveLength(8); // 2 cannons × 4 messages
+    expect(messages[4].address).toContain('/beyond/projector/99/');
+  });
 });
 
 describe('encodeFB4Messages', () => {
@@ -142,7 +152,7 @@ function createMockOscReceiver(port: number): Promise<{
   });
 }
 
-let portCounter = 19900;
+let portCounter = 19950;
 function nextPort() { return portCounter++; }
 
 describe('BeyondOscOutput (UDP integration)', () => {
@@ -161,7 +171,6 @@ describe('BeyondOscOutput (UDP integration)', () => {
     const grid = makeSingleGrid(0, 0, 100, 100); // pure red at cannon 0
     adapter.send(grid);
 
-    // Wait for UDP packets to arrive
     await new Promise((r) => setTimeout(r, 200));
 
     expect(mock.packets.length).toBeGreaterThanOrEqual(4);
@@ -266,7 +275,7 @@ describe('RoutedOscOutput', () => {
         'beyond-a': { type: 'beyond', host: '127.0.0.1', port: beyondPort },
         'fb4-b': { type: 'fb4', host: '127.0.0.1', port: fb4Port }
       },
-      flushHz: 60, // send every frame for testing
+      flushHz: 60,
       cannons: [
         { logical: 0, target: 'beyond-a', projectorIndex: 3 },
         { logical: 48, target: 'fb4-b', fb4Serial: '02356' }
@@ -281,12 +290,10 @@ describe('RoutedOscOutput', () => {
 
     await new Promise((r) => setTimeout(r, 300));
 
-    // BEYOND should receive projector 3 messages
     const beyondRed = beyondMock.packets.find(p => p.address === '/beyond/projector/3/livecontrol/red');
     expect(beyondRed).toBeDefined();
     expect(beyondRed!.args[0]).toBe(255);
 
-    // FB4 should receive serial-based messages
     const fb4Red = fb4Mock.packets.find(p => p.address === '/FB4-02356/color_red');
     expect(fb4Red).toBeDefined();
     expect(fb4Red!.args[0]).toBe(100);
@@ -310,9 +317,8 @@ describe('RoutedOscOutput', () => {
     const routed = createRoutedOutput(config);
     expect(routed.targetNames).toContain('beyond-a');
 
-    // The encoder should only produce messages for cannon 0
     const grid = makeGrid(0, 100, 100);
-    const messages = encodeBeyondMessages(grid, { 0: 0 }); // only cannon 0 mapped
+    const messages = encodeBeyondMessages(grid, { 0: 0 });
     expect(messages).toHaveLength(4);
   });
 
@@ -342,7 +348,7 @@ describe('RoutedOscOutput', () => {
 
     const routed = createRoutedOutput(config);
     expect(routed.targetNames).toHaveLength(0);
-    routed.send(makeGrid()); // should not throw
+    routed.send(makeGrid());
     routed.close();
   });
 });
