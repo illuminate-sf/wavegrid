@@ -37,6 +37,7 @@
     "7x7"
   ],
   "dependencies": {
+    "node-osc": "^11.5.0",
     "ws": "^8.18.0"
   },
   "devDependencies": {
