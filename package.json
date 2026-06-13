@@ -1,5 +1,5 @@
 {
-  "name": "illuminate",
+  "name": "wavegrid",
   "version": "0.0.1",
   "author": "Dan Lynch <pyramation@gmail.com>",
   "private": true,
@@ -19,10 +19,10 @@
     "clean": "pnpm -r run clean",
     "test": "pnpm -r run test",
     "lint": "pnpm -r run lint",
-    "dev": "pnpm --filter @illuminate/simulator run dev",
-    "dev:sim": "pnpm --filter @illuminate/simulator run dev",
-    "dev:canvas": "pnpm --filter @illuminate/canvas run dev",
-    "dev:receiver": "pnpm --filter @illuminate/receiver run dev",
+    "dev": "pnpm --filter @wavegrid/simulator run dev",
+    "dev:sim": "pnpm --filter @wavegrid/simulator run dev",
+    "dev:canvas": "pnpm --filter @wavegrid/canvas run dev",
+    "dev:receiver": "pnpm --filter wavegrid run dev",
     "deps": "pnpm up -r -i -L"
   },
   "devDependencies": {

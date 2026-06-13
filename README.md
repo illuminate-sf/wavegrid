@@ -41,9 +41,9 @@ pnpm build
 
 | Package | Description |
 |---------|-------------|
-| `@illuminate/simulator` | 7×7 grid state engine and debug UI — manages the 49-cannon state with smooth interpolation |
-| `@illuminate/canvas` | Artist-facing creative canvas — "painting the sky with light" |
-| `@illuminate/receiver` | Receiver brain — independent LP filter, 3D sine fallback, OSC bridge |
+| `@wavegrid/simulator` | 7×7 grid state engine and debug UI — manages the 49-cannon state with smooth interpolation |
+| `@wavegrid/canvas` | Artist-facing creative canvas — "painting the sky with light" |
+| `wavegrid` | Receiver brain — independent LP filter, 3D sine fallback, adapter pattern for hardware |
 
 ## Architecture
 
