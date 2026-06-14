@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.4.0](https://github.com/constructive-io/Illuminate/compare/@wavegrid/canvas@0.3.0...@wavegrid/canvas@0.4.0) (2026-06-14)
+
+### Features
+
+- **ui:** all 9 creative tabs + global audio engine + remove Brush tab ([a676085](https://github.com/constructive-io/Illuminate/commit/a67608513c2bcace41f76a8c7f35a9ea571617a5))
+- **ui:** slider readouts, audio loop/seek, motion path, drops handles, delete Symmetry ([65953ff](https://github.com/constructive-io/Illuminate/commit/65953ff3a1f678fe99a0b10881ed4ec1fe787a22))
+
 # [0.3.0](https://github.com/constructive-io/Illuminate/compare/@wavegrid/canvas@0.2.1...@wavegrid/canvas@0.3.0) (2026-06-14)
 
 ### Features

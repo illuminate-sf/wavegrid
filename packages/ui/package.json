@@ -1,6 +1,6 @@
 {
   "name": "@wavegrid/ui",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "scripts": {
     "dev": "next dev -p 3003",
@@ -14,11 +14,11 @@
     "react-dom": "^19.1.0"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.10",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
-    "typescript": "^5.9.3",
-    "@tailwindcss/postcss": "^4.1.10",
+    "postcss": "^8.5.6",
     "tailwindcss": "^4.1.10",
-    "postcss": "^8.5.6"
+    "typescript": "^5.9.3"
   }
 }
