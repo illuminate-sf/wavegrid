@@ -174,18 +174,18 @@ export function createBenFigure(config: InstallationConfig): {
     shoulder.rotation.z = Math.PI / 2;
     group.add(shoulder);
 
-    // Arm — angled forward/down to hold iPad
+    // Arm — angled steeply down toward the iPad at waist level
     const arm = new THREE.Mesh(
       new THREE.CylinderGeometry(armR, armR, armLen, 6),
       yellowMat
     );
     arm.position.set(
-      shoulderX,
-      shoulderY - armLen * 0.35,
-      benZ - 0.1
+      shoulderX * 0.97 + benX * 0.03,
+      shoulderY - armLen * 0.45,
+      benZ - 0.16
     );
-    arm.rotation.x = -0.5;
-    arm.rotation.z = side * -0.2;
+    arm.rotation.x = -1.0;
+    arm.rotation.z = side * -0.25;
     group.add(arm);
   }
 
