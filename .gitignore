@@ -3,3 +3,5 @@
 **/dist
 **/pnpm-debug.log
 lerna-debug.log
+**/.next
+**/out
