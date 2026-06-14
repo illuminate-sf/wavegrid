@@ -332,7 +332,6 @@ export function getCanvasHTML(numCannons: number = 49, gridColumns: number = 7):
     <div class="mode-tabs" id="mode-tabs">
       <div class="mode-tab active" data-mode="paint">Paint</div>
       <div class="mode-tab" data-mode="gradient">Gradient</div>
-      <div class="mode-tab" data-mode="brush">Brush</div>
       <div class="mode-tab" data-mode="energy">Energy</div>
       <div class="mode-tab" data-mode="scenes">Scenes</div>
       <div class="mode-tab" data-mode="animations">Animations</div>
@@ -353,6 +352,16 @@ export function getCanvasHTML(numCannons: number = 49, gridColumns: number = 7):
             <div class="brightness-thumb" id="bright-thumb" style="bottom:80%"></div>
           </div>
           <div class="color-preview" id="color-preview" style="background:#4a7cff"></div>
+          <div class="brush-controls" style="margin-left:8px">
+            <div class="brush-size-wrap">
+              <div class="brush-preview">
+                <div class="brush-dot" id="brush-dot" style="width:20px;height:20px"></div>
+              </div>
+              <span class="brush-label">Size</span>
+              <input type="range" class="brush-slider" id="brush-size" min="1" max="5" value="1">
+            </div>
+            <div class="toggle-pill" id="brush-falloff">Soft edge</div>
+          </div>
         </div>
       </div>
 
@@ -363,26 +372,6 @@ export function getCanvasHTML(numCannons: number = 49, gridColumns: number = 7):
             <canvas class="gradient-bar" id="gradient-bar" width="200" height="32"></canvas>
           </div>
           <div class="gradient-hint">Tap bar to add stops. Drag across grid to apply.</div>
-        </div>
-      </div>
-
-      <!-- Brush Mode -->
-      <div class="tool-panel" id="panel-brush">
-        <div class="color-section">
-          <div id="brush-color-wheel-wrap" style="position:relative;width:80px;height:80px;flex-shrink:0">
-            <canvas id="brush-color-wheel" width="80" height="80" style="width:80px;height:80px;border-radius:50%;cursor:crosshair;touch-action:none"></canvas>
-            <div id="brush-wheel-cursor" style="position:absolute;width:12px;height:12px;border:2px solid #fff;border-radius:50%;pointer-events:none;transform:translate(-50%,-50%);box-shadow:0 0 6px rgba(0,0,0,0.5);left:40px;top:40px"></div>
-          </div>
-          <div class="brush-controls">
-            <div class="brush-size-wrap">
-              <div class="brush-preview">
-                <div class="brush-dot" id="brush-dot" style="width:20px;height:20px"></div>
-              </div>
-              <span class="brush-label">Size</span>
-              <input type="range" class="brush-slider" id="brush-size" min="1" max="5" value="1">
-            </div>
-            <div class="toggle-pill" id="brush-falloff">Soft edge</div>
-          </div>
         </div>
       </div>
 
@@ -649,7 +638,7 @@ function getAffectedCannons(centerIdx) {
   const result = [{ idx: centerIdx, falloff: 1 }];
 
   // Brush size > 1: include neighbors
-  if (brushSize > 1 && (currentMode === 'brush' || currentMode === 'paint')) {
+  if (brushSize > 1 && currentMode === 'paint') {
     const reach = brushSize - 1;
     for (let dr = -reach; dr <= reach; dr++) {
       for (let dc = -reach; dc <= reach; dc++) {
@@ -759,7 +748,7 @@ function handleSculptureStart(e) {
     return;
   }
 
-  if (idx >= 0 && (currentMode === 'paint' || currentMode === 'brush')) {
+  if (idx >= 0 && currentMode === 'paint') {
     const affected = getAffectedCannons(idx);
     affected.forEach(a => paintCannon(a.idx, a.falloff));
     lastPaintedIdx = idx;
@@ -809,7 +798,7 @@ function handleSculptureMove(e) {
     return;
   }
 
-  if (currentMode === 'paint' || currentMode === 'brush') {
+  if (currentMode === 'paint') {
     const affected = getAffectedCannons(idx);
     affected.forEach(a => paintCannon(a.idx, a.falloff));
     lastPaintedIdx = idx;
@@ -894,14 +883,6 @@ setupColorWheel('color-wheel', 'wheel-cursor', (h, s) => {
   currentHue = h;
   currentSat = s;
   updateColorPreview();
-});
-
-setupColorWheel('brush-color-wheel', 'brush-wheel-cursor', (h, s) => {
-  currentHue = h;
-  currentSat = s;
-  updateColorPreview();
-  const dot = document.getElementById('brush-dot');
-  dot.style.background = hsl(h, s, 50);
 });
 
 // Brightness bar

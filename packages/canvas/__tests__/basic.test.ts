@@ -11,7 +11,6 @@ describe('canvas UI', () => {
     const html = getCanvasHTML();
     expect(html).toContain('data-mode="paint"');
     expect(html).toContain('data-mode="gradient"');
-    expect(html).toContain('data-mode="brush"');
     expect(html).toContain('data-mode="energy"');
     expect(html).toContain('data-mode="scenes"');
     expect(html).toContain('data-mode="motion"');
@@ -35,6 +34,13 @@ describe('canvas UI', () => {
   it('should contain color wheel', () => {
     const html = getCanvasHTML();
     expect(html).toContain('id="color-wheel"');
+  });
+
+  it('should have brush controls in paint panel', () => {
+    const html = getCanvasHTML();
+    expect(html).toContain('id="brush-size"');
+    expect(html).toContain('id="brush-falloff"');
+    expect(html).not.toContain('data-mode="brush"');
   });
 
   it('should not contain technical language', () => {
