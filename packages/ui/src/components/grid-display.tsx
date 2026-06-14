@@ -4,13 +4,24 @@ import { useCallback, useEffect, useRef } from 'react';
 
 import type { CannonColor } from '@/lib/use-socket';
 
+import type { SymmetryState } from './symmetry-tab';
+
+export type GridMode = 'paint' | 'gradient' | 'energy' | 'drops' | 'motion' | 'symmetry' | 'scenes' | 'animations' | 'audio';
+
 interface GridDisplayProps {
   grid: CannonColor[];
   columns: number;
   currentHue: number;
   currentSat: number;
   currentBright: number;
+  mode: GridMode;
+  brushSize: number;
+  softEdge: boolean;
+  symmetry: SymmetryState;
   onCannon: (index: number, h: number, s: number, b: number) => void;
+  onDrop?: (index: number) => void;
+  onMotionPoint?: (index: number) => void;
+  onGradientDrag?: (startIdx: number, endIdx: number) => void;
 }
 
 function hslStr(h: number, s: number, l: number): string {
@@ -34,11 +45,20 @@ export function GridDisplay({
   currentHue,
   currentSat,
   currentBright,
-  onCannon
+  mode,
+  brushSize,
+  softEdge,
+  symmetry,
+  onCannon,
+  onDrop,
+  onMotionPoint,
+  onGradientDrag
 }: GridDisplayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const paintingRef = useRef(false);
+  const lastPaintedRef = useRef(-1);
+  const gradientStartRef = useRef(-1);
   const sizeRef = useRef({ cellSize: 0, gridOffset: 0, canvasW: 0, canvasH: 0 });
 
   const rows = Math.ceil(grid.length / columns);
@@ -84,7 +104,6 @@ export function GridDisplay({
       const c = grid[i];
       const lightness = Math.max(5, c.b * 0.5);
 
-      // Outer glow
       if (c.b > 5) {
         const glowR = r * (1.2 + c.b * 0.012);
         const grad = ctx.createRadialGradient(cx, cy, r * 0.3, cx, cy, glowR);
@@ -97,7 +116,6 @@ export function GridDisplay({
         ctx.fill();
       }
 
-      // Core orb
       const orbGrad = ctx.createRadialGradient(cx - r * 0.2, cy - r * 0.2, r * 0.1, cx, cy, r);
       if (c.b < 2) {
         orbGrad.addColorStop(0, '#181820');
@@ -112,7 +130,6 @@ export function GridDisplay({
       ctx.fillStyle = orbGrad;
       ctx.fill();
 
-      // Specular highlight
       if (c.b > 20) {
         ctx.beginPath();
         ctx.arc(cx - r * 0.25, cy - r * 0.25, r * 0.2, 0, Math.PI * 2);
@@ -122,7 +139,6 @@ export function GridDisplay({
     }
   }, [grid, columns]);
 
-  // Get cannon index from pointer coordinates
   const cannonAtXY = useCallback((clientX: number, clientY: number): number => {
     const canvas = canvasRef.current;
     if (!canvas) return -1;
@@ -137,25 +153,127 @@ export function GridDisplay({
     return idx < grid.length ? idx : -1;
   }, [columns, rows, grid.length]);
 
-  const paint = useCallback((clientX: number, clientY: number) => {
-    const idx = cannonAtXY(clientX, clientY);
-    if (idx >= 0) onCannon(idx, currentHue, currentSat, currentBright);
-  }, [cannonAtXY, onCannon, currentHue, currentSat, currentBright]);
+  const getAffectedCannons = useCallback((centerIdx: number): { idx: number; falloff: number }[] => {
+    const result: { idx: number; falloff: number }[] = [{ idx: centerIdx, falloff: 1 }];
+    const cRow = Math.floor(centerIdx / columns);
+    const cCol = centerIdx % columns;
+
+    if (brushSize > 1) {
+      const reach = brushSize - 1;
+      for (let dr = -reach; dr <= reach; dr++) {
+        for (let dc = -reach; dc <= reach; dc++) {
+          if (dr === 0 && dc === 0) continue;
+          const nr = cRow + dr;
+          const nc = cCol + dc;
+          if (nr < 0 || nr >= rows || nc < 0 || nc >= columns) continue;
+          const dist = Math.sqrt(dr * dr + dc * dc);
+          if (dist > reach + 0.5) continue;
+          const fo = softEdge ? Math.max(0, 1 - dist / (reach + 1)) : 1;
+          result.push({ idx: nr * columns + nc, falloff: fo });
+        }
+      }
+    }
+
+    const mirrored: { idx: number; falloff: number }[] = [];
+    for (const item of result) {
+      mirrored.push(item);
+      const r = Math.floor(item.idx / columns);
+      const c = item.idx % columns;
+      if (symmetry.h) mirrored.push({ idx: r * columns + (columns - 1 - c), falloff: item.falloff });
+      if (symmetry.v) mirrored.push({ idx: (rows - 1 - r) * columns + c, falloff: item.falloff });
+      if (symmetry.h && symmetry.v) mirrored.push({ idx: (rows - 1 - r) * columns + (columns - 1 - c), falloff: item.falloff });
+      if (symmetry.radial) {
+        mirrored.push({ idx: c * columns + (columns - 1 - r), falloff: item.falloff });
+        mirrored.push({ idx: (columns - 1 - c) * columns + r, falloff: item.falloff });
+      }
+      if (symmetry.kaleidoscope) {
+        mirrored.push({ idx: r * columns + (columns - 1 - c), falloff: item.falloff });
+        mirrored.push({ idx: (rows - 1 - r) * columns + c, falloff: item.falloff });
+        mirrored.push({ idx: (rows - 1 - r) * columns + (columns - 1 - c), falloff: item.falloff });
+        mirrored.push({ idx: c * columns + r, falloff: item.falloff });
+        mirrored.push({ idx: c * columns + (columns - 1 - r), falloff: item.falloff });
+        mirrored.push({ idx: (columns - 1 - c) * columns + r, falloff: item.falloff });
+        mirrored.push({ idx: (columns - 1 - c) * columns + (columns - 1 - r), falloff: item.falloff });
+      }
+    }
+
+    const seen = new Set<number>();
+    return mirrored.filter((m) => {
+      if (m.idx < 0 || m.idx >= grid.length || seen.has(m.idx)) return false;
+      seen.add(m.idx);
+      return true;
+    });
+  }, [columns, rows, brushSize, softEdge, symmetry, grid.length]);
 
   const handleStart = useCallback((e: React.PointerEvent) => {
     paintingRef.current = true;
-    paint(e.clientX, e.clientY);
-  }, [paint]);
+    lastPaintedRef.current = -1;
+    const idx = cannonAtXY(e.clientX, e.clientY);
+
+    if (mode === 'drops') {
+      if (idx >= 0 && onDrop) onDrop(idx);
+      lastPaintedRef.current = idx;
+      return;
+    }
+
+    if (mode === 'motion') {
+      if (idx >= 0 && onMotionPoint) onMotionPoint(idx);
+      lastPaintedRef.current = idx;
+      return;
+    }
+
+    if (mode === 'gradient') {
+      gradientStartRef.current = idx;
+      return;
+    }
+
+    if (idx >= 0 && (mode === 'paint' || mode === 'symmetry')) {
+      const affected = getAffectedCannons(idx);
+      for (const a of affected) {
+        onCannon(a.idx, currentHue, currentSat, currentBright * a.falloff);
+      }
+      lastPaintedRef.current = idx;
+    }
+  }, [cannonAtXY, mode, onDrop, onMotionPoint, getAffectedCannons, onCannon, currentHue, currentSat, currentBright]);
 
   const handleMove = useCallback((e: React.PointerEvent) => {
-    if (paintingRef.current) paint(e.clientX, e.clientY);
-  }, [paint]);
+    if (!paintingRef.current) return;
+    const idx = cannonAtXY(e.clientX, e.clientY);
+    if (idx < 0 || idx === lastPaintedRef.current) return;
+
+    if (mode === 'drops') {
+      if (onDrop) onDrop(idx);
+      lastPaintedRef.current = idx;
+      return;
+    }
+
+    if (mode === 'motion') {
+      if (onMotionPoint) onMotionPoint(idx);
+      lastPaintedRef.current = idx;
+      return;
+    }
+
+    if (mode === 'gradient' && gradientStartRef.current >= 0 && onGradientDrag) {
+      onGradientDrag(gradientStartRef.current, idx);
+      lastPaintedRef.current = idx;
+      return;
+    }
+
+    if (mode === 'paint' || mode === 'symmetry') {
+      const affected = getAffectedCannons(idx);
+      for (const a of affected) {
+        onCannon(a.idx, currentHue, currentSat, currentBright * a.falloff);
+      }
+      lastPaintedRef.current = idx;
+    }
+  }, [cannonAtXY, mode, onDrop, onMotionPoint, onGradientDrag, getAffectedCannons, onCannon, currentHue, currentSat, currentBright]);
 
   const handleEnd = useCallback(() => {
     paintingRef.current = false;
+    lastPaintedRef.current = -1;
+    gradientStartRef.current = -1;
   }, []);
 
-  // Resize and draw
   useEffect(() => {
     resize();
     window.addEventListener('resize', resize);
@@ -176,7 +294,7 @@ export function GridDisplay({
         ref={canvasRef}
         width={600}
         height={600}
-        style={{ borderRadius: 16, touchAction: 'none' }}
+        style={{ borderRadius: 16, touchAction: 'none', cursor: 'crosshair' }}
         onPointerDown={handleStart}
         onPointerMove={handleMove}
         onPointerUp={handleEnd}

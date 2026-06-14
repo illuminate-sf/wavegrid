@@ -3,29 +3,71 @@
 import { useCallback, useState } from 'react';
 
 import { AudioTab } from '@/components/audio-tab';
-import { ColorPicker } from '@/components/controls';
+import { ColorWheel } from '@/components/color-wheel';
+import { DropsControls, useDrops } from '@/components/drops-tab';
+import { GradientBar, useGradient } from '@/components/gradient-tab';
+import type { GridMode } from '@/components/grid-display';
 import { GridDisplay } from '@/components/grid-display';
+import { MotionControls, useMotion } from '@/components/motion-tab';
 import { AnimationPalette, ScenePalette } from '@/components/palette';
+import type { SymmetryState } from '@/components/symmetry-tab';
+import { SymmetryControls } from '@/components/symmetry-tab';
+import { useAudio } from '@/lib/use-audio';
 import { useSocket } from '@/lib/use-socket';
 
 const NUM_CANNONS = parseInt(process.env.NEXT_PUBLIC_NUM_CANNONS || '49', 10);
 const GRID_COLUMNS = parseInt(process.env.NEXT_PUBLIC_GRID_COLUMNS || '7', 10);
 const SIMULATOR_URL = process.env.NEXT_PUBLIC_SIMULATOR_URL || 'ws://localhost:3000';
 
-type Tab = 'paint' | 'scenes' | 'animations' | 'audio';
+const tabs: { key: GridMode; label: string }[] = [
+  { key: 'paint', label: 'Paint' },
+  { key: 'gradient', label: 'Gradient' },
+  { key: 'energy', label: 'Energy' },
+  { key: 'drops', label: 'Drops' },
+  { key: 'motion', label: 'Motion' },
+  { key: 'symmetry', label: 'Symmetry' },
+  { key: 'scenes', label: 'Scenes' },
+  { key: 'animations', label: 'Animations' },
+  { key: 'audio', label: 'Audio' }
+];
 
 export default function Home() {
   const { connected, grid, send } = useSocket(SIMULATOR_URL);
 
-  const [tab, setTab] = useState<Tab>('paint');
+  const [tab, setTab] = useState<GridMode>('paint');
   const [hue, setHue] = useState(220);
   const [sat, setSat] = useState(90);
   const [bright, setBright] = useState(80);
+  const [brushSize, setBrushSize] = useState(1);
+  const [softEdge, setSoftEdge] = useState(false);
   const [smoothness, setSmoothness] = useState(50);
   const [attack, setAttack] = useState(80);
   const [masterBright, setMasterBright] = useState(100);
   const [activeScene, setActiveScene] = useState<string | null>(null);
   const [activeAnim, setActiveAnim] = useState<string | null>(null);
+  const [symmetry, setSymmetry] = useState<SymmetryState>({ h: false, v: false, radial: false, kaleidoscope: false });
+  const [energyValue, setEnergyValue] = useState(80);
+  const [dropsConfig, setDropsConfig] = useState({
+    spectrumStart: 0,
+    spectrumEnd: 180,
+    speed: 5,
+    decay: 5,
+    width: 2
+  });
+
+  const gridData = grid.length > 0 ? grid : Array.from({ length: NUM_CANNONS }, () => ({ h: 220, s: 90, b: 80 }));
+
+  // Audio engine (lives at page level — persists across tab switches)
+  const audio = useAudio(NUM_CANNONS, GRID_COLUMNS, gridData, send);
+
+  // Drops engine
+  const { addDrop } = useDrops(NUM_CANNONS, GRID_COLUMNS, dropsConfig, send);
+
+  // Motion engine
+  const motion = useMotion(hue, sat, bright, send);
+
+  // Gradient engine
+  const gradient = useGradient();
 
   const handleCannon = useCallback(
     (index: number, h: number, s: number, b: number) => {
@@ -82,16 +124,38 @@ export default function Home() {
     [send]
   );
 
-  const tabs: { key: Tab; label: string }[] = [
-    { key: 'paint', label: 'Paint' },
-    { key: 'scenes', label: 'Scenes' },
-    { key: 'animations', label: 'Animations' },
-    { key: 'audio', label: 'Audio' }
-  ];
+  const handleEnergyChange = useCallback(
+    (val: number) => {
+      setEnergyValue(val);
+      send({ type: 'master_brightness', value: val / 100 });
+    },
+    [send]
+  );
+
+  const handleGradientDrag = useCallback(
+    (startIdx: number, endIdx: number) => {
+      const startRow = Math.floor(startIdx / GRID_COLUMNS);
+      const startCol = startIdx % GRID_COLUMNS;
+      const endRow = Math.floor(endIdx / GRID_COLUMNS);
+      const endCol = endIdx % GRID_COLUMNS;
+      const dist = Math.sqrt((endRow - startRow) ** 2 + (endCol - startCol) ** 2);
+      if (dist < 0.5) return;
+
+      for (let i = 0; i < NUM_CANNONS; i++) {
+        const r = Math.floor(i / GRID_COLUMNS);
+        const c = i % GRID_COLUMNS;
+        const proj = ((r - startRow) * (endRow - startRow) + (c - startCol) * (endCol - startCol)) / (dist * dist);
+        const t = Math.max(0, Math.min(1, proj));
+        const gc = gradient.colorAt(t);
+        send({ type: 'cannon', index: i, h: gc.h, s: gc.s, b: gc.b });
+      }
+    },
+    [send, gradient]
+  );
 
   return (
     <div className="flex flex-col h-screen" style={{ background: '#050508' }}>
-      {/* ─── Top Bar ─── */}
+      {/* Top Bar */}
       <header
         className="flex items-center justify-between px-5 py-3 shrink-0"
         style={{ background: '#0c0c12', borderBottom: '1px solid #1a1a25' }}
@@ -107,6 +171,11 @@ export default function Home() {
             className="w-2 h-2 rounded-full"
             style={{ background: connected ? '#4a4' : '#d44' }}
           />
+          {audio.state.playing && (
+            <span className="text-xs animate-pulse" style={{ color: '#4a7cff' }}>
+              ♪
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
@@ -154,19 +223,26 @@ export default function Home() {
         </div>
       </header>
 
-      {/* ─── Sculpture Canvas ─── */}
+      {/* Sculpture Canvas */}
       <div className="flex-1 flex items-center justify-center overflow-hidden" style={{ padding: 16 }}>
         <GridDisplay
-          grid={grid.length > 0 ? grid : Array.from({ length: NUM_CANNONS }, () => ({ h: 220, s: 90, b: 80 }))}
+          grid={gridData}
           columns={GRID_COLUMNS}
           currentHue={hue}
           currentSat={sat}
           currentBright={bright}
+          mode={tab}
+          brushSize={brushSize}
+          softEdge={softEdge}
+          symmetry={symmetry}
           onCannon={handleCannon}
+          onDrop={addDrop}
+          onMotionPoint={motion.recordPoint}
+          onGradientDrag={handleGradientDrag}
         />
       </div>
 
-      {/* ─── Tool Dock (bottom) ─── */}
+      {/* Tool Dock (bottom) */}
       <div className="shrink-0" style={{ background: '#0c0c12', borderTop: '1px solid #1a1a25' }}>
         {/* Mode tabs */}
         <div
@@ -197,16 +273,78 @@ export default function Home() {
         {/* Tool area */}
         <div style={{ padding: '8px 16px 16px', minHeight: 120 }}>
           {tab === 'paint' && (
-            <div className="flex items-center gap-4">
-              <ColorPicker
-                hue={hue}
-                saturation={sat}
-                brightness={bright}
-                onHueChange={setHue}
-                onSatChange={setSat}
-                onBrightChange={setBright}
+            <ColorWheel
+              hue={hue}
+              saturation={sat}
+              brightness={bright}
+              brushSize={brushSize}
+              softEdge={softEdge}
+              onHueChange={setHue}
+              onSatChange={setSat}
+              onBrightChange={setBright}
+              onBrushSizeChange={setBrushSize}
+              onSoftEdgeChange={setSoftEdge}
+            />
+          )}
+
+          {tab === 'gradient' && (
+            <div className="space-y-2">
+              <GradientBar
+                stops={gradient.stops}
+                onAdd={(pos) => gradient.addStop(pos, hue, sat, bright)}
               />
+              <button
+                onClick={gradient.reset}
+                className="px-3 py-1 rounded-lg text-xs transition-all"
+                style={{
+                  background: '#12121a',
+                  color: '#888898',
+                  border: '1px solid #1a1a25'
+                }}
+              >
+                Reset
+              </button>
             </div>
+          )}
+
+          {tab === 'energy' && (
+            <div className="space-y-2">
+              <p className="text-xs" style={{ color: '#888898', letterSpacing: '0.05em' }}>ENERGY</p>
+              <div className="flex items-center gap-3">
+                <input
+                  type="range"
+                  className="flex-1"
+                  min={0}
+                  max={100}
+                  value={energyValue}
+                  onChange={(e) => handleEnergyChange(Number(e.target.value))}
+                />
+                <span className="text-sm font-mono" style={{ color: '#e8e8f0', minWidth: 36, textAlign: 'right' }}>
+                  {energyValue}%
+                </span>
+              </div>
+              <p className="text-xs" style={{ color: 'rgba(136,136,152,0.5)' }}>
+                Master intensity — controls overall brightness of all lights
+              </p>
+            </div>
+          )}
+
+          {tab === 'drops' && (
+            <DropsControls config={dropsConfig} onChange={setDropsConfig} />
+          )}
+
+          {tab === 'motion' && (
+            <MotionControls
+              state={motion.state}
+              onRecord={motion.toggleRecord}
+              onPlay={motion.togglePlay}
+              onClear={motion.clear}
+              onSpeed={motion.setSpeed}
+            />
+          )}
+
+          {tab === 'symmetry' && (
+            <SymmetryControls symmetry={symmetry} onChange={setSymmetry} />
           )}
 
           {tab === 'scenes' && (
@@ -222,12 +360,7 @@ export default function Home() {
           )}
 
           {tab === 'audio' && (
-            <AudioTab
-              numCannons={NUM_CANNONS}
-              gridColumns={GRID_COLUMNS}
-              grid={grid.length > 0 ? grid : Array.from({ length: NUM_CANNONS }, () => ({ h: 0, s: 0, b: 0 }))}
-              send={send}
-            />
+            <AudioTab audio={audio} />
           )}
         </div>
       </div>
