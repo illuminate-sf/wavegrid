@@ -17,6 +17,8 @@ const NUM_CANNONS = parseInt(process.env.NEXT_PUBLIC_NUM_CANNONS || '49', 10);
 const GRID_COLUMNS = parseInt(process.env.NEXT_PUBLIC_GRID_COLUMNS || '7', 10);
 const SIMULATOR_URL = process.env.NEXT_PUBLIC_SIMULATOR_URL || 'ws://localhost:3000';
 
+type PanelLayout = 'bottom' | 'right';
+
 const tabs: { key: GridMode; label: string }[] = [
   { key: 'paint', label: 'Paint' },
   { key: 'gradient', label: 'Gradient' },
@@ -28,10 +30,179 @@ const tabs: { key: GridMode; label: string }[] = [
   { key: 'audio', label: 'Audio' }
 ];
 
+function ToolPanel({
+  tab,
+  setTab,
+  layout,
+  hue, sat, bright, brushSize, softEdge,
+  setHue, setSat, setBright, setBrushSize, setSoftEdge,
+  gradient, dropsConfig, setDropsConfig,
+  energyValue, handleEnergyChange,
+  motion, activeScene, handleScene,
+  activeAnim, handleAnim, handleAnimStop,
+  audio
+}: {
+  tab: GridMode;
+  setTab: (t: GridMode) => void;
+  layout: PanelLayout;
+  hue: number; sat: number; bright: number; brushSize: number; softEdge: boolean;
+  setHue: (v: number) => void; setSat: (v: number) => void; setBright: (v: number) => void;
+  setBrushSize: (v: number) => void; setSoftEdge: (v: boolean) => void;
+  gradient: ReturnType<typeof useGradient>;
+  dropsConfig: { spectrumStart: number; spectrumEnd: number; speed: number; decay: number; width: number };
+  setDropsConfig: (c: typeof dropsConfig) => void;
+  energyValue: number;
+  handleEnergyChange: (v: number) => void;
+  motion: ReturnType<typeof useMotion>;
+  activeScene: string | null;
+  handleScene: (name: string) => void;
+  activeAnim: string | null;
+  handleAnim: (name: string) => void;
+  handleAnimStop: () => void;
+  audio: ReturnType<typeof useAudio>;
+}) {
+  const isRight = layout === 'right';
+
+  return (
+    <div
+      className={isRight ? 'flex flex-col h-full' : ''}
+      style={{
+        background: '#0c0c12',
+        ...(isRight
+          ? { borderLeft: '1px solid #1a1a25', width: 320 }
+          : { borderTop: '1px solid #1a1a25' })
+      }}
+    >
+      {/* Mode tabs */}
+      <div
+        className={isRight ? 'flex flex-wrap gap-0.5 shrink-0' : 'flex gap-0.5 overflow-x-auto'}
+        style={{
+          padding: isRight ? '8px 8px 4px' : '8px 12px 4px',
+          ...(isRight ? {} : { WebkitOverflowScrolling: 'touch' as const })
+        }}
+      >
+        {tabs.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className="whitespace-nowrap transition-all"
+            style={{
+              padding: isRight ? '6px 10px' : '8px 16px',
+              borderRadius: 20,
+              fontSize: isRight ? 11 : 12,
+              fontWeight: 500,
+              letterSpacing: '0.02em',
+              background: tab === t.key ? '#12121a' : 'transparent',
+              border: tab === t.key ? '1px solid #1a1a25' : '1px solid transparent',
+              color: tab === t.key ? '#e8e8f0' : '#888898'
+            }}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Tool area */}
+      <div
+        className={isRight ? 'flex-1 overflow-y-auto' : ''}
+        style={{ padding: isRight ? '8px 12px 12px' : '8px 16px 16px', minHeight: isRight ? 0 : 120 }}
+      >
+        {tab === 'paint' && (
+          <ColorWheel
+            hue={hue}
+            saturation={sat}
+            brightness={bright}
+            brushSize={brushSize}
+            softEdge={softEdge}
+            onHueChange={setHue}
+            onSatChange={setSat}
+            onBrightChange={setBright}
+            onBrushSizeChange={setBrushSize}
+            onSoftEdgeChange={setSoftEdge}
+          />
+        )}
+
+        {tab === 'gradient' && (
+          <div className="space-y-2">
+            <GradientBar
+              stops={gradient.stops}
+              onAdd={(pos) => gradient.addStop(pos, hue, sat, bright)}
+            />
+            <button
+              onClick={gradient.reset}
+              className="px-3 py-1 rounded-lg text-xs transition-all"
+              style={{
+                background: '#12121a',
+                color: '#888898',
+                border: '1px solid #1a1a25'
+              }}
+            >
+              Reset
+            </button>
+          </div>
+        )}
+
+        {tab === 'energy' && (
+          <div className="space-y-2">
+            <p className="text-xs" style={{ color: '#888898', letterSpacing: '0.05em' }}>ENERGY</p>
+            <div className="flex items-center gap-3">
+              <input
+                type="range"
+                className="flex-1"
+                min={0}
+                max={100}
+                value={energyValue}
+                onChange={(e) => handleEnergyChange(Number(e.target.value))}
+              />
+              <span className="text-sm font-mono" style={{ color: '#e8e8f0', minWidth: 36, textAlign: 'right' }}>
+                {energyValue}%
+              </span>
+            </div>
+            <p className="text-xs" style={{ color: 'rgba(136,136,152,0.5)' }}>
+              Master intensity — controls overall brightness of all lights
+            </p>
+          </div>
+        )}
+
+        {tab === 'drops' && (
+          <DropsControls config={dropsConfig} onChange={setDropsConfig} />
+        )}
+
+        {tab === 'motion' && (
+          <MotionControls
+            state={motion.state}
+            onRecord={motion.toggleRecord}
+            onPlay={motion.togglePlay}
+            onClear={motion.clear}
+            onSpeed={motion.setSpeed}
+          />
+        )}
+
+        {tab === 'scenes' && (
+          <ScenePalette active={activeScene} onSelect={handleScene} />
+        )}
+
+        {tab === 'animations' && (
+          <AnimationPalette
+            active={activeAnim}
+            onSelect={handleAnim}
+            onStop={handleAnimStop}
+          />
+        )}
+
+        {tab === 'audio' && (
+          <AudioTab audio={audio} />
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
   const { connected, grid, send } = useSocket(SIMULATOR_URL);
 
   const [tab, setTab] = useState<GridMode>('paint');
+  const [layout, setLayout] = useState<PanelLayout>('bottom');
   const [hue, setHue] = useState(220);
   const [sat, setSat] = useState(90);
   const [bright, setBright] = useState(80);
@@ -159,6 +330,17 @@ export default function Home() {
     [send, gradient]
   );
 
+  const toolPanelProps = {
+    tab, setTab, layout,
+    hue, sat, bright, brushSize, softEdge,
+    setHue, setSat, setBright, setBrushSize, setSoftEdge,
+    gradient, dropsConfig, setDropsConfig,
+    energyValue, handleEnergyChange,
+    motion, activeScene, handleScene,
+    activeAnim, handleAnim, handleAnimStop,
+    audio
+  };
+
   return (
     <div className="flex flex-col h-screen" style={{ background: '#050508' }}>
       {/* Top Bar */}
@@ -232,144 +414,51 @@ export default function Home() {
               {attack}
             </span>
           </div>
+
+          {/* Layout toggle */}
+          <button
+            onClick={() => setLayout((l) => l === 'bottom' ? 'right' : 'bottom')}
+            className="flex items-center justify-center transition-all"
+            title={layout === 'bottom' ? 'Panel: right side' : 'Panel: bottom'}
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 8,
+              background: '#12121a',
+              border: '1px solid #1a1a25',
+              color: '#888898',
+              fontSize: 14
+            }}
+          >
+            {layout === 'bottom' ? '⊟' : '⊞'}
+          </button>
         </div>
       </header>
 
-      {/* Sculpture Canvas */}
-      <div className="flex-1 flex items-center justify-center overflow-hidden" style={{ padding: 16 }}>
-        <GridDisplay
-          grid={gridData}
-          columns={GRID_COLUMNS}
-          currentHue={hue}
-          currentSat={sat}
-          currentBright={bright}
-          mode={tab}
-          brushSize={brushSize}
-          softEdge={softEdge}
-          motionPath={motion.state.path}
-          onCannon={handleCannon}
-          onDrop={addDrop}
-          onMotionPoint={motion.recordPoint}
-          onGradientDrag={handleGradientDrag}
-        />
-      </div>
-
-      {/* Tool Dock (bottom) */}
-      <div className="shrink-0" style={{ background: '#0c0c12', borderTop: '1px solid #1a1a25' }}>
-        {/* Mode tabs */}
-        <div
-          className="flex gap-0.5 overflow-x-auto"
-          style={{ padding: '8px 12px 4px', WebkitOverflowScrolling: 'touch' }}
-        >
-          {tabs.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className="whitespace-nowrap transition-all"
-              style={{
-                padding: '8px 16px',
-                borderRadius: 20,
-                fontSize: 12,
-                fontWeight: 500,
-                letterSpacing: '0.02em',
-                background: tab === t.key ? '#12121a' : 'transparent',
-                border: tab === t.key ? '1px solid #1a1a25' : '1px solid transparent',
-                color: tab === t.key ? '#e8e8f0' : '#888898'
-              }}
-            >
-              {t.label}
-            </button>
-          ))}
+      {/* Main content: canvas + tool panel */}
+      <div className={`flex-1 flex ${layout === 'right' ? 'flex-row' : 'flex-col'} overflow-hidden`}>
+        {/* Sculpture Canvas */}
+        <div className="flex-1 flex items-center justify-center overflow-hidden" style={{ padding: 16 }}>
+          <GridDisplay
+            grid={gridData}
+            columns={GRID_COLUMNS}
+            currentHue={hue}
+            currentSat={sat}
+            currentBright={bright}
+            mode={tab}
+            brushSize={brushSize}
+            softEdge={softEdge}
+            motionPath={motion.state.path}
+            onCannon={handleCannon}
+            onDrop={addDrop}
+            onMotionPoint={motion.recordPoint}
+            onGradientDrag={handleGradientDrag}
+          />
         </div>
 
-        {/* Tool area */}
-        <div style={{ padding: '8px 16px 16px', minHeight: 120 }}>
-          {tab === 'paint' && (
-            <ColorWheel
-              hue={hue}
-              saturation={sat}
-              brightness={bright}
-              brushSize={brushSize}
-              softEdge={softEdge}
-              onHueChange={setHue}
-              onSatChange={setSat}
-              onBrightChange={setBright}
-              onBrushSizeChange={setBrushSize}
-              onSoftEdgeChange={setSoftEdge}
-            />
-          )}
-
-          {tab === 'gradient' && (
-            <div className="space-y-2">
-              <GradientBar
-                stops={gradient.stops}
-                onAdd={(pos) => gradient.addStop(pos, hue, sat, bright)}
-              />
-              <button
-                onClick={gradient.reset}
-                className="px-3 py-1 rounded-lg text-xs transition-all"
-                style={{
-                  background: '#12121a',
-                  color: '#888898',
-                  border: '1px solid #1a1a25'
-                }}
-              >
-                Reset
-              </button>
-            </div>
-          )}
-
-          {tab === 'energy' && (
-            <div className="space-y-2">
-              <p className="text-xs" style={{ color: '#888898', letterSpacing: '0.05em' }}>ENERGY</p>
-              <div className="flex items-center gap-3">
-                <input
-                  type="range"
-                  className="flex-1"
-                  min={0}
-                  max={100}
-                  value={energyValue}
-                  onChange={(e) => handleEnergyChange(Number(e.target.value))}
-                />
-                <span className="text-sm font-mono" style={{ color: '#e8e8f0', minWidth: 36, textAlign: 'right' }}>
-                  {energyValue}%
-                </span>
-              </div>
-              <p className="text-xs" style={{ color: 'rgba(136,136,152,0.5)' }}>
-                Master intensity — controls overall brightness of all lights
-              </p>
-            </div>
-          )}
-
-          {tab === 'drops' && (
-            <DropsControls config={dropsConfig} onChange={setDropsConfig} />
-          )}
-
-          {tab === 'motion' && (
-            <MotionControls
-              state={motion.state}
-              onRecord={motion.toggleRecord}
-              onPlay={motion.togglePlay}
-              onClear={motion.clear}
-              onSpeed={motion.setSpeed}
-            />
-          )}
-
-          {tab === 'scenes' && (
-            <ScenePalette active={activeScene} onSelect={handleScene} />
-          )}
-
-          {tab === 'animations' && (
-            <AnimationPalette
-              active={activeAnim}
-              onSelect={handleAnim}
-              onStop={handleAnimStop}
-            />
-          )}
-
-          {tab === 'audio' && (
-            <AudioTab audio={audio} />
-          )}
+        {/* Tool Panel */}
+        <div className={layout === 'right' ? 'shrink-0 h-full' : 'shrink-0'}>
+          <ToolPanel {...toolPanelProps} />
         </div>
       </div>
     </div>
