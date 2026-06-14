@@ -12,6 +12,7 @@ import { createCivicBuildings } from './CivicBuildings';
 import { getCameraPresets, type CameraPreset } from '../ui/CameraPresets';
 import { createHumanSilhouettes } from './Silhouettes';
 import { createBenFigure, updateBenIPad } from './BenFigure';
+import { createSkylineLandmarks } from './SkylineLandmarks';
 
 const FT = 0.3048;
 
@@ -37,6 +38,7 @@ export class CivicCenterScene {
   private cityHall: THREE.Group;
   private streetLamps: THREE.Group;
   private civicBuildings: THREE.Group;
+  private skyline: THREE.Group;
   private fog: THREE.FogExp2;
   private ambientLight: THREE.AmbientLight;
   private sunLight: THREE.DirectionalLight;
@@ -119,6 +121,10 @@ export class CivicCenterScene {
     // Surrounding buildings
     this.civicBuildings = createCivicBuildings('night');
     this.scene.add(this.civicBuildings);
+
+    // SF skyline landmarks (Transamerica, Salesforce Tower, Coit, FiDi)
+    this.skyline = createSkylineLandmarks('night');
+    this.scene.add(this.skyline);
 
     // Human silhouettes for scale
     const humans = createHumanSilhouettes(this.config);
@@ -234,6 +240,10 @@ export class CivicCenterScene {
     this.scene.remove(this.civicBuildings);
     this.civicBuildings = createCivicBuildings(tod);
     this.scene.add(this.civicBuildings);
+
+    this.scene.remove(this.skyline);
+    this.skyline = createSkylineLandmarks(tod);
+    this.scene.add(this.skyline);
   }
 
   /**

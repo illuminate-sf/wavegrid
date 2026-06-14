@@ -157,10 +157,9 @@ export function createBenFigure(config: InstallationConfig): {
   hairBack.position.set(benX, torsoTop + headH * 0.5, benZ + headR * 0.9);
   group.add(hairBack);
 
-  // ── ARMS (LEGO-style: shoulder stud + angled arm + C-clamp hand) ──
+  // ── ARMS (LEGO-style: shoulder stud + angled arm, no hands) ──
   const armLen = torsoH * 0.85;
   const armR = 0.035;
-  const handR = 0.03;
 
   for (const side of [-1, 1]) {
     const shoulderX = benX + side * (torsoW / 2 + armR);
@@ -188,20 +187,6 @@ export function createBenFigure(config: InstallationConfig): {
     arm.rotation.x = -0.5;
     arm.rotation.z = side * -0.2;
     group.add(arm);
-
-    // C-clamp hand (torus)
-    const hand = new THREE.Mesh(
-      new THREE.TorusGeometry(handR, handR * 0.5, 6, 8, Math.PI * 1.5),
-      skinMat
-    );
-    hand.position.set(
-      shoulderX + side * -0.01,
-      shoulderY - armLen * 0.65,
-      benZ - 0.22
-    );
-    hand.rotation.y = side > 0 ? 0 : Math.PI;
-    hand.rotation.x = -0.3;
-    group.add(hand);
   }
 
   // ── iPAD ──
@@ -250,7 +235,7 @@ export function createBenFigure(config: InstallationConfig): {
     side: THREE.DoubleSide
   });
   const ipadScreen = new THREE.Mesh(screenGeo, screenMat);
-  // Position screen just in front of the iPad body, facing outward (negative Z)
+  // Front screen (facing outward, negative Z)
   const screenOffset = ipadDepth / 2 + 0.002;
   ipadScreen.position.set(benX, ipadY, ipadZ - screenOffset);
   ipadScreen.rotation.x = -0.3;
@@ -258,6 +243,13 @@ export function createBenFigure(config: InstallationConfig): {
   ipadScreen.userData.ctx = ctx;
   ipadScreen.userData.texture = texture;
   group.add(ipadScreen);
+
+  // Back screen (facing Ben / positive Z) — dual-sided display
+  const backScreen = new THREE.Mesh(screenGeo, screenMat);
+  backScreen.position.set(benX, ipadY, ipadZ + screenOffset);
+  backScreen.rotation.x = -0.3;
+  backScreen.rotation.y = Math.PI; // flip to face the other way
+  group.add(backScreen);
 
   // iPad screen glow
   const screenGlow = new THREE.PointLight(0x4488ff, 0.4, 2.5);
