@@ -16,6 +16,9 @@ import { CannonState, OutputAdapter } from 'wavegrid';
 
 import { hsbToRgb100, hsbToRgb255 } from './color';
 
+/** When true, log every OSC message sent. Set via DEBUG_OSC=1 env var. */
+export const DEBUG_OSC = !!process.env.DEBUG_OSC;
+
 // ═══════════════════════════════════════════════════
 // Types
 // ═══════════════════════════════════════════════════
@@ -103,6 +106,13 @@ export class BeyondOscOutput implements OutputAdapter {
     if (!this.client) return;
 
     const messages = encodeBeyondMessages(grid, this.config.projectorMap);
+    if (DEBUG_OSC && messages.length > 0) {
+      const sample = messages.slice(0, 4);
+      const lines = sample.map(m => `    ${m.address} = ${m.value}`);
+      console.log(`  [OSC→BEYOND] frame ${this.frameCount} | ${messages.length} msgs to ${this.config.host}:${this.config.port}`);
+      for (const line of lines) console.log(line);
+      if (messages.length > 4) console.log(`    ... +${messages.length - 4} more`);
+    }
     for (const msg of messages) {
       this.client.send(msg.address, msg.value);
     }
@@ -188,6 +198,13 @@ export class FB4OscOutput implements OutputAdapter {
     if (!this.client) return;
 
     const messages = encodeFB4Messages(grid, this.config.serialMap);
+    if (DEBUG_OSC && messages.length > 0) {
+      const sample = messages.slice(0, 3);
+      const lines = sample.map(m => `    ${m.address} = ${m.value}`);
+      console.log(`  [OSC→FB4] frame ${this.frameCount} | ${messages.length} msgs to ${this.config.host}:${this.config.port}`);
+      for (const line of lines) console.log(line);
+      if (messages.length > 3) console.log(`    ... +${messages.length - 3} more`);
+    }
     for (const msg of messages) {
       this.client.send(msg.address, msg.value);
     }
