@@ -80,7 +80,9 @@ if (hasOscConfig) {
       outputLabels.push(`FB4 OSC → ${host}:${port}`);
     }
   } catch (e) {
-    console.warn('  ⚠ OSC env vars set but @wavegrid/osc is not installed. Run: pnpm add @wavegrid/osc');
+    console.error('  ✖ Failed to load @wavegrid/osc:');
+    console.error(`    ${e instanceof Error ? e.message : String(e)}`);
+    console.error('    OSC output is DISABLED — only console output will be active.');
   }
 }
 
