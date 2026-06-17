@@ -7,7 +7,7 @@
  * the receiver core.
  *
  * OSC addressing follows Pangolin's documented schemas:
- *   BEYOND: /beyond/projector/{index}/livecontrol/{property}
+ *   BEYOND: /beyond/zone/{index}/livecontrol/{property}
  *   FB4:    /FB4-{serial}/{command}
  */
 
@@ -73,11 +73,11 @@ export interface BeyondOscConfig {
  * Encode a grid snapshot into BEYOND OSC messages.
  * Exported for testing — the adapter calls this internally.
  *
- * BEYOND livecontrol uses:
- *   /beyond/projector/{n}/livecontrol/red    (0–255)
- *   /beyond/projector/{n}/livecontrol/green  (0–255)
- *   /beyond/projector/{n}/livecontrol/blue   (0–255)
- *   /beyond/projector/{n}/livecontrol/brightness (0–100)
+ * BEYOND livecontrol uses zone-level addressing:
+ *   /beyond/zone/{n}/livecontrol/red    (0–255 float)
+ *   /beyond/zone/{n}/livecontrol/green  (0–255 float)
+ *   /beyond/zone/{n}/livecontrol/blue   (0–255 float)
+ *   /beyond/zone/{n}/livecontrol/brightness (0–100 float)
  */
 export function encodeBeyondMessages(
   grid: CannonState[],
@@ -99,7 +99,7 @@ export function encodeBeyondMessages(
     }
 
     const rgb = hsbToRgb255(cannon.h, cannon.s, cannon.b);
-    const prefix = `/beyond/projector/${projIndex}/livecontrol`;
+    const prefix = `/beyond/zone/${projIndex}/livecontrol`;
 
     messages.push({ address: `${prefix}/red`, value: rgb.r });
     messages.push({ address: `${prefix}/green`, value: rgb.g });
