@@ -16,6 +16,7 @@ export type {
 export {
   BEYOND_COLOR_MIN,
   BEYOND_COLOR_MAX,
+  BEYOND_COLOR_WHITE,
   BeyondOscOutput,
   DEBUG_OSC,
   FB4OscOutput,
@@ -23,6 +24,5 @@ export {
   createRoutedOutput,
   encodeBeyondMessages,
   encodeFB4Messages,
-  hueToColorSlider,
-  satToSaturation
+  hueToColorSlider
 } from './osc-adapters';

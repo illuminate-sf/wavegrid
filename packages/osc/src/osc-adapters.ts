@@ -71,21 +71,26 @@ export interface BeyondOscConfig {
 
 /**
  * BEYOND ColorSlider range — the usable portion of the 0–255 slider.
- * Below min the slider falls off to black; above max it desaturates to white.
- * Override with BEYOND_COLOR_MIN / BEYOND_COLOR_MAX env vars.
+ *   28–218  = color spectrum (ROYGBIV)
+ *   <~25    = falls off to black/yellow
+ *   >~221   = desaturates to white
+ * Override with BEYOND_COLOR_MIN / BEYOND_COLOR_MAX / BEYOND_COLOR_WHITE env vars.
  */
 export const BEYOND_COLOR_MIN = Number(process.env.BEYOND_COLOR_MIN) || 28;
 export const BEYOND_COLOR_MAX = Number(process.env.BEYOND_COLOR_MAX) || 218;
+export const BEYOND_COLOR_WHITE = Number(process.env.BEYOND_COLOR_WHITE) || 240;
 
-/** Map hue (0–360) linearly into the usable BEYOND ColorSlider range. */
-export function hueToColorSlider(h: number): number {
+/** Saturation threshold below which we treat the color as white. */
+const WHITE_SAT_THRESHOLD = 10;
+
+/**
+ * Map HSB hue + saturation to BEYOND ColorSlider value.
+ * Low saturation → white zone (above 221); otherwise linear 28–218.
+ */
+export function hueToColorSlider(h: number, s: number = 100): number {
+  if (s <= WHITE_SAT_THRESHOLD) return BEYOND_COLOR_WHITE;
   const hue = ((h % 360) + 360) % 360;
   return BEYOND_COLOR_MIN + (hue / 360) * (BEYOND_COLOR_MAX - BEYOND_COLOR_MIN);
-}
-
-/** Map saturation (0–100) to BEYOND Saturation (-100 to 100). */
-export function satToSaturation(s: number): number {
-  return s - 100;
 }
 
 /**
@@ -94,8 +99,12 @@ export function satToSaturation(s: number): number {
  *
  * BEYOND livecontrol uses zone-level addressing (case-sensitive):
  *   /beyond/zone/{n}/livecontrol/ColorSlider  (0–255 float)
- *   /beyond/zone/{n}/livecontrol/Saturation   (-100–100 float)
  *   /beyond/zone/{n}/livecontrol/Brightness   (0–100 float)
+ *
+ * Color strategy:
+ *   s > 10  → ColorSlider 28–218 (color spectrum)
+ *   s ≤ 10  → ColorSlider ~240 (white zone)
+ *   b = 0   → Brightness 0 (black, ColorSlider irrelevant)
  */
 export function encodeBeyondMessages(
   grid: CannonState[],
@@ -118,8 +127,7 @@ export function encodeBeyondMessages(
 
     const prefix = `/beyond/zone/${projIndex}/livecontrol`;
 
-    messages.push({ address: `${prefix}/ColorSlider`, value: hueToColorSlider(cannon.h) });
-    messages.push({ address: `${prefix}/Saturation`, value: satToSaturation(cannon.s) });
+    messages.push({ address: `${prefix}/ColorSlider`, value: hueToColorSlider(cannon.h, cannon.s) });
     messages.push({ address: `${prefix}/Brightness`, value: Math.round(cannon.b) });
   }
 
@@ -156,11 +164,11 @@ export class BeyondOscOutput implements OutputAdapter {
     if (messages.length === 0) return;
 
     if (DEBUG_OSC) {
-      const sample = messages.slice(0, 3);
+      const sample = messages.slice(0, 2);
       const lines = sample.map(m => `    ${m.address} = ${m.value}`);
       console.log(`  [OSC→BEYOND] frame ${this.frameCount} | ${messages.length} msgs to ${this.config.host}:${this.config.port}`);
       for (const line of lines) console.log(line);
-      if (messages.length > 3) console.log(`    ... +${messages.length - 3} more`);
+      if (messages.length > 2) console.log(`    ... +${messages.length - 2} more`);
     }
     for (const msg of messages) {
       sendFloat(this.client, msg.address, msg.value);
