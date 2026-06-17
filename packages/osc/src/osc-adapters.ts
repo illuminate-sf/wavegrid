@@ -56,7 +56,7 @@ function sendFloats(client: Client, address: string, value: number | number[]): 
 // ═══════════════════════════════════════════════════
 
 /** Color mode for BEYOND output. */
-export type BeyondColorMode = 'slider' | 'rgba';
+export type BeyondColorMode = 'slider' | 'rgba' | 'rgb';
 
 export interface BeyondOscConfig {
   /** UDP target host (IP or hostname). */
@@ -77,7 +77,8 @@ export interface BeyondOscConfig {
   /**
    * Color control mode:
    *   'slider' — ColorSlider 28–218 + white zone (default)
-   *   'rgba'   — RGBA 4-float message (R,G,B,A 0–255)
+   *   'rgb'    — separate alpha+red+green+blue messages (0–255 each)
+   *   'rgba'   — RGBA 4-float message (R,G,B,A 0–255) [experimental]
    * Override with BEYOND_COLOR_MODE env var.
    */
   colorMode?: BeyondColorMode;
@@ -117,7 +118,14 @@ export function hueToColorSlider(h: number, s: number = 100): number {
  *   /beyond/zone/{n}/livecontrol/ColorSlider  (0–255 float)
  *   /beyond/zone/{n}/livecontrol/Brightness   (0–100 float)
  *
- * rgba mode:
+ * rgb mode:
+ *   /beyond/zone/{n}/livecontrol/alpha  (255 = full override)
+ *   /beyond/zone/{n}/livecontrol/red    (0–255 float)
+ *   /beyond/zone/{n}/livecontrol/green  (0–255 float)
+ *   /beyond/zone/{n}/livecontrol/blue   (0–255 float)
+ *   /beyond/zone/{n}/livecontrol/Brightness   (0–100 float)
+ *
+ * rgba mode (experimental):
  *   /beyond/zone/{n}/livecontrol/RGBA  (4 floats: R,G,B,A  0–255)
  *   /beyond/zone/{n}/livecontrol/Brightness   (0–100 float)
  */
@@ -143,7 +151,13 @@ export function encodeBeyondMessages(
 
     const prefix = `/beyond/zone/${projIndex}/livecontrol`;
 
-    if (colorMode === 'rgba') {
+    if (colorMode === 'rgb') {
+      const rgb = hsbToRgb255(cannon.h, cannon.s, cannon.b);
+      messages.push({ address: `${prefix}/alpha`, value: 255 });
+      messages.push({ address: `${prefix}/red`, value: rgb.r });
+      messages.push({ address: `${prefix}/green`, value: rgb.g });
+      messages.push({ address: `${prefix}/blue`, value: rgb.b });
+    } else if (colorMode === 'rgba') {
       const rgb = hsbToRgb255(cannon.h, cannon.s, cannon.b);
       messages.push({ address: `${prefix}/RGBA`, value: [rgb.r, rgb.g, rgb.b, 0] });
     } else {

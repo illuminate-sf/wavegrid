@@ -222,6 +222,72 @@ describe('encodeBeyondMessages (rgba mode)', () => {
   });
 });
 
+describe('encodeBeyondMessages (rgb mode)', () => {
+  it('should produce alpha+red+green+blue+Brightness (5 messages)', () => {
+    const grid = makeSingleGrid(0, 0, 100, 100); // h=0, s=100, b=100 (red)
+    const messages = encodeBeyondMessages(grid, { 0: 3 }, undefined, 'rgb');
+
+    expect(messages).toHaveLength(5);
+    expect(messages[0].address).toBe('/beyond/zone/3/livecontrol/alpha');
+    expect(messages[0].value).toBe(255);
+    expect(messages[1].address).toBe('/beyond/zone/3/livecontrol/red');
+    expect(messages[1].value).toBe(255);
+    expect(messages[2].address).toBe('/beyond/zone/3/livecontrol/green');
+    expect(messages[2].value).toBe(0);
+    expect(messages[3].address).toBe('/beyond/zone/3/livecontrol/blue');
+    expect(messages[3].value).toBe(0);
+    expect(messages[4].address).toBe('/beyond/zone/3/livecontrol/Brightness');
+    expect(messages[4].value).toBe(100);
+  });
+
+  it('should produce white (255,255,255) for s=0 b=100', () => {
+    const grid = makeSingleGrid(0, 0, 0, 100); // white
+    const messages = encodeBeyondMessages(grid, { 0: 0 }, undefined, 'rgb');
+
+    expect(messages).toHaveLength(5);
+    expect(messages[0].value).toBe(255); // alpha
+    expect(messages[1].value).toBe(255); // red
+    expect(messages[2].value).toBe(255); // green
+    expect(messages[3].value).toBe(255); // blue
+    expect(messages[4].value).toBe(100); // brightness
+  });
+
+  it('should produce black (0,0,0) for b=0', () => {
+    const grid = makeSingleGrid(0, 0, 100, 0); // black
+    const messages = encodeBeyondMessages(grid, { 0: 0 }, undefined, 'rgb');
+
+    expect(messages).toHaveLength(5);
+    expect(messages[0].value).toBe(255); // alpha still 255
+    expect(messages[1].value).toBe(0);   // red
+    expect(messages[2].value).toBe(0);   // green
+    expect(messages[3].value).toBe(0);   // blue
+    expect(messages[4].value).toBe(0);   // brightness
+  });
+
+  it('should match hsbToRgb255 conversion', () => {
+    const grid = makeSingleGrid(0, 120, 80, 75);
+    const messages = encodeBeyondMessages(grid, { 0: 0 }, undefined, 'rgb');
+    const expected = hsbToRgb255(120, 80, 75);
+    expect(messages[1].value).toBe(expected.r);
+    expect(messages[2].value).toBe(expected.g);
+    expect(messages[3].value).toBe(expected.b);
+  });
+
+  it('should handle multiple mapped cannons', () => {
+    const grid = makeGrid(120, 100, 100);
+    const messages = encodeBeyondMessages(grid, { 0: 0, 1: 1, 2: 2 }, undefined, 'rgb');
+
+    expect(messages).toHaveLength(15); // 3 cannons × 5 messages
+  });
+
+  it('should skip unchanged cannons', () => {
+    const grid = makeGrid(120, 100, 100);
+    const prevGrid = makeGrid(120, 100, 100);
+    const messages = encodeBeyondMessages(grid, { 0: 0, 1: 1 }, prevGrid, 'rgb');
+    expect(messages).toHaveLength(0);
+  });
+});
+
 describe('encodeFB4Messages', () => {
   it('should produce correct serial-based OSC addresses', () => {
     const grid = makeSingleGrid(0, 0, 100, 100); // pure red
@@ -380,6 +446,50 @@ describe('BeyondOscOutput (UDP integration)', () => {
     expect(rgbaPkt!.args[1]).toBeCloseTo(0, 0);   // G
     expect(rgbaPkt!.args[2]).toBeCloseTo(0, 0);   // B
     expect(rgbaPkt!.args[3]).toBeCloseTo(0, 0);   // A
+
+    const brightPkt = mock.packets.find(p => p.address === '/beyond/zone/0/livecontrol/Brightness');
+    expect(brightPkt).toBeDefined();
+    expect(brightPkt!.args[0]).toBeCloseTo(100, 0);
+
+    adapter.close();
+    await mock.close();
+  });
+
+  it('should send separate alpha+rgb+brightness packets in rgb mode', async () => {
+    const port = nextPort();
+    const mock = await createMockOscReceiver(port);
+
+    const adapter = new BeyondOscOutput({
+      host: '127.0.0.1',
+      port,
+      projectorMap: { 0: 0 },
+      sendEveryNFrames: 1,
+      colorMode: 'rgb'
+    });
+    adapter.connect();
+
+    const grid = makeSingleGrid(0, 0, 100, 100); // pure red
+    adapter.send(grid);
+
+    await new Promise((r) => setTimeout(r, 200));
+
+    expect(mock.packets.length).toBeGreaterThanOrEqual(5);
+
+    const alphaPkt = mock.packets.find(p => p.address === '/beyond/zone/0/livecontrol/alpha');
+    expect(alphaPkt).toBeDefined();
+    expect(alphaPkt!.args[0]).toBeCloseTo(255, 0);
+
+    const redPkt = mock.packets.find(p => p.address === '/beyond/zone/0/livecontrol/red');
+    expect(redPkt).toBeDefined();
+    expect(redPkt!.args[0]).toBeCloseTo(255, 0);
+
+    const greenPkt = mock.packets.find(p => p.address === '/beyond/zone/0/livecontrol/green');
+    expect(greenPkt).toBeDefined();
+    expect(greenPkt!.args[0]).toBeCloseTo(0, 0);
+
+    const bluePkt = mock.packets.find(p => p.address === '/beyond/zone/0/livecontrol/blue');
+    expect(bluePkt).toBeDefined();
+    expect(bluePkt!.args[0]).toBeCloseTo(0, 0);
 
     const brightPkt = mock.packets.find(p => p.address === '/beyond/zone/0/livecontrol/Brightness');
     expect(brightPkt).toBeDefined();
