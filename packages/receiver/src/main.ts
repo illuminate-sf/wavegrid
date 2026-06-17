@@ -61,7 +61,7 @@ if (hasOscConfig) {
 
     if (process.env.BEYOND_HOST) {
       const host = process.env.BEYOND_HOST;
-      const port = parseInt(process.env.BEYOND_PORT || '9000', 10);
+      const port = parseInt(process.env.BEYOND_PORT || '7001', 10);
       const projectorMap: Record<number, number> = {};
       for (let i = 0; i < NUM_CANNONS; i++) projectorMap[i] = i;
       const beyond = new osc.BeyondOscOutput({ host, port, projectorMap });
@@ -116,6 +116,7 @@ console.log(`  → Output: ${outputLabels.join(' + ')}`);
 console.log(`  → Alpha: ${ALPHA}  Fallback delay: ${FALLBACK_DELAY}ms`);
 console.log(`  → Grid: ${NUM_CANNONS} cannons (${GRID_COLUMNS} columns)`);
 console.log(`  → Shard: ${shard ? `cannons ${shard.start}–${shard.end} (${shard.end - shard.start + 1} of ${NUM_CANNONS})` : `all cannons (no shard)`}`);
+if (process.env.DEBUG_OSC) console.log('  → DEBUG_OSC: enabled (logging all OSC messages)');
 console.log('');
 
 receiver.start();

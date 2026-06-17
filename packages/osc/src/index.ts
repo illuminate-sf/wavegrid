@@ -13,6 +13,7 @@ export type {
 } from './osc-adapters';
 export {
   BeyondOscOutput,
+  DEBUG_OSC,
   FB4OscOutput,
   RoutedOscOutput,
   createRoutedOutput,
