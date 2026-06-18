@@ -41,13 +41,13 @@ graph LR
 Open two terminals:
 
 ```sh
-# Terminal 1 — Simulator
-pnpm dev:sim
+# Terminal 1 — Simulator (password-protected)
+AUTH_PASSWORD=illuminate77! pnpm dev:sim
 ```
 
 ```sh
-# Terminal 2 — UI (replace CLOUD_IP with your server's public IP)
-NEXT_PUBLIC_SIMULATOR_URL=ws://<CLOUD_IP>:3000 pnpm dev:ui
+# Terminal 2 — UI (password-protected, replace CLOUD_IP with your server's public IP)
+AUTH_PASSWORD=illuminate77! NEXT_PUBLIC_AUTH_TOKEN=illuminate77! NEXT_PUBLIC_SIMULATOR_URL=ws://<CLOUD_IP>:3000 pnpm dev:ui
 ```
 
 Ensure ports **3000** and **3003** are open in the firewall.
@@ -57,8 +57,7 @@ Ensure ports **3000** and **3003** are open in the firewall.
 #### Single BEYOND target
 
 ```powershell
-$env:SIMULATOR_URL = "ws://<CLOUD_IP>:3000"
-$env:BEYOND_COLOR_MODE = "rgb"
+$env:SIMULATOR_URL = "ws://<CLOUD_IP>:3000?token=illuminate77!"
 $env:BEYOND_HOST = "127.0.0.1"
 $env:BEYOND_PORT = "7001"
 $env:SHARD_START = "0"
@@ -74,8 +73,8 @@ Use a routing config instead of `BEYOND_HOST`. Save `routing.json` in the repo r
 ```json
 {
   "targets": {
-    "beyond-a": { "type": "beyond", "host": "<BEYOND_A_IP>", "port": 7001, "colorMode": "rgb" },
-    "beyond-b": { "type": "beyond", "host": "<BEYOND_B_IP>", "port": 7001, "colorMode": "rgb" }
+    "beyond-a": { "type": "beyond", "host": "<BEYOND_A_IP>", "port": 7001 },
+    "beyond-b": { "type": "beyond", "host": "<BEYOND_B_IP>", "port": 7001 }
   },
   "flushHz": 30,
   "cannons": [
@@ -95,7 +94,7 @@ Then run:
 
 ```powershell
 $env:ROUTING_CONFIG = "routing.json"
-$env:SIMULATOR_URL = "ws://<CLOUD_IP>:3000"
+$env:SIMULATOR_URL = "ws://<CLOUD_IP>:3000?token=illuminate77!"
 $env:DEBUG_OSC = "1"
 pnpm dev:receiver
 ```
@@ -150,4 +149,4 @@ graph TD
 | Receiver connects but no laser response | Verify BEYOND's OSC server is on port 7001, and "Show R-G-B-A panel" is enabled in BEYOND settings |
 | Colors wrong in `rgb` mode | Confirm `alpha` is being sent (check `DEBUG_OSC=1` output for `/livecontrol/alpha 255`) |
 | Receiver can't connect to simulator | Check cloud firewall allows inbound on port 3000 |
-| White shows as red | Make sure `BEYOND_COLOR_MODE=rgb` is set (not `slider`) |
+| White shows as red | Ensure BEYOND's RGBA panel is enabled: Settings → Configuration → Live Control → Extra Controls → "Show R-G-B-A panel" |

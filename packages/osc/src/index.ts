@@ -4,7 +4,6 @@ export { hsbToRgb, hsbToRgb100, hsbToRgb255 } from './color';
 
 // OSC adapters
 export type {
-  BeyondColorMode,
   BeyondOscConfig,
   CannonRoute,
   CannonState,
@@ -15,15 +14,11 @@ export type {
   RoutingConfig
 } from './osc-adapters';
 export {
-  BEYOND_COLOR_MIN,
-  BEYOND_COLOR_MAX,
-  BEYOND_COLOR_WHITE,
   BeyondOscOutput,
   DEBUG_OSC,
   FB4OscOutput,
   RoutedOscOutput,
   createRoutedOutput,
   encodeBeyondMessages,
-  encodeFB4Messages,
-  hueToColorSlider
+  encodeFB4Messages
 } from './osc-adapters';

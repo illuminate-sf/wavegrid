@@ -167,7 +167,6 @@ Replace `203.0.113.50` with your server's public IP. Ensure ports **3000** and *
 PowerShell:
 ```powershell
 $env:SIMULATOR_URL = "ws://203.0.113.50:3000"
-$env:BEYOND_COLOR_MODE = "rgb"
 $env:BEYOND_HOST = "127.0.0.1"
 $env:BEYOND_PORT = "7001"
 $env:SHARD_START = "0"
@@ -179,7 +178,6 @@ pnpm dev:receiver
 Bash (Linux/macOS):
 ```sh
 SIMULATOR_URL=ws://203.0.113.50:3000 \
-BEYOND_COLOR_MODE=rgb \
 BEYOND_HOST=127.0.0.1 \
 BEYOND_PORT=7001 \
 SHARD_START=0 \
@@ -219,8 +217,8 @@ Create a `routing.json` file (see `examples/routing-two-beyond.json` for a full 
 ```json
 {
   "targets": {
-    "beyond-a": { "type": "beyond", "host": "192.168.1.68", "port": 7001, "colorMode": "rgb" },
-    "beyond-b": { "type": "beyond", "host": "192.168.1.69", "port": 7001, "colorMode": "rgb" }
+    "beyond-a": { "type": "beyond", "host": "192.168.1.68", "port": 7001 },
+    "beyond-b": { "type": "beyond", "host": "192.168.1.69", "port": 7001 }
   },
   "flushHz": 30,
   "cannons": [
@@ -258,32 +256,52 @@ ROUTING_CONFIG=routing.json SIMULATOR_URL=ws://203.0.113.50:3000 DEBUG_OSC=1 pnp
 
 The startup banner will show: `Routed OSC → [beyond-a, beyond-b]`
 
-> **Note:** When using `ROUTING_CONFIG`, do not set `BEYOND_HOST` — they are mutually exclusive. The routing config handles all target configuration including color mode per target.
+> **Note:** When using `ROUTING_CONFIG`, do not set `BEYOND_HOST` — they are mutually exclusive.
 
-### BEYOND Color Modes
+### BEYOND Color Control
 
-The receiver supports multiple color control strategies via `BEYOND_COLOR_MODE`:
+The receiver sends 5 OSC messages per changed cannon: `alpha` (255 = full override) + `red` + `green` + `blue` (0–255) + `Brightness` (0–100). This requires BEYOND's RGBA panel to be enabled: **Settings → Configuration → Live Control → Extra Controls → "Show R-G-B-A panel"**.
 
-| Mode | Messages per cannon | Description |
-|------|-------------------|-------------|
-| `slider` (default) | 2 | `ColorSlider` (0–255) + `Brightness` (0–100). Uses calibrated hue wheel range 28–218. |
-| `rgb` | 5 | `alpha` (255) + `red` + `green` + `blue` (0–255 each) + `Brightness`. Full RGB override — smooth fades to white/black. |
-| `rgba` | 2 | `RGBA` (4-float) + `Brightness`. Experimental single-message format. |
+### Password Protection
 
-The `rgb` mode requires BEYOND's RGBA panel to be enabled: **Settings → Configuration → Live Control → Extra Controls → "Show R-G-B-A panel"**.
+Set `AUTH_PASSWORD` to lock down the simulator and UI. Without the password, nothing loads and WebSocket connections are rejected.
+
+**Simulator** (cloud server):
+```sh
+AUTH_PASSWORD=illuminate77! pnpm dev:sim
+```
+
+**UI** (cloud server):
+```sh
+AUTH_PASSWORD=illuminate77! NEXT_PUBLIC_AUTH_TOKEN=illuminate77! NEXT_PUBLIC_SIMULATOR_URL=ws://203.0.113.50:3000 pnpm dev:ui
+```
+
+**Receiver** (Pangolin PC) — append `?token=` to the simulator URL:
+
+PowerShell:
+```powershell
+$env:SIMULATOR_URL = "ws://203.0.113.50:3000?token=illuminate77!"
+$env:BEYOND_HOST = "127.0.0.1"
+pnpm dev:receiver
+```
+
+Bash:
+```sh
+SIMULATOR_URL="ws://203.0.113.50:3000?token=illuminate77!" BEYOND_HOST=127.0.0.1 pnpm dev:receiver
+```
+
+When `AUTH_PASSWORD` is not set, everything works without authentication (same as before).
 
 ### Environment Variables Reference
 
 | Variable | Default | Description |
 |----------|---------|-------------|
+| `AUTH_PASSWORD` | — | Password for simulator + UI access (unset = open) |
+| `NEXT_PUBLIC_AUTH_TOKEN` | — | Token the UI sends to the simulator WebSocket |
 | `SIMULATOR_URL` | `ws://localhost:3000` | WebSocket upstream for the receiver |
 | `NEXT_PUBLIC_SIMULATOR_URL` | `ws://localhost:3000` | WebSocket URL the browser UI connects to |
 | `BEYOND_HOST` | — | BEYOND PC IP (enables OSC output) |
 | `BEYOND_PORT` | `7001` | BEYOND OSC receive port |
-| `BEYOND_COLOR_MODE` | `slider` | Color control: `slider`, `rgb`, or `rgba` |
-| `BEYOND_COLOR_MIN` | `28` | ColorSlider range start (slider mode) |
-| `BEYOND_COLOR_MAX` | `218` | ColorSlider range end (slider mode) |
-| `BEYOND_COLOR_WHITE` | `240` | ColorSlider white zone value (slider mode) |
 | `BEYOND_GRID_ORDER` | `row` | Grid-to-zone mapping: `row` or `column` |
 | `SHARD_START` / `SHARD_END` | — | Cannon index range for this receiver |
 | `NUM_CANNONS` | `49` | Total cannons in grid |

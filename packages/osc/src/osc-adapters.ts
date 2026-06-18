@@ -55,9 +55,6 @@ function sendFloats(client: Client, address: string, value: number | number[]): 
 // BEYOND OSC Output Adapter
 // ═══════════════════════════════════════════════════
 
-/** Color mode for BEYOND output. */
-export type BeyondColorMode = 'slider' | 'rgba' | 'rgb';
-
 export interface BeyondOscConfig {
   /** UDP target host (IP or hostname). */
   host: string;
@@ -74,38 +71,6 @@ export interface BeyondOscConfig {
    * Default: 2 (30Hz).
    */
   sendEveryNFrames?: number;
-  /**
-   * Color control mode:
-   *   'slider' — ColorSlider 28–218 + white zone (default)
-   *   'rgb'    — separate alpha+red+green+blue messages (0–255 each)
-   *   'rgba'   — RGBA 4-float message (R,G,B,A 0–255) [experimental]
-   * Override with BEYOND_COLOR_MODE env var.
-   */
-  colorMode?: BeyondColorMode;
-}
-
-/**
- * BEYOND ColorSlider range — the usable portion of the 0–255 slider.
- *   28–218  = color spectrum (ROYGBIV)
- *   <~25    = falls off to black/yellow
- *   >~221   = desaturates to white
- * Override with BEYOND_COLOR_MIN / BEYOND_COLOR_MAX / BEYOND_COLOR_WHITE env vars.
- */
-export const BEYOND_COLOR_MIN = Number(process.env.BEYOND_COLOR_MIN) || 28;
-export const BEYOND_COLOR_MAX = Number(process.env.BEYOND_COLOR_MAX) || 218;
-export const BEYOND_COLOR_WHITE = Number(process.env.BEYOND_COLOR_WHITE) || 240;
-
-/** Saturation threshold below which we treat the color as white. */
-const WHITE_SAT_THRESHOLD = 10;
-
-/**
- * Map HSB hue + saturation to BEYOND ColorSlider value.
- * Low saturation → white zone (above 221); otherwise linear 28–218.
- */
-export function hueToColorSlider(h: number, s: number = 100): number {
-  if (s <= WHITE_SAT_THRESHOLD) return BEYOND_COLOR_WHITE;
-  const hue = ((h % 360) + 360) % 360;
-  return BEYOND_COLOR_MIN + (hue / 360) * (BEYOND_COLOR_MAX - BEYOND_COLOR_MIN);
 }
 
 /**
@@ -113,27 +78,17 @@ export function hueToColorSlider(h: number, s: number = 100): number {
  * Exported for testing — the adapter calls this internally.
  *
  * BEYOND livecontrol uses zone-level addressing (case-sensitive).
- *
- * slider mode (default):
- *   /beyond/zone/{n}/livecontrol/ColorSlider  (0–255 float)
- *   /beyond/zone/{n}/livecontrol/Brightness   (0–100 float)
- *
- * rgb mode:
- *   /beyond/zone/{n}/livecontrol/alpha  (255 = full override)
- *   /beyond/zone/{n}/livecontrol/red    (0–255 float)
- *   /beyond/zone/{n}/livecontrol/green  (0–255 float)
- *   /beyond/zone/{n}/livecontrol/blue   (0–255 float)
- *   /beyond/zone/{n}/livecontrol/Brightness   (0–100 float)
- *
- * rgba mode (experimental):
- *   /beyond/zone/{n}/livecontrol/RGBA  (4 floats: R,G,B,A  0–255)
- *   /beyond/zone/{n}/livecontrol/Brightness   (0–100 float)
+ * Sends 5 messages per changed cannon:
+ *   /beyond/zone/{n}/livecontrol/alpha      (255 = full override)
+ *   /beyond/zone/{n}/livecontrol/red        (0–255 float)
+ *   /beyond/zone/{n}/livecontrol/green      (0–255 float)
+ *   /beyond/zone/{n}/livecontrol/blue       (0–255 float)
+ *   /beyond/zone/{n}/livecontrol/Brightness (0–100 float)
  */
 export function encodeBeyondMessages(
   grid: CannonState[],
   projectorMap: Record<number, number>,
-  prevGrid?: CannonState[],
-  colorMode: BeyondColorMode = 'slider'
+  prevGrid?: CannonState[]
 ): OscMessage[] {
   const messages: OscMessage[] = [];
 
@@ -151,18 +106,11 @@ export function encodeBeyondMessages(
 
     const prefix = `/beyond/zone/${projIndex}/livecontrol`;
 
-    if (colorMode === 'rgb') {
-      const rgb = hsbToRgb255(cannon.h, cannon.s, cannon.b);
-      messages.push({ address: `${prefix}/alpha`, value: 255 });
-      messages.push({ address: `${prefix}/red`, value: rgb.r });
-      messages.push({ address: `${prefix}/green`, value: rgb.g });
-      messages.push({ address: `${prefix}/blue`, value: rgb.b });
-    } else if (colorMode === 'rgba') {
-      const rgb = hsbToRgb255(cannon.h, cannon.s, cannon.b);
-      messages.push({ address: `${prefix}/RGBA`, value: [rgb.r, rgb.g, rgb.b, 0] });
-    } else {
-      messages.push({ address: `${prefix}/ColorSlider`, value: hueToColorSlider(cannon.h, cannon.s) });
-    }
+    const rgb = hsbToRgb255(cannon.h, cannon.s, cannon.b);
+    messages.push({ address: `${prefix}/alpha`, value: 255 });
+    messages.push({ address: `${prefix}/red`, value: rgb.r });
+    messages.push({ address: `${prefix}/green`, value: rgb.g });
+    messages.push({ address: `${prefix}/blue`, value: rgb.b });
     messages.push({ address: `${prefix}/Brightness`, value: Math.round(cannon.b) });
   }
 
@@ -175,12 +123,10 @@ export class BeyondOscOutput implements OutputAdapter {
   private frameCount = 0;
   private sendInterval: number;
   private prevGrid: CannonState[] | undefined;
-  private colorMode: BeyondColorMode;
 
   constructor(config: BeyondOscConfig) {
     this.config = config;
     this.sendInterval = config.sendEveryNFrames ?? 2;
-    this.colorMode = config.colorMode ?? 'slider';
   }
 
   /** Initialize the UDP client. Call before receiver.start(). */
@@ -193,7 +139,7 @@ export class BeyondOscOutput implements OutputAdapter {
     if (this.frameCount % this.sendInterval !== 0) return;
     if (!this.client) return;
 
-    const messages = encodeBeyondMessages(grid, this.config.projectorMap, this.prevGrid, this.colorMode);
+    const messages = encodeBeyondMessages(grid, this.config.projectorMap, this.prevGrid);
 
     // Snapshot current state for next-frame diff
     this.prevGrid = grid.map(c => ({ h: c.h, s: c.s, b: c.b }));
@@ -206,7 +152,7 @@ export class BeyondOscOutput implements OutputAdapter {
         const v = Array.isArray(m.value) ? m.value.join(', ') : m.value;
         return `    ${m.address} = ${v}`;
       });
-      console.log(`  [OSC→BEYOND] frame ${this.frameCount} | ${messages.length} msgs (${this.colorMode}) to ${this.config.host}:${this.config.port}`);
+      console.log(`  [OSC→BEYOND] frame ${this.frameCount} | ${messages.length} msgs (rgb) to ${this.config.host}:${this.config.port}`);
       for (const line of lines) console.log(line);
       if (messages.length > 2) console.log(`    ... +${messages.length - 2} more`);
     }
@@ -338,8 +284,6 @@ export interface OscTarget {
   type: 'beyond' | 'fb4';
   host: string;
   port: number;
-  /** Color mode for BEYOND targets. Default: 'slider'. */
-  colorMode?: BeyondColorMode;
 }
 
 /**
@@ -414,7 +358,6 @@ export class RoutedOscOutput implements OutputAdapter {
         host: target.host,
         port: target.port,
         projectorMap,
-        colorMode: target.colorMode,
         sendEveryNFrames: 1
       }));
     }
