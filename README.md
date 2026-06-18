@@ -190,6 +190,76 @@ pnpm dev:receiver
 
 The receiver connects outward to the cloud simulator and sends OSC locally to BEYOND. `BEYOND_HOST=127.0.0.1` when BEYOND runs on the same machine; use the LAN IP if BEYOND is on a different box.
 
+### Multi-Target Routing (multiple BEYOND machines)
+
+When a single BEYOND PC can't handle all 49 zones, split the grid across multiple machines using a **routing config** JSON file. One receiver dispatches OSC to multiple BEYOND targets over the LAN — no extra Node.js installs needed on the other machines.
+
+```
+┌──────────────────────────────┐
+│     Receiver (one machine)   │
+│                              │
+│  reads routing.json          │
+│  ┌────────┐   ┌────────┐    │
+│  │ grid   │──►│ routed │    │
+│  │ state  │   │ output │    │
+│  └────────┘   └───┬────┘    │
+│                   │         │
+└───────────────────┼─────────┘
+          ┌─────────┼─────────┐
+          ▼                   ▼
+  ┌──────────────┐    ┌──────────────┐
+  │  BEYOND A    │    │  BEYOND B    │
+  │  .1.68:7001  │    │  .1.69:7001  │
+  │  zones 0–23  │    │  zones 0–24  │
+  └──────────────┘    └──────────────┘
+```
+
+Create a `routing.json` file (see `examples/routing-two-beyond.json` for a full 49-cannon example):
+
+```json
+{
+  "targets": {
+    "beyond-a": { "type": "beyond", "host": "192.168.1.68", "port": 7001, "colorMode": "rgb" },
+    "beyond-b": { "type": "beyond", "host": "192.168.1.69", "port": 7001, "colorMode": "rgb" }
+  },
+  "flushHz": 30,
+  "cannons": [
+    { "logical": 0,  "target": "beyond-a", "projectorIndex": 0,  "label": "row0 col0" },
+    { "logical": 1,  "target": "beyond-a", "projectorIndex": 1,  "label": "row0 col1" },
+    ...
+    { "logical": 24, "target": "beyond-b", "projectorIndex": 0,  "label": "row3 col3" },
+    { "logical": 25, "target": "beyond-b", "projectorIndex": 1,  "label": "row3 col4" },
+    ...
+  ]
+}
+```
+
+Each cannon entry maps a logical grid index to a target and zone index:
+- **`logical`** — grid cell index (0–48 for a 7×7 grid)
+- **`target`** — name of a target defined in `targets`
+- **`projectorIndex`** — the BEYOND zone index on that target (resets to 0 for each target)
+- **`label`** — optional human-readable name for debugging
+- **`safeDisabled`** — set `true` to disable a cannon in software
+
+Run with:
+
+PowerShell (Windows):
+```powershell
+$env:ROUTING_CONFIG = "routing.json"
+$env:SIMULATOR_URL = "ws://203.0.113.50:3000"
+$env:DEBUG_OSC = "1"
+pnpm dev:receiver
+```
+
+Bash:
+```sh
+ROUTING_CONFIG=routing.json SIMULATOR_URL=ws://203.0.113.50:3000 DEBUG_OSC=1 pnpm dev:receiver
+```
+
+The startup banner will show: `Routed OSC → [beyond-a, beyond-b]`
+
+> **Note:** When using `ROUTING_CONFIG`, do not set `BEYOND_HOST` — they are mutually exclusive. The routing config handles all target configuration including color mode per target.
+
 ### BEYOND Color Modes
 
 The receiver supports multiple color control strategies via `BEYOND_COLOR_MODE`:
