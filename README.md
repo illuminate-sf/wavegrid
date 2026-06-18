@@ -103,17 +103,113 @@ SHARD_START=40 SHARD_END=48 pnpm dev:receiver
 
 Both connect to the same Simulator (or Relay). The UI stays unified.
 
+## Data Flow
+
+The UI never sends OSC — only the **Receiver** talks to laser hardware:
+
+```
+┌──────────┐   HSB grid (WebSocket)   ┌──────────┐   HSB grid (WebSocket)   ┌──────────┐   OSC/UDP   ┌──────────┐
+│    UI    │ ────────────────────────► │Simulator │ ────────────────────────► │ Receiver │ ──────────► │  BEYOND  │
+│ (browser)│                           │  :3000   │                           │  (brain) │            │  (laser) │
+└──────────┘                           └──────────┘                           └──────────┘            └──────────┘
+  Paints colors                     Broadcasts state                     Smooths + converts            Drives
+  & scenes                          to all clients                       HSB → RGB/OSC                 hardware
+```
+
+- **UI** sends high-level grid state (HSB colors per cell) over WebSocket
+- **Simulator** broadcasts that state to all connected WebSocket clients
+- **Receiver** applies LP smoothing, converts HSB to the configured color format, and sends OSC messages over UDP to BEYOND
+- The UI has no knowledge of OSC, projectors, or zones
+
 ## Deployment
 
-For a live event, run all services on the Windows machine at the venue:
+### Local (all-in-one)
+
+For a live event where everything runs on a single machine at the venue:
 
 ```sh
-node packages/simulator/dist/server.js   # :3000 (master controller)
+pnpm dev:sim                             # :3000 (master controller)
 pnpm dev:ui                              # :3003 (artist UI)
-node packages/receiver/dist/main.js      # brain → hardware
+pnpm dev:receiver                        # brain → hardware
 ```
 
 iPads connect to `http://<machine-ip>:3003` for the UI.
+
+### Remote (cloud server + on-site hardware)
+
+When the UI/Simulator run on a cloud server and the laser hardware is on-site:
+
+```
+┌───────────────────────────────────┐              ┌──────────────────────────────┐
+│        Cloud Server               │              │       On-Site (Pangolin PC)  │
+│                                   │   WebSocket  │                              │
+│  Simulator (:3000)  ◄─────────────┼──────────────┼──  Receiver                  │
+│  UI (:3003)                       │              │       │                      │
+│                                   │              │       ▼ OSC/UDP (localhost)  │
+│  Artists connect via browser      │              │    BEYOND (:7001)            │
+└───────────────────────────────────┘              └──────────────────────────────┘
+```
+
+**On the cloud server** (e.g. DigitalOcean):
+
+```sh
+# Terminal 1 — Simulator (WebSocket server)
+pnpm dev:sim
+
+# Terminal 2 — UI (Next.js, tells browsers where the simulator is)
+NEXT_PUBLIC_SIMULATOR_URL=ws://203.0.113.50:3000 pnpm dev:ui
+```
+
+Replace `203.0.113.50` with your server's public IP. Ensure ports **3000** and **3003** are open in the firewall.
+
+**On the Pangolin PC** (on-site, same network as BEYOND):
+
+```sh
+SIMULATOR_URL=ws://203.0.113.50:3000 \
+BEYOND_COLOR_MODE=rgb \
+BEYOND_HOST=127.0.0.1 \
+BEYOND_PORT=7001 \
+SHARD_START=0 \
+SHARD_END=23 \
+DEBUG_OSC=1 \
+pnpm dev:receiver
+```
+
+The receiver connects outward to the cloud simulator and sends OSC locally to BEYOND. `BEYOND_HOST=127.0.0.1` when BEYOND runs on the same machine; use the LAN IP if BEYOND is on a different box.
+
+### BEYOND Color Modes
+
+The receiver supports multiple color control strategies via `BEYOND_COLOR_MODE`:
+
+| Mode | Messages per cannon | Description |
+|------|-------------------|-------------|
+| `slider` (default) | 2 | `ColorSlider` (0–255) + `Brightness` (0–100). Uses calibrated hue wheel range 28–218. |
+| `rgb` | 5 | `alpha` (255) + `red` + `green` + `blue` (0–255 each) + `Brightness`. Full RGB override — smooth fades to white/black. |
+| `rgba` | 2 | `RGBA` (4-float) + `Brightness`. Experimental single-message format. |
+
+The `rgb` mode requires BEYOND's RGBA panel to be enabled: **Settings → Configuration → Live Control → Extra Controls → "Show R-G-B-A panel"**.
+
+### Environment Variables Reference
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SIMULATOR_URL` | `ws://localhost:3000` | WebSocket upstream for the receiver |
+| `NEXT_PUBLIC_SIMULATOR_URL` | `ws://localhost:3000` | WebSocket URL the browser UI connects to |
+| `BEYOND_HOST` | — | BEYOND PC IP (enables OSC output) |
+| `BEYOND_PORT` | `7001` | BEYOND OSC receive port |
+| `BEYOND_COLOR_MODE` | `slider` | Color control: `slider`, `rgb`, or `rgba` |
+| `BEYOND_COLOR_MIN` | `28` | ColorSlider range start (slider mode) |
+| `BEYOND_COLOR_MAX` | `218` | ColorSlider range end (slider mode) |
+| `BEYOND_COLOR_WHITE` | `240` | ColorSlider white zone value (slider mode) |
+| `BEYOND_GRID_ORDER` | `row` | Grid-to-zone mapping: `row` or `column` |
+| `SHARD_START` / `SHARD_END` | — | Cannon index range for this receiver |
+| `NUM_CANNONS` | `49` | Total cannons in grid |
+| `GRID_COLUMNS` | `7` | Number of columns |
+| `DEBUG_OSC` | — | Set to `1` to log every OSC message |
+| `RECEIVER_ALPHA` | `0.06` | LP filter smoothing factor |
+| `FALLBACK_DELAY` | `3000` | Ms before sine fallback on signal loss |
+| `FB4_HOST` / `FB4_PORT` | — | FB4 device IP and port (default port 8000) |
+| `ROUTING_CONFIG` | — | Path to JSON routing config file |
 
 ## Credits
 
