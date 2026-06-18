@@ -5,3 +5,10 @@
 lerna-debug.log
 **/.next
 **/out
+
+# local env / secrets (keep the server IP out of git) — .env.example is tracked
+**/.env
+**/.env.local
+
+# generated machine config (holds real LAN/cloud IPs)
+deploy/routing.json

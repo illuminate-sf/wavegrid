@@ -25,6 +25,7 @@
     "dev:relay": "pnpm --filter @wavegrid/relay run dev",
     "dev:ui": "pnpm --filter @wavegrid/ui run dev",
     "dev:webgl": "pnpm --filter @wavegrid/webgl run dev",
+    "gen:config": "node deploy/gen-config.js",
     "deps": "pnpm up -r -i -L"
   },
   "devDependencies": {
