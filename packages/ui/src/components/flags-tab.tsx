@@ -399,25 +399,25 @@ export function FlagsTab({
   return (
     <div className="space-y-3">
       {/* Flag swatches */}
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex gap-2.5 flex-wrap">
         {FLAGS.map((flag) => (
           <button
             key={flag.name}
             onClick={() => onSelectFlag(flag.name, flag)}
             className="relative overflow-hidden transition-transform active:scale-93"
             style={{
-              width: 56,
-              height: 56,
-              borderRadius: 14,
+              width: 72,
+              height: 72,
+              borderRadius: 16,
               background: flag.gradient,
-              border: activeFlag === flag.name ? '2px solid #fff' : '2px solid transparent'
+              border: activeFlag === flag.name ? '2.5px solid #fff' : '2.5px solid transparent'
             }}
           >
             <span
-              className="absolute bottom-0.5 left-0 right-0 text-center text-white font-semibold"
+              className="absolute bottom-1 left-0 right-0 text-center text-white font-semibold"
               style={{
-                fontSize: 7,
-                textShadow: '0 1px 3px rgba(0,0,0,0.8)',
+                fontSize: 9,
+                textShadow: '0 1px 4px rgba(0,0,0,0.8)',
                 letterSpacing: '0.02em'
               }}
             >
@@ -428,17 +428,17 @@ export function FlagsTab({
       </div>
 
       {/* Effect toggles */}
-      <div className="flex gap-1.5 flex-wrap items-center">
-        <span className="text-xs" style={{ color: '#888898', letterSpacing: '0.05em' }}>FX</span>
+      <div className="flex gap-2 flex-wrap items-center">
+        <span className="text-sm font-medium" style={{ color: '#888898', letterSpacing: '0.05em' }}>FX</span>
         {EFFECTS.map((fx) => (
           <button
             key={fx.key}
             onClick={() => onEffect(fx.key)}
             className="transition-all"
             style={{
-              padding: '5px 12px',
-              borderRadius: 16,
-              fontSize: 11,
+              padding: '8px 16px',
+              borderRadius: 20,
+              fontSize: 13,
               fontWeight: 500,
               background: effect === fx.key ? '#1a1a2e' : 'transparent',
               border: effect === fx.key ? '1px solid #333' : '1px solid #1a1a25',
@@ -455,9 +455,9 @@ export function FlagsTab({
         onClick={() => onPurpleBlack(!purpleBlack)}
         className="flex items-center gap-2 transition-all"
         style={{
-          padding: '5px 12px',
-          borderRadius: 16,
-          fontSize: 11,
+          padding: '8px 16px',
+          borderRadius: 20,
+          fontSize: 13,
           fontWeight: 500,
           background: purpleBlack ? '#2a1a3e' : 'transparent',
           border: purpleBlack ? '1px solid #5a3a7e' : '1px solid #1a1a25',

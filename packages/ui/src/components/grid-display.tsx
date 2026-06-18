@@ -68,7 +68,7 @@ export function GridDisplay({
 
     const maxW = wrap.clientWidth - 32;
     const maxH = wrap.clientHeight - 32;
-    const size = Math.min(maxW, maxH, 560);
+    const size = Math.min(maxW, maxH);
     const dpr = window.devicePixelRatio || 1;
 
     canvas.width = size * dpr;

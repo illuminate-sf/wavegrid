@@ -13,6 +13,7 @@ interface ColorWheelProps {
   onBrightChange: (b: number) => void;
   onBrushSizeChange: (s: number) => void;
   onSoftEdgeChange: (v: boolean) => void;
+  compact?: boolean;
 }
 
 function hslRgb(h: number, s: number, l: number): [number, number, number] {
@@ -35,15 +36,18 @@ export function ColorWheel({
   onSatChange,
   onBrightChange,
   onBrushSizeChange,
-  onSoftEdgeChange
+  onSoftEdgeChange,
+  compact = false
 }: ColorWheelProps) {
   const wheelRef = useRef<HTMLCanvasElement>(null);
   const brightBarRef = useRef<HTMLDivElement>(null);
   const draggingWheel = useRef(false);
   const draggingBright = useRef(false);
-  const wheelSize = 160;
+  const wheelSize = 200;
+  const displaySize = compact ? 140 : 200;
+  const barWidth = compact ? 32 : 36;
+  const barHeight = displaySize;
 
-  // Draw the color wheel
   useEffect(() => {
     const canvas = wheelRef.current;
     if (!canvas) return;
@@ -120,122 +124,122 @@ export function ColorWheel({
     };
   }, [pickWheel, pickBright]);
 
-  // Cursor position on wheel
   const radius = wheelSize / 2 - 2;
   const cursorAngle = (hue * Math.PI) / 180;
   const cursorDist = (saturation / 100) * radius;
   const cursorX = wheelSize / 2 + Math.cos(cursorAngle) * cursorDist;
   const cursorY = wheelSize / 2 + Math.sin(cursorAngle) * cursorDist;
-  const displayScale = 160 / wheelSize;
+  const displayScale = displaySize / wheelSize;
   const cursorDisplayX = cursorX * displayScale;
   const cursorDisplayY = cursorY * displayScale;
 
-  // Preview color
   const [pr, pg, pb] = hslRgb(hue, saturation, Math.max(10, brightness * 0.5));
   const previewColor = `rgb(${Math.round(pr * 255)},${Math.round(pg * 255)},${Math.round(pb * 255)})`;
   const previewGlow = `rgba(${Math.round(pr * 255)},${Math.round(pg * 255)},${Math.round(pb * 255)},0.4)`;
 
   return (
-    <div className="flex items-start gap-4">
-      {/* Color wheel */}
-      <div className="relative shrink-0" style={{ width: 160, height: 160 }}>
-        <canvas
-          ref={wheelRef}
-          width={wheelSize}
-          height={wheelSize}
-          className="rounded-full cursor-crosshair"
-          style={{ width: 160, height: 160, touchAction: 'none' }}
-          onPointerDown={(e) => {
-            draggingWheel.current = true;
-            pickWheel(e.clientX, e.clientY);
-          }}
-        />
-        <div
-          className="absolute pointer-events-none"
-          style={{
-            width: '14px',
-            height: '14px',
-            borderRadius: '50%',
-            border: '2px solid #fff',
-            boxShadow: '0 0 6px rgba(0,0,0,0.5)',
-            transform: 'translate(-50%, -50%)',
-            left: `${cursorDisplayX}px`,
-            top: `${cursorDisplayY}px`
-          }}
-        />
-      </div>
-
-      {/* Brightness bar */}
-      <div
-        ref={brightBarRef}
-        className="relative shrink-0 rounded-lg cursor-pointer"
-        style={{
-          width: 28,
-          height: 160,
-          background: `linear-gradient(to bottom, hsl(${hue},${saturation}%,50%), #000)`,
-          touchAction: 'none'
-        }}
-        onPointerDown={(e) => {
-          draggingBright.current = true;
-          pickBright(e.clientY);
-        }}
-      >
-        <div
-          className="absolute pointer-events-none"
-          style={{
-            left: -2,
-            right: -2,
-            height: 4,
-            borderRadius: 2,
-            background: '#fff',
-            boxShadow: '0 0 6px rgba(0,0,0,0.5)',
-            bottom: `${brightness}%`,
-            transform: 'translateY(50%)'
-          }}
-        />
-      </div>
-
-      {/* Preview + controls column */}
-      <div className="flex flex-col gap-3 min-w-0">
-        {/* Color preview swatch */}
-        <div
-          className="rounded-xl"
-          style={{
-            width: 52,
-            height: 52,
-            background: previewColor,
-            boxShadow: `0 0 20px ${previewGlow}`,
-            border: '1px solid rgba(255,255,255,0.1)'
-          }}
-        />
-
-        {/* Brush size */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs" style={{ color: '#888898', fontSize: 9, letterSpacing: '0.05em' }}>SIZE</span>
-          <input
-            type="range"
-            min={1}
-            max={5}
-            value={brushSize}
-            onChange={(e) => onBrushSizeChange(Number(e.target.value))}
-            style={{ width: 60 }}
+    <div className={compact ? 'space-y-4' : 'space-y-4'}>
+      {/* Wheel + brightness bar row */}
+      <div className="flex items-start gap-4">
+        {/* Color wheel */}
+        <div className="relative shrink-0" style={{ width: displaySize, height: displaySize }}>
+          <canvas
+            ref={wheelRef}
+            width={wheelSize}
+            height={wheelSize}
+            className="rounded-full cursor-crosshair"
+            style={{ width: displaySize, height: displaySize, touchAction: 'none' }}
+            onPointerDown={(e) => {
+              draggingWheel.current = true;
+              pickWheel(e.clientX, e.clientY);
+            }}
           />
-          <span className="text-xs font-mono" style={{ color: '#888898' }}>{brushSize}</span>
+          <div
+            className="absolute pointer-events-none"
+            style={{
+              width: '18px',
+              height: '18px',
+              borderRadius: '50%',
+              border: '2.5px solid #fff',
+              boxShadow: '0 0 8px rgba(0,0,0,0.6)',
+              transform: 'translate(-50%, -50%)',
+              left: `${cursorDisplayX}px`,
+              top: `${cursorDisplayY}px`
+            }}
+          />
         </div>
 
-        {/* Soft edge toggle */}
-        <button
-          onClick={() => onSoftEdgeChange(!softEdge)}
-          className="px-3 py-1 rounded-2xl text-xs transition-all"
+        {/* Brightness bar */}
+        <div
+          ref={brightBarRef}
+          className="relative shrink-0 rounded-lg cursor-pointer"
           style={{
-            background: softEdge ? 'rgba(74,124,255,0.15)' : '#12121a',
-            color: softEdge ? '#4a7cff' : '#888898',
-            border: `1px solid ${softEdge ? '#4a7cff' : '#1a1a25'}`,
-            fontSize: 10
+            width: barWidth,
+            height: barHeight,
+            background: `linear-gradient(to bottom, hsl(${hue},${saturation}%,50%), #000)`,
+            touchAction: 'none'
+          }}
+          onPointerDown={(e) => {
+            draggingBright.current = true;
+            pickBright(e.clientY);
           }}
         >
-          Soft Edge
-        </button>
+          <div
+            className="absolute pointer-events-none"
+            style={{
+              left: -3,
+              right: -3,
+              height: 5,
+              borderRadius: 3,
+              background: '#fff',
+              boxShadow: '0 0 8px rgba(0,0,0,0.6)',
+              bottom: `${brightness}%`,
+              transform: 'translateY(50%)'
+            }}
+          />
+        </div>
+
+        {/* Preview + controls column */}
+        <div className="flex flex-col gap-3 min-w-0 flex-1">
+          {/* Color preview swatch */}
+          <div
+            className="rounded-xl"
+            style={{
+              width: compact ? 48 : 60,
+              height: compact ? 48 : 60,
+              background: previewColor,
+              boxShadow: `0 0 24px ${previewGlow}`,
+              border: '1px solid rgba(255,255,255,0.1)'
+            }}
+          />
+
+          {/* Brush size */}
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium" style={{ color: '#888898' }}>Size</span>
+            <input
+              type="range"
+              min={1}
+              max={5}
+              value={brushSize}
+              onChange={(e) => onBrushSizeChange(Number(e.target.value))}
+              style={{ width: compact ? 80 : 100 }}
+            />
+            <span className="text-sm font-mono" style={{ color: '#888898' }}>{brushSize}</span>
+          </div>
+
+          {/* Soft edge toggle */}
+          <button
+            onClick={() => onSoftEdgeChange(!softEdge)}
+            className="px-4 py-2.5 rounded-2xl text-sm font-medium transition-all"
+            style={{
+              background: softEdge ? 'rgba(74,124,255,0.15)' : '#12121a',
+              color: softEdge ? '#4a7cff' : '#888898',
+              border: `1px solid ${softEdge ? '#4a7cff' : '#1a1a25'}`
+            }}
+          >
+            Soft Edge
+          </button>
+        </div>
       </div>
     </div>
   );

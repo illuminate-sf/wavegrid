@@ -211,25 +211,25 @@ export function BrightnessTab({
   return (
     <div className="space-y-3">
       {/* Mode swatches */}
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex gap-2.5 flex-wrap">
         {MODES.map((m) => (
           <button
             key={m.key}
             onClick={() => onMode(m.key)}
             className="relative overflow-hidden transition-transform active:scale-93"
             style={{
-              width: 56,
-              height: 56,
-              borderRadius: 14,
+              width: 72,
+              height: 72,
+              borderRadius: 16,
               background: MODE_GRADIENTS[m.key],
-              border: config.mode === m.key ? '2px solid #fff' : '2px solid transparent'
+              border: config.mode === m.key ? '2.5px solid #fff' : '2.5px solid transparent'
             }}
           >
             <span
-              className="absolute bottom-0.5 left-0 right-0 text-center text-white font-semibold"
+              className="absolute bottom-1 left-0 right-0 text-center text-white font-semibold"
               style={{
-                fontSize: 8,
-                textShadow: '0 1px 3px rgba(0,0,0,0.7)',
+                fontSize: 10,
+                textShadow: '0 1px 4px rgba(0,0,0,0.8)',
                 letterSpacing: '0.03em'
               }}
             >
@@ -244,10 +244,10 @@ export function BrightnessTab({
         <div className="space-y-2">
           <div className="flex items-center gap-3">
             <span
-              className="text-xs"
-              style={{ color: '#888898', letterSpacing: '0.05em', minWidth: 52 }}
+              className="text-sm font-medium"
+              style={{ color: '#888898', letterSpacing: '0.05em', minWidth: 56 }}
             >
-              SPEED
+              Speed
             </span>
             <input
               type="range"
@@ -258,18 +258,18 @@ export function BrightnessTab({
               onChange={(e) => onSpeed(Number(e.target.value))}
             />
             <span
-              className="text-xs font-mono"
-              style={{ color: '#e8e8f0', minWidth: 24, textAlign: 'right' }}
+              className="text-sm font-mono"
+              style={{ color: '#e8e8f0', minWidth: 28, textAlign: 'right' }}
             >
               {config.speed}
             </span>
           </div>
           <div className="flex items-center gap-3">
             <span
-              className="text-xs"
-              style={{ color: '#888898', letterSpacing: '0.05em', minWidth: 52 }}
+              className="text-sm font-medium"
+              style={{ color: '#888898', letterSpacing: '0.05em', minWidth: 56 }}
             >
-              MIX
+              Mix
             </span>
             <input
               type="range"
@@ -280,15 +280,15 @@ export function BrightnessTab({
               onChange={(e) => onIntensity(Number(e.target.value))}
             />
             <span
-              className="text-xs font-mono"
-              style={{ color: '#e8e8f0', minWidth: 32, textAlign: 'right' }}
+              className="text-sm font-mono"
+              style={{ color: '#e8e8f0', minWidth: 36, textAlign: 'right' }}
             >
               {config.intensity}%
             </span>
           </div>
           <button
             onClick={onResnapshot}
-            className="px-3 py-1 rounded-lg text-xs transition-all"
+            className="px-4 py-2.5 rounded-lg text-sm font-medium transition-all"
             style={{
               background: '#12121a',
               color: '#888898',

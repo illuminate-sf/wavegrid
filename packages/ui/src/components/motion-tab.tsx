@@ -130,7 +130,7 @@ export function MotionControls({
       <div className="flex gap-2 items-center">
         <button
           onClick={onRecord}
-          className="px-4 py-2 rounded-lg text-xs font-medium transition-all"
+          className="px-5 py-3 rounded-lg text-sm font-medium transition-all"
           style={{
             background: state.recording ? 'rgba(221,68,68,0.2)' : '#12121a',
             color: state.recording ? '#e55' : '#888898',
@@ -141,7 +141,7 @@ export function MotionControls({
         </button>
         <button
           onClick={onPlay}
-          className="px-4 py-2 rounded-lg text-xs font-medium transition-all"
+          className="px-5 py-3 rounded-lg text-sm font-medium transition-all"
           style={{
             background: state.playing ? 'rgba(74,124,255,0.2)' : '#12121a',
             color: state.playing ? '#4a7cff' : (state.path.length < 2 ? '#555' : '#888898'),
@@ -153,7 +153,7 @@ export function MotionControls({
         </button>
         <button
           onClick={onClear}
-          className="px-4 py-2 rounded-lg text-xs font-medium transition-all"
+          className="px-5 py-3 rounded-lg text-sm font-medium transition-all"
           style={{
             background: '#12121a',
             color: '#888898',
@@ -164,8 +164,8 @@ export function MotionControls({
         </button>
       </div>
 
-      <div className="flex items-center gap-2">
-        <span className="text-xs" style={{ color: '#888898', fontSize: 9, letterSpacing: '0.05em' }}>SPEED</span>
+      <div className="flex items-center gap-3">
+        <span className="text-sm font-medium" style={{ color: '#888898' }}>Speed</span>
         <input
           type="range"
           min={1}
@@ -176,7 +176,7 @@ export function MotionControls({
             setSpeed(v);
             onSpeed(v);
           }}
-          style={{ width: 80 }}
+          style={{ width: 120 }}
         />
       </div>
 

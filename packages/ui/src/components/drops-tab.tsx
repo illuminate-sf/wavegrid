@@ -190,8 +190,8 @@ export function DropsControls({
     <div className="space-y-3">
       {/* Spectrum range */}
       <div>
-        <p className="text-xs mb-1.5" style={{ color: '#888898', letterSpacing: '0.05em' }}>
-          SPECTRUM
+        <p className="text-sm font-medium mb-2" style={{ color: '#888898', letterSpacing: '0.05em' }}>
+          Spectrum
         </p>
         <div
           className="relative"
@@ -204,9 +204,9 @@ export function DropsControls({
           <canvas
             ref={spectrumRef}
             width={200}
-            height={36}
+            height={44}
             className="w-full rounded-md"
-            style={{ height: 36 }}
+            style={{ height: 44 }}
           />
           {/* Start handle */}
           <div
@@ -273,30 +273,30 @@ export function DropsControls({
       </div>
 
       {/* Sliders */}
-      <div className="flex gap-4">
+      <div className="flex gap-4 flex-wrap">
         {[
           { label: 'Speed', key: 'speed' as const, min: 1, max: 10, val: config.speed },
           { label: 'Decay', key: 'decay' as const, min: 1, max: 10, val: config.decay },
           { label: 'Width', key: 'width' as const, min: 1, max: 5, val: config.width }
         ].map((s) => (
-          <div key={s.key} className="flex items-center gap-1.5">
-            <span className="text-xs" style={{ color: '#888898', fontSize: 9 }}>{s.label}</span>
+          <div key={s.key} className="flex items-center gap-2">
+            <span className="text-sm font-medium" style={{ color: '#888898' }}>{s.label}</span>
             <input
               type="range"
               min={s.min}
               max={s.max}
               value={s.val}
               onChange={(e) => handleSliderChange(s.key, Number(e.target.value))}
-              style={{ width: 60 }}
+              style={{ width: 80 }}
             />
-            <span className="text-xs font-mono" style={{ color: '#888898', minWidth: 14, textAlign: 'right', fontSize: 9 }}>
+            <span className="text-sm font-mono" style={{ color: '#888898', minWidth: 18, textAlign: 'right' }}>
               {s.val}
             </span>
           </div>
         ))}
       </div>
 
-      <p className="text-xs" style={{ color: 'rgba(136,136,152,0.5)' }}>
+      <p className="text-sm" style={{ color: 'rgba(136,136,152,0.5)' }}>
         Tap on the grid to create ripples
       </p>
     </div>

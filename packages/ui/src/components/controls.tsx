@@ -13,7 +13,7 @@ interface SliderProps {
 export function Slider({ label, value, min = 0, max = 100, step = 1, displayValue, onChange }: SliderProps) {
   return (
     <div className="flex items-center gap-3">
-      <label className="text-xs text-text-2 min-w-20">{label}</label>
+      <label className="text-sm text-text-2 min-w-20 font-medium">{label}</label>
       <input
         type="range"
         className="flex-1"
@@ -23,7 +23,7 @@ export function Slider({ label, value, min = 0, max = 100, step = 1, displayValu
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
       />
-      <span className="text-xs text-text-2 min-w-12 text-right font-mono">{displayValue}</span>
+      <span className="text-sm text-text-2 min-w-12 text-right font-mono">{displayValue}</span>
     </div>
   );
 }

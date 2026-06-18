@@ -1,5 +1,9 @@
 'use client';
 
+const TILE = 72;
+const TILE_RADIUS = 16;
+const LABEL_SIZE = 10;
+
 const sceneGradients: Record<string, string> = {
   civic: 'linear-gradient(135deg, #1a3a8a, #2563eb, #60a5fa)',
   pride: 'linear-gradient(135deg, #e33, #f90, #ee0, #3a5, #35e, #a3e)',
@@ -21,6 +25,43 @@ const animGradients: Record<string, string> = {
   heartbeat: 'linear-gradient(135deg, #b91c1c, #ef4444)'
 };
 
+function Tile({
+  name,
+  gradient,
+  active,
+  onClick
+}: {
+  name: string;
+  gradient: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="relative overflow-hidden transition-transform active:scale-93"
+      style={{
+        width: TILE,
+        height: TILE,
+        borderRadius: TILE_RADIUS,
+        background: gradient,
+        border: active ? '2.5px solid #fff' : '2.5px solid transparent'
+      }}
+    >
+      <span
+        className="absolute bottom-1 left-0 right-0 text-center text-white font-semibold"
+        style={{
+          fontSize: LABEL_SIZE,
+          textShadow: '0 1px 4px rgba(0,0,0,0.8)',
+          letterSpacing: '0.03em'
+        }}
+      >
+        {name}
+      </span>
+    </button>
+  );
+}
+
 export function ScenePalette({
   active,
   onSelect
@@ -29,31 +70,15 @@ export function ScenePalette({
   onSelect: (name: string) => void;
 }) {
   return (
-    <div className="flex gap-2 flex-wrap">
+    <div className="flex gap-2.5 flex-wrap">
       {Object.keys(sceneGradients).map((name) => (
-        <button
+        <Tile
           key={name}
+          name={name}
+          gradient={sceneGradients[name]}
+          active={active === name}
           onClick={() => onSelect(name)}
-          className="relative overflow-hidden transition-transform active:scale-93"
-          style={{
-            width: 56,
-            height: 56,
-            borderRadius: 14,
-            background: sceneGradients[name],
-            border: active === name ? '2px solid #fff' : '2px solid transparent'
-          }}
-        >
-          <span
-            className="absolute bottom-0.5 left-0 right-0 text-center text-white font-semibold"
-            style={{
-              fontSize: 8,
-              textShadow: '0 1px 3px rgba(0,0,0,0.7)',
-              letterSpacing: '0.03em'
-            }}
-          >
-            {name}
-          </span>
-        </button>
+        />
       ))}
     </div>
   );
@@ -69,44 +94,28 @@ export function AnimationPalette({
   onStop: () => void;
 }) {
   return (
-    <div className="flex gap-2 flex-wrap">
+    <div className="flex gap-2.5 flex-wrap">
       {Object.keys(animGradients).map((name) => (
-        <button
+        <Tile
           key={name}
+          name={name}
+          gradient={animGradients[name]}
+          active={active === name}
           onClick={() => onSelect(name)}
-          className="relative overflow-hidden transition-transform active:scale-93"
-          style={{
-            width: 56,
-            height: 56,
-            borderRadius: 14,
-            background: animGradients[name],
-            border: active === name ? '2px solid #fff' : '2px solid transparent'
-          }}
-        >
-          <span
-            className="absolute bottom-0.5 left-0 right-0 text-center text-white font-semibold"
-            style={{
-              fontSize: 8,
-              textShadow: '0 1px 3px rgba(0,0,0,0.7)',
-              letterSpacing: '0.03em'
-            }}
-          >
-            {name}
-          </span>
-        </button>
+        />
       ))}
       <button
         onClick={onStop}
         className="transition-transform active:scale-93 flex items-center justify-center"
         style={{
-          width: 56,
-          height: 56,
-          borderRadius: 14,
+          width: TILE,
+          height: TILE,
+          borderRadius: TILE_RADIUS,
           background: '#1a1a25',
           border: '1px solid #333'
         }}
       >
-        <span style={{ fontSize: 10, color: '#d44' }}>Stop</span>
+        <span style={{ fontSize: 12, color: '#d44', fontWeight: 600 }}>Stop</span>
       </button>
     </div>
   );

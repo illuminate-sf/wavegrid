@@ -92,7 +92,7 @@ export function AudioTab({ audio }: AudioTabProps) {
           <div className="flex items-center gap-3">
             <button
               onClick={audio.state.playing ? audio.stop : audio.play}
-              className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
+              className="px-5 py-3 rounded-lg text-sm font-medium transition-all"
               style={{
                 background: audio.state.playing ? 'rgba(221,68,68,0.2)' : 'rgba(74,124,255,0.2)',
                 color: audio.state.playing ? '#d44' : '#4a7cff',
@@ -103,7 +103,7 @@ export function AudioTab({ audio }: AudioTabProps) {
             </button>
             <button
               onClick={() => audio.setLoop(!audio.loop)}
-              className="px-3 py-2 rounded-lg text-xs font-medium transition-all"
+              className="px-4 py-3 rounded-lg text-sm font-medium transition-all"
               style={{
                 background: audio.loop ? 'rgba(74,124,255,0.15)' : '#12121a',
                 color: audio.loop ? '#4a7cff' : '#888898',
@@ -112,11 +112,11 @@ export function AudioTab({ audio }: AudioTabProps) {
             >
               {audio.loop ? '⟳ Loop' : '⟳'}
             </button>
-            <span className="text-xs font-mono" style={{ color: '#888898' }}>
+            <span className="text-sm font-mono" style={{ color: '#888898' }}>
               {formatTime(audio.state.currentTime)} / {formatTime(audio.state.duration)}
             </span>
             {audio.state.bpm && (
-              <span className="text-xs font-mono ml-auto" style={{ color: '#4a7cff' }}>
+              <span className="text-sm font-mono ml-auto" style={{ color: '#4a7cff' }}>
                 ~{audio.state.bpm} BPM
               </span>
             )}
@@ -146,13 +146,13 @@ export function AudioTab({ audio }: AudioTabProps) {
 
       {/* Mode */}
       <div>
-        <p className="text-xs mb-1" style={{ color: '#888898', letterSpacing: '0.05em' }}>MODE</p>
-        <div className="flex gap-1.5">
+        <p className="text-sm font-medium mb-2" style={{ color: '#888898', letterSpacing: '0.05em' }}>Mode</p>
+        <div className="flex gap-2">
           {modes.map((m) => (
             <button
               key={m.key}
               onClick={() => audio.setMode(m.key)}
-              className="px-3 py-1.5 rounded-full text-xs transition-all"
+              className="px-4 py-2.5 rounded-full text-sm font-medium transition-all"
               style={{
                 background: audio.mode === m.key ? '#4a7cff' : '#12121a',
                 color: audio.mode === m.key ? '#fff' : '#888898',
@@ -167,13 +167,13 @@ export function AudioTab({ audio }: AudioTabProps) {
 
       {/* Blend */}
       <div>
-        <p className="text-xs mb-1" style={{ color: '#888898', letterSpacing: '0.05em' }}>BLEND</p>
-        <div className="flex gap-1.5">
+        <p className="text-sm font-medium mb-2" style={{ color: '#888898', letterSpacing: '0.05em' }}>Blend</p>
+        <div className="flex gap-2">
           {blends.map((b) => (
             <button
               key={b.key}
               onClick={() => audio.setBlend(b.key)}
-              className="px-3 py-1.5 rounded-full text-xs transition-all"
+              className="px-4 py-2.5 rounded-full text-sm font-medium transition-all"
               style={{
                 background: audio.blend === b.key ? '#4a7cff' : '#12121a',
                 color: audio.blend === b.key ? '#fff' : '#888898',
@@ -184,7 +184,7 @@ export function AudioTab({ audio }: AudioTabProps) {
             </button>
           ))}
         </div>
-        <p className="text-xs mt-1" style={{ color: 'rgba(136,136,152,0.5)' }}>
+        <p className="text-sm mt-1" style={{ color: 'rgba(136,136,152,0.5)' }}>
           {blends.find((b) => b.key === audio.blend)?.desc}
         </p>
       </div>
@@ -193,7 +193,7 @@ export function AudioTab({ audio }: AudioTabProps) {
       <div className="flex items-center gap-4">
         <button
           onClick={() => audio.setSineSpread(!audio.sineSpread)}
-          className="px-3 py-1 rounded-2xl text-xs transition-all"
+          className="px-4 py-2.5 rounded-2xl text-sm font-medium transition-all"
           style={{
             background: audio.sineSpread ? 'rgba(74,124,255,0.15)' : '#12121a',
             color: audio.sineSpread ? '#4a7cff' : '#888898',
@@ -203,7 +203,7 @@ export function AudioTab({ audio }: AudioTabProps) {
           Sine Spread
         </button>
         <div className="flex items-center gap-2 flex-1">
-          <span className="text-xs" style={{ color: '#888898', fontSize: 9 }}>Sens</span>
+          <span className="text-sm font-medium" style={{ color: '#888898' }}>Sens</span>
           <input
             type="range"
             className="flex-1"
@@ -212,7 +212,7 @@ export function AudioTab({ audio }: AudioTabProps) {
             value={audio.sensitivity}
             onChange={(e) => audio.setSensitivity(Number(e.target.value))}
           />
-          <span className="text-xs font-mono min-w-8 text-right" style={{ color: '#888898' }}>{audio.sensitivity}%</span>
+          <span className="text-sm font-mono min-w-8 text-right" style={{ color: '#888898' }}>{audio.sensitivity}%</span>
         </div>
       </div>
 

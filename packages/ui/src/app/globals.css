@@ -31,18 +31,32 @@ html, body {
 input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
-  height: 4px;
-  border-radius: 2px;
+  height: 6px;
+  border-radius: 3px;
   background: linear-gradient(to right, #1a1a2a, var(--color-accent));
   outline: none;
 }
 
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   background: var(--color-accent);
   box-shadow: 0 0 12px var(--color-accent-glow);
   cursor: pointer;
+}
+
+/* Larger hit area for sliders on touch devices */
+@media (pointer: coarse) {
+  input[type="range"] {
+    height: 8px;
+    border-radius: 4px;
+    min-height: 44px;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    width: 32px;
+    height: 32px;
+  }
 }
