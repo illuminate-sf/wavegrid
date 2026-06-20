@@ -350,14 +350,6 @@ export default function Home() {
   const { connected, grid, send } = useSocket(SIMULATOR_URL);
   const isPhone = useIsPhone();
 
-  if (!checked) {
-    return <div className="h-screen" style={{ background: '#050508' }} />;
-  }
-
-  if (!user) {
-    return <LoginScreen onLogin={login} />;
-  }
-
   const [tab, setTab] = useState<GridMode>('paint');
   const [layout, setLayout] = useState<PanelLayout>('bottom');
   const [hue, setHue] = useState(220);
@@ -502,6 +494,15 @@ export default function Home() {
     flags, brightness, audio,
     isPhone
   };
+
+  /* ---------- Auth gate (after all hooks, to respect Rules of Hooks) ---------- */
+  if (!checked) {
+    return <div className="h-screen" style={{ background: '#050508' }} />;
+  }
+
+  if (!user) {
+    return <LoginScreen onLogin={login} />;
+  }
 
   /* ---------- PHONE LAYOUT ---------- */
   if (isPhone) {
