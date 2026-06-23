@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Laser Local Display</title>
+<style>
+  body{margin:0;background:#04060a;color:#9aa7b4;font-family:system-ui;display:flex;flex-direction:column;align-items:center}
+  h1{font-size:16px;margin:14px 0 4px;background:linear-gradient(90deg,#5cf,#a8f);-webkit-background-clip:text;background-clip:text;color:transparent}
+  canvas{border-radius:14px;max-width:96vw;height:auto}
+  #s{margin:8px 0 14px;font-size:13px}
+  .dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#611;margin-right:6px;vertical-align:middle}
+  .dot.on{background:#22c55e}
+</style></head>
+<body>
+  <h1>🔆 Local Laser Display</h1>
+  <canvas id="cv" width="600" height="600"></canvas>
+  <div id="s"><span class="dot" id="d"></span>connecting…</div>
+<script>
+const COLS=7,ROWS=7,COUNT=49,cv=document.getElementById('cv'),g=cv.getContext('2d'),W=600,H=600;
+let fb=new Uint8Array(COUNT*3);
+function draw(){
+  g.fillStyle='#04060a'; g.fillRect(0,0,W,H);
+  const pad=W*0.08,gx=(W-2*pad)/(COLS-1),gy=(H-2*pad)/(ROWS-1),r=Math.min(gx,gy)*0.34;
+  for(let i=0;i<COUNT;i++){
+    const x=pad+(i%COLS)*gx,y=pad+((i/COLS)|0)*gy,o=i*3,R=fb[o]|0,G=fb[o+1]|0,B=fb[o+2]|0;
+    g.strokeStyle='rgba(255,255,255,.05)'; g.beginPath(); g.arc(x,y,r,0,7); g.stroke();
+    if(R+G+B>6){
+      g.save(); g.shadowBlur=r*1.9; g.shadowColor='rgb('+R+','+G+','+B+')';
+      const grd=g.createRadialGradient(x,y,0,x,y,r);
+      grd.addColorStop(0,'rgb('+R+','+G+','+B+')'); grd.addColorStop(1,'rgba('+R+','+G+','+B+',.12)');
+      g.fillStyle=grd; g.beginPath(); g.arc(x,y,r,0,7); g.fill(); g.restore();
+    }
+  }
+  requestAnimationFrame(draw);
+}
+draw();
+function conn(){
+  const ws=new WebSocket('ws://'+location.host); ws.binaryType='arraybuffer';
+  const d=document.getElementById('d'), s=document.getElementById('s');
+  ws.onopen=()=>{ d.className='dot on'; s.lastChild.textContent='connected to agent'; };
+  ws.onmessage=e=>{ fb=new Uint8Array(e.data); };
+  ws.onclose=()=>{ d.className='dot'; s.lastChild.textContent='disconnected — retrying…'; setTimeout(conn,1000); };
+  ws.onerror=()=>{ try{ws.close();}catch{} };
+}
+conn();
+</script></body></html>
