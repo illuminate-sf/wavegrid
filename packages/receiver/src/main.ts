@@ -16,9 +16,8 @@
  *   FB4_HOST/PORT      Quick single-target FB4 OSC (alternative to routing file)
  */
 
-import * as fs from 'fs';
-
 import { BeyondOscOutput, createRoutedOutput, FB4OscOutput } from '@wavegrid/osc';
+import * as fs from 'fs';
 
 import { ConsoleOutput, MultiOutput, OutputAdapter, WebSocketInput, WebSocketOutput } from './adapters';
 import { DEFAULT_GRID_COLUMNS, DEFAULT_NUM_CANNONS } from './filter';

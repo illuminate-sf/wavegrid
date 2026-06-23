@@ -4,6 +4,7 @@
  */
 
 import WebSocket from 'ws';
+
 import type { AgentCommand } from './types';
 
 export interface RelayClientConfig {
@@ -125,6 +126,6 @@ export function createRelayClient(config: RelayClientConfig): RelayClient {
 
     get connected(): boolean {
       return ws !== null && ws.readyState === WebSocket.OPEN;
-    },
+    }
   };
 }

@@ -15,10 +15,10 @@ export type {
   GridConfig,
   ParamDescriptor,
   PatternMeta,
-  SafetyConfig,
+  SafetyConfig
 } from './types';
 export {
   DEFAULT_ENGINE_CONFIG,
   DEFAULT_GRID_CONFIG,
-  DEFAULT_SAFETY_CONFIG,
+  DEFAULT_SAFETY_CONFIG
 } from './types';

@@ -177,6 +177,6 @@ export function createRawOscSink(config: RawOscSinkConfig = {}): OscSinkHandle {
 
     close(): void {
       try { sock.close(); } catch { /* ignore */ }
-    },
+    }
   };
 }

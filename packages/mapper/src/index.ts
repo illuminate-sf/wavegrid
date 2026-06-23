@@ -1,9 +1,8 @@
+export type { MapperHandle } from './mapper';
+export { startMapper } from './mapper';
 export type {
   MapperConfig,
   MappingCell,
   OscTarget,
-  ZoneMapping,
+  ZoneMapping
 } from './types';
-
-export type { MapperHandle } from './mapper';
-export { startMapper } from './mapper';

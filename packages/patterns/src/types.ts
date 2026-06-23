@@ -66,18 +66,18 @@ export const DEFAULT_ENGINE_CONFIG: EngineConfig = {
   memLimit: 64 * 1024 * 1024,
   stackLimit: 512 * 1024,
   renderBudgetMs: 6,
-  loadBudgetMs: 2000,
+  loadBudgetMs: 2000
 };
 
 /** Default safety limits. */
 export const DEFAULT_SAFETY_CONFIG: SafetyConfig = {
   brightnessCap: 1,
-  maxFlashHz: 0,
+  maxFlashHz: 0
 };
 
 /** Default grid (7x7 = 49 cannons). */
 export const DEFAULT_GRID_CONFIG: GridConfig = {
   cols: 7,
   rows: 7,
-  count: 49,
+  count: 49
 };

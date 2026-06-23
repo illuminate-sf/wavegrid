@@ -4,7 +4,8 @@
  */
 
 import http from 'http';
-import { WebSocketServer, WebSocket } from 'ws';
+import { WebSocket,WebSocketServer } from 'ws';
+
 import type { Sink } from './types';
 
 export interface LocalUiSinkConfig {
@@ -68,6 +69,6 @@ export function createLocalUiSink(config: LocalUiSinkConfig = {}): Sink & { clos
       clients.clear();
       wss.close();
       server.close();
-    },
+    }
   };
 }

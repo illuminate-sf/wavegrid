@@ -5,6 +5,7 @@
 
 import type { PatternEngine } from '@wavegrid/patterns';
 import { applySafety } from '@wavegrid/patterns';
+
 import type { AgentCommand, RuntimeState, Sink } from './types';
 
 export interface CommandHandlerDeps {
@@ -25,7 +26,7 @@ export interface RenderLoop {
  */
 export function createRenderLoop(
   deps: CommandHandlerDeps,
-  count: number,
+  count: number
 ): RenderLoop {
   const { engine, sink, state } = deps;
   const prev = new Array<number>(count * 3).fill(0);
@@ -46,7 +47,7 @@ export function createRenderLoop(
     if (fb) {
       applySafety(fb, prev, rdt, {
         brightnessCap: state.brightnessCap,
-        maxFlashHz: state.maxFlashHz,
+        maxFlashHz: state.maxFlashHz
       });
       if (sink.kind !== 'osc' || state.armed) {
         sink.present(fb);
@@ -70,7 +71,7 @@ export function createRenderLoop(
     },
     get running(): boolean {
       return timer !== null;
-    },
+    }
   };
 }
 
@@ -80,7 +81,7 @@ export function createRenderLoop(
 export function createCommandHandler(
   deps: CommandHandlerDeps,
   loop: RenderLoop,
-  count: number,
+  count: number
 ): (cmd: AgentCommand) => void {
   const { engine, sink, state, onLog } = deps;
   const log = onLog ?? console.log;
@@ -104,80 +105,80 @@ export function createCommandHandler(
 
   return function handle(cmd: AgentCommand): void {
     switch (cmd.action) {
-      case 'loadPattern':
-        try {
-          const m = engine.loadPattern(
-            cmd.code ?? '',
-            (cmd.params as Record<string, unknown>) ?? {},
-          );
-          state.speed = cmd.speed ?? 1;
-          log(`loaded pattern: ${m.name || '(unnamed)'} speed ${state.speed}`);
-          loop.start();
-        } catch (e: unknown) {
-          log(`loadPattern error: ${(e as Error).message}`);
-        }
-        break;
-
-      case 'startPattern':
-        loop.start();
-        break;
-
-      case 'arm':
-        state.armed = true;
-        log('ARMED — OSC output live');
-        break;
-
-      case 'disarm':
-        state.armed = false;
-        if (sink.releaseAll) sink.releaseAll();
-        log('DISARMED — released all zones');
-        break;
-
-      case 'setSpeed':
+    case 'loadPattern':
+      try {
+        const m = engine.loadPattern(
+          cmd.code ?? '',
+          (cmd.params as Record<string, unknown>) ?? {}
+        );
         state.speed = cmd.speed ?? 1;
-        break;
-
-      case 'stopPattern':
-        manual(solidFb(0, 0, 0));
-        break;
-
-      case 'setParam':
-        if (cmd.name) engine.setParam(cmd.name, cmd.value);
-        break;
-
-      case 'setConfig':
-        Object.assign(state, cmd);
-        delete (state as unknown as Record<string, unknown>).action;
-        if (loop.running) {
-          loop.stop();
-          loop.start();
-        }
-        break;
-
-      case 'solid':
-      case 'live':
-        manual(solidFb(cmd.r ?? 0, cmd.g ?? 0, cmd.b ?? 0));
-        break;
-
-      case 'blackout':
-      case 'restore':
-        manual(solidFb(0, 0, 0));
-        break;
-
-      case 'setZone': {
-        const fb = solidFb(0, 0, 0);
-        const z = cmd.zone ?? 0;
-        if (z >= 0 && z < count) {
-          fb[z * 3] = cmd.r ?? 0;
-          fb[z * 3 + 1] = cmd.g ?? 0;
-          fb[z * 3 + 2] = cmd.b ?? 0;
-        }
-        manual(fb);
-        break;
+        log(`loaded pattern: ${m.name || '(unnamed)'} speed ${state.speed}`);
+        loop.start();
+      } catch (e: unknown) {
+        log(`loadPattern error: ${(e as Error).message}`);
       }
+      break;
 
-      default:
-        log(`unknown command: ${cmd.action}`);
+    case 'startPattern':
+      loop.start();
+      break;
+
+    case 'arm':
+      state.armed = true;
+      log('ARMED — OSC output live');
+      break;
+
+    case 'disarm':
+      state.armed = false;
+      if (sink.releaseAll) sink.releaseAll();
+      log('DISARMED — released all zones');
+      break;
+
+    case 'setSpeed':
+      state.speed = cmd.speed ?? 1;
+      break;
+
+    case 'stopPattern':
+      manual(solidFb(0, 0, 0));
+      break;
+
+    case 'setParam':
+      if (cmd.name) engine.setParam(cmd.name, cmd.value);
+      break;
+
+    case 'setConfig':
+      Object.assign(state, cmd);
+      delete (state as unknown as Record<string, unknown>).action;
+      if (loop.running) {
+        loop.stop();
+        loop.start();
+      }
+      break;
+
+    case 'solid':
+    case 'live':
+      manual(solidFb(cmd.r ?? 0, cmd.g ?? 0, cmd.b ?? 0));
+      break;
+
+    case 'blackout':
+    case 'restore':
+      manual(solidFb(0, 0, 0));
+      break;
+
+    case 'setZone': {
+      const fb = solidFb(0, 0, 0);
+      const z = cmd.zone ?? 0;
+      if (z >= 0 && z < count) {
+        fb[z * 3] = cmd.r ?? 0;
+        fb[z * 3 + 1] = cmd.g ?? 0;
+        fb[z * 3 + 2] = cmd.b ?? 0;
+      }
+      manual(fb);
+      break;
+    }
+
+    default:
+      log(`unknown command: ${cmd.action}`);
     }
   };
 }

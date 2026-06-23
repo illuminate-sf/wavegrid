@@ -11,7 +11,7 @@ export type {
   AgentConfig,
   OscConfig,
   RuntimeState,
-  Sink,
+  Sink
 } from './types';
 
 // Command handler & render loop

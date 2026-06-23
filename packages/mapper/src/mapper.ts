@@ -5,9 +5,10 @@
  * zones via OSC to identify physical cannons during calibration.
  */
 
-import http from 'http';
 import dgram from 'dgram';
-import { readFileSync, writeFileSync, existsSync } from 'fs';
+import { existsSync,readFileSync, writeFileSync } from 'fs';
+import http from 'http';
+
 import type { MapperConfig, OscTarget, ZoneMapping } from './types';
 
 /** Pad a buffer to 4-byte alignment (OSC requirement). */
@@ -59,7 +60,7 @@ export function startMapper(config: MapperConfig): MapperHandle {
           col: c,
           index: pos,
           name: String.fromCharCode(65 + r) + (c + 1),
-          target: 'pc2',
+          target: 'pc2'
         });
       }
     }
@@ -80,7 +81,7 @@ export function startMapper(config: MapperConfig): MapperHandle {
   function setZone(
     t: OscTarget, index: number,
     r: number, g: number, b: number,
-    a: number, bright: number,
+    a: number, bright: number
   ): void {
     const p = `/beyond/zone/${index}/livecontrol`;
     sock.send(osc(`${p}/Brightness`, [bright]), t.port, t.host);
@@ -197,6 +198,6 @@ export function startMapper(config: MapperConfig): MapperHandle {
       flashing.clear();
       server.close();
       try { sock.close(); } catch { /* ignore */ }
-    },
+    }
   };
 }

@@ -3,8 +3,8 @@
  * under CPU-deadline + memory limits, returns the framebuffer to the host.
  */
 
-import { getQuickJS } from 'quickjs-emscripten';
 import type { QuickJSContext, QuickJSHandle, QuickJSRuntime, QuickJSWASMModule } from 'quickjs-emscripten';
+import { getQuickJS } from 'quickjs-emscripten';
 
 import { generatePrelude } from './prelude';
 import { DEFAULT_ENGINE_CONFIG, DEFAULT_GRID_CONFIG, EngineConfig, GridConfig, PatternMeta } from './types';
@@ -50,7 +50,7 @@ export async function createEngine(opts: CreateEngineOptions = {}): Promise<Patt
   const cfg: EngineConfig = { ...DEFAULT_ENGINE_CONFIG, ...opts.config };
   const gridCfg: GridConfig = {
     ...DEFAULT_GRID_CONFIG,
-    ...opts.grid,
+    ...opts.grid
   };
   // Ensure count is consistent
   gridCfg.count = gridCfg.cols * gridCfg.rows;
@@ -191,6 +191,6 @@ export async function createEngine(opts: CreateEngineOptions = {}): Promise<Patt
     renderFrame,
     dispose,
     get meta() { return _meta; },
-    get loaded() { return _loaded; },
+    get loaded() { return _loaded; }
   };
 }
