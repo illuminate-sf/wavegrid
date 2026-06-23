@@ -57,7 +57,8 @@ async function main(): Promise<void> {
     bpm: 120,
     speed: 1,
     brightnessCap: 1,
-    maxFlashHz: 12,
+    maxFlashHz: 0,
+    fade: 0.08,
     armed: false
   };
 
