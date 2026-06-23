@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Animation Program Simulator — 100×100</title>
+<style>
+  :root { --fg:#1c1f24; --muted:#5b6470; --line:#dfe4ea; --accent:#0b66c3; --soft:#f5f7fa; }
+  body { margin:0; background:#0f1216; color:#e7edf5;
+    font:15px/1.5 -apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  .wrap { max-width:760px; margin:0 auto; padding:28px 20px 60px; }
+  h1 { font-size:20px; margin:0 0 4px; }
+  .sub { color:#9aa7b4; font-size:13px; margin:0 0 20px; }
+  .stage { background:#000; border:1px solid #2a313b; border-radius:10px; padding:14px;
+    display:flex; justify-content:center; }
+  #screen { image-rendering:pixelated; width:500px; height:500px; display:block; }
+  .row { display:flex; gap:24px; flex-wrap:wrap; align-items:center; margin-top:16px; }
+  .stat { background:#171c22; border:1px solid #2a313b; border-radius:8px; padding:8px 14px; font-variant-numeric:tabular-nums; }
+  .stat b { color:#fff; font-size:18px; } .stat span { color:#9aa7b4; font-size:12px; display:block; }
+  button, label.tog { background:#1f6feb; color:#fff; border:0; border-radius:8px; padding:9px 16px;
+    font-size:14px; cursor:pointer; }
+  button.sec { background:#2a313b; }
+  label.tog { background:#2a313b; user-select:none; display:inline-flex; gap:8px; align-items:center; }
+  /* program picker */
+  .grid { display:flex; flex-wrap:wrap; gap:6px; margin:0 0 16px; max-height:188px; overflow-y:auto;
+    padding:8px; background:#12161b; border:1px solid #2a313b; border-radius:10px; }
+  .pbtn { display:flex; flex-direction:column; align-items:center; gap:4px; width:62px; padding:6px 3px;
+    background:#1b2128; border:1px solid #2a313b; border-radius:8px; cursor:pointer; }
+  .pbtn:hover { background:#222c37; }
+  .pbtn.active { border-color:#1f6feb; box-shadow:0 0 0 1px #1f6feb; background:#1d2a3d; }
+  .pbtn canvas { width:34px; height:34px; image-rendering:pixelated; border-radius:4px; display:block; }
+  .pbtn span { font-size:10px; line-height:1.15; text-align:center; color:#9aa7b4; word-break:break-word; }
+  /* speed control */
+  .speed { display:inline-flex; align-items:center; gap:10px; background:#171c22; border:1px solid #2a313b;
+    border-radius:8px; padding:7px 14px; }
+  .speed input { width:120px; accent-color:#1f6feb; }
+  .speed b { color:#fff; min-width:46px; text-align:right; font-variant-numeric:tabular-nums; }
+  .legend { color:#9aa7b4; font-size:12.5px; margin-top:14px; line-height:1.7; }
+  .legend code { background:#171c22; padding:1px 6px; border-radius:4px; color:#cdd7e1; }
+  .chip { display:inline-block; width:10px; height:10px; border-radius:2px; vertical-align:middle; margin-right:5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Animation Program Simulator</h1>
+  <p class="sub">PC host running animation programs through the ABI.
+     The canvas is rendered as <b>two independent render sets</b> (left + right halves) and stitched —
+     a live demo of the distributed-rendering model. Animations are <b>time-based</b>, so they move at the same
+     speed at any framerate.</p>
+
+  <div id="progGrid" class="grid"></div>
+
+  <div class="stage">
+    <canvas id="screen" width="100" height="100"></canvas>
+  </div>
+
+  <div class="row">
+    <label class="tog" style="background:#171c22">size&nbsp;
+      <select id="res" style="background:#1f6feb;color:#fff;border:0;border-radius:6px;padding:6px 8px;font-size:14px;">
+        <option value="7">7 × 7</option>
+        <option value="100">100 × 100</option>
+      </select>
+    </label>
+    <label class="speed">speed
+      <input type="range" id="speed" min="0" max="1000" value="500" step="1">
+      <b id="speedval">1.00×</b>
+    </label>
+    <div class="stat"><b id="fps">—</b><span>fps</span></div>
+    <div class="stat"><b id="frame">0</b><span>frame</span></div>
+    <div class="stat"><b id="pixels">0</b><span>pixels driven</span></div>
+    <button id="play">Pause</button>
+    <button id="step" class="sec">Step</button>
+    <button id="reset" class="sec">Reset</button>
+    <label class="tog"><input type="checkbox" id="seam"> show node boundary</label>
+  </div>
+
+  <div class="legend">
+    <span class="chip" style="background:#0b66c3"></span>Left node — render set <code>rectRuns(0,0,50,100)</code>,
+    2 500 px &nbsp;·&nbsp;
+    <span class="chip" style="background:#1a7f47"></span>Right node — <code>rectRuns(50,0,50,100)</code>, 2 500 px.<br>
+    Each node holds only its own 1-D framebuffer; neither allocates the full canvas. The wave is authored once in
+    global coordinates and is <b>render-set-blind</b>, so the seam is invisible.
+  </div>
+</div>
+
+<script src="host.js"></script>
+<script src="programs.js"></script>
+<script>
+(function () {
+  "use strict";
+  const SEED = 0x12345678;
+  let W = 100, H = 100, leftW = 50; // mutable: depends on selected resolution
+
+  const cv = document.getElementById("screen");
+  const g = cv.getContext("2d");
+  cv.style.imageRendering = "pixelated"; // no filtering on enlargement
+  let img = g.createImageData(W, H);
+
+  let factory = Programs[0].factory;
+  let left, right, frame, running = true;
+  let speedMul = 1; // animation speed multiplier (from the slider)
+
+  // Build the program picker: each button shows a live thumbnail icon
+  // rendered by actually running the program at small size — works for
+  // both generative animations and flags, at any resolution.
+  const grid = document.getElementById("progGrid");
+  let activeBtn = null;
+  function renderThumb(canvas, fac) {
+    const tw = canvas.width, th = canvas.height;
+    const node = Host.createNode(fac, { W: tw, H: th, runs: Host.fullRuns(tw, th), seed: SEED });
+    for (let f = 0; f < 40; f++) node.renderFrame(f, 1 / 60); // settle into a representative frame
+    const tg = canvas.getContext("2d");
+    const timg = tg.createImageData(tw, th), d = timg.data, fb = node.fb;
+    for (let i = 0; i < node.ownedCount; i++) {
+      const p = i * 4, o = i * 3;
+      d[p] = fb[o]; d[p + 1] = fb[o + 1]; d[p + 2] = fb[o + 2]; d[p + 3] = 255;
+    }
+    tg.putImageData(timg, 0, 0);
+  }
+  Programs.forEach((p, i) => {
+    const btn = document.createElement("button");
+    btn.className = "pbtn"; btn.title = p.name;
+    const ic = document.createElement("canvas"); ic.width = 24; ic.height = 24;
+    const label = document.createElement("span"); label.textContent = p.name;
+    btn.appendChild(ic); btn.appendChild(label);
+    renderThumb(ic, p.factory);
+    btn.onclick = function () {
+      factory = p.factory;
+      if (activeBtn) activeBtn.classList.remove("active");
+      btn.classList.add("active"); activeBtn = btn;
+      build();
+    };
+    if (i === 0) { btn.classList.add("active"); activeBtn = btn; }
+    grid.appendChild(btn);
+  });
+
+  // (Re)create the canvas backing buffer + ImageData for the current size.
+  function setupResolution(size) {
+    W = size; H = size; leftW = Math.floor(W / 2);
+    cv.width = W; cv.height = H;          // backing buffer; CSS keeps it at 500px
+    img = g.createImageData(W, H);
+    for (let i = 3; i < img.data.length; i += 4) img.data[i] = 255; // opaque alpha
+    build();
+  }
+
+  function build() {
+    const rightW = W - leftW;
+    left = Host.createNode(factory, { W, H, runs: Host.rectRuns(W, H, 0, 0, leftW, H), seed: SEED });
+    right = Host.createNode(factory, { W, H, runs: Host.rectRuns(W, H, leftW, 0, rightW, H), seed: SEED });
+    frame = 0;
+    document.getElementById("pixels").textContent =
+      (left.ownedCount + right.ownedCount).toLocaleString();
+  }
+  setupResolution(7);
+
+  // Blit a node's 1-D framebuffer into the shared ImageData using its coords.
+  function blit(node) {
+    const X = node.coordsX, Y = node.coordsY, fb = node.fb, d = img.data;
+    for (let i = 0; i < node.ownedCount; i++) {
+      const p = (Y[i] * W + X[i]) * 4, o = i * 3;
+      d[p] = fb[o]; d[p + 1] = fb[o + 1]; d[p + 2] = fb[o + 2];
+    }
+  }
+
+  // dt is REAL elapsed seconds — the same value goes to BOTH nodes so they
+  // stay in sync. This makes motion framerate-independent.
+  function renderOneFrame(dt) {
+    left.renderFrame(frame, dt);
+    right.renderFrame(frame, dt);
+    blit(left); blit(right);
+    g.putImageData(img, 0, 0);
+    if (document.getElementById("seam").checked) {
+      g.fillStyle = "rgba(255,255,255,0.55)";
+      g.fillRect(leftW, 0, 1, H); // node boundary between left/right render sets
+    }
+    document.getElementById("frame").textContent = frame;
+    frame++;
+  }
+
+  // animation loop + fps meter
+  let last = performance.now(), acc = 0, cnt = 0;
+  function loop(now) {
+    let dt = (now - last) / 1000;
+    if (dt > 0.1) dt = 0.1;            // clamp after tab-switch stalls
+    if (running) renderOneFrame(dt * speedMul);
+    cnt++; acc += now - last; last = now;
+    if (acc >= 250) {
+      document.getElementById("fps").textContent = (cnt * 1000 / acc).toFixed(0);
+      acc = 0; cnt = 0;
+    }
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+  // controls
+  document.getElementById("res").onchange = function () { setupResolution(this.value | 0); };
+  const speedEl = document.getElementById("speed"), speedVal = document.getElementById("speedval");
+  speedEl.oninput = function () {
+    // Power curve: lower half of travel maps to 0–1×, upper half to 1–4×,
+    // giving finer granularity at slow speeds. f=0.5 → exactly 1.0×.
+    const f = (this.value | 0) / 1000;
+    speedMul = 4 * f * f;
+    speedVal.textContent = speedMul.toFixed(2) + "×";
+  };
+  document.getElementById("play").onclick = function () {
+    running = !running; this.textContent = running ? "Pause" : "Play";
+  };
+  document.getElementById("step").onclick = function () {
+    running = false; document.getElementById("play").textContent = "Play";
+    renderOneFrame((1 / 60) * speedMul); // single-frame advance, scaled by speed
+  };
+  document.getElementById("reset").onclick = build;
+})();
+</script>
+</body>
+</html>

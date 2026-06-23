@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Laser Grid Control — Droplet + Agent</title>
+<style>
+  :root{--bg:#0e1116;--pan:#161b22;--ln:#30363d;--tx:#e6edf3;--mut:#9aa7b4;--ac:#58a6ff;--ok:#3fb950;--warn:#d29922;--code:#0b0f14}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.6 system-ui,Segoe UI,Arial;padding:0 0 80px}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+  header{background:linear-gradient(120deg,#0d1b2a,#1b263b);border-bottom:1px solid var(--ln);padding:34px 0 26px;margin-bottom:8px}
+  h1{margin:0;font-size:30px;background:linear-gradient(90deg,#58a6ff,#a371f7,#ff7b72);-webkit-background-clip:text;background-clip:text;color:transparent}
+  h2{font-size:22px;margin:34px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--ln)}
+  h3{font-size:17px;margin:22px 0 6px;color:#cdd9e5}
+  .lead{color:var(--mut);font-size:16px;max-width:760px}
+  code,pre{font-family:ui-monospace,Consolas,monospace}
+  code{background:#1f2630;padding:1px 6px;border-radius:5px;font-size:13px}
+  pre{background:var(--code);border:1px solid var(--ln);border-radius:10px;padding:14px 16px;overflow:auto;font-size:13px}
+  table{border-collapse:collapse;width:100%;margin:10px 0;font-size:14px}
+  th,td{border:1px solid var(--ln);padding:7px 10px;text-align:left;vertical-align:top}
+  th{background:#1c2330;color:var(--mut);font-weight:600}
+  .pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:20px;border:1px solid var(--ln);color:var(--mut)}
+  .ok{color:var(--ok)} .warn{color:var(--warn)} .ac{color:var(--ac)}
+  .note{background:#13202e;border-left:3px solid var(--ac);padding:10px 14px;border-radius:0 8px 8px 0;margin:12px 0}
+  .danger{background:#2a1416;border-left:3px solid #ff7b72;padding:10px 14px;border-radius:0 8px 8px 0;margin:12px 0}
+  .diagram{background:var(--code);border:1px solid var(--ln);border-radius:10px;padding:18px;overflow:auto;color:#c9d1d9;font-size:12.5px;line-height:1.45}
+  a{color:var(--ac)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:720px){.grid2{grid-template-columns:1fr}}
+</style></head>
+<body>
+<header><div class="wrap">
+  <h1>🔆 Laser Grid Control</h1>
+  <p class="lead">A cloud-reachable controller for a 7×7 array of 49 RGB “Laser Space Cannons” driven by Pangolin&nbsp;BEYOND. A browser talks to a small cloud relay; each laser PC dials <em>out</em> to that relay (no port-forwarding) and renders sandboxed pattern code to the lasers over OSC.</p>
+</div></header>
+<div class="wrap">
+
+<h2>1. The big picture</h2>
+<p>Three moving parts: a <b>droplet</b> (cloud relay + web UI), one or more <b>agents</b> (a Node process on each BEYOND PC), and the <b>mapper</b> (a calibration tool the agent serves on the LAN). Patterns are authored as small JavaScript programs that the droplet ships to the agent and the agent runs in a sandbox, emitting per-cannon colour as BEYOND <code>livecontrol</code> OSC.</p>
+
+<div class="diagram"><pre style="margin:0;background:none;border:0;padding:0">
+  ┌──────────┐   HTTPS    ┌─────────────────────────┐   WSS (agent dials OUT)   ┌───────────────────────────┐
+  │ Browser  │ ─────────▶ │  DROPLET                │ ◀──────────────────────── │  AGENT  (on a BEYOND PC)   │
+  │ (web UI) │ ◀───────── │  Caddy (auto-TLS) +     │   commands: loadPattern,  │  • QuickJS sandbox runs    │
+  └──────────┘            │  relay.js (Node)        │   solid, arm, setSpeed …  │    pattern JS (untrusted)  │
+                          │  • serves the UI        │                           │  • OscSink → BEYOND        │
+                          │  • token-gated /agent   │                           │  • safety limiter + arm    │
+                          └─────────────────────────┘                           └──────────────┬────────────┘
+                                                                                                │ OSC/UDP :8000
+   Local calibration:                                                                           │ /beyond/zone/N/livecontrol
+   ┌──────────┐  http :8091   ┌───────────────────────┐                                         ▼
+   │ Browser  │ ───────────▶  │ mapper (served by the │                                ┌──────────────────┐
+   │ (LAN)    │               │ agent) → mapping.json │                                │  BEYOND (master) │
+   └──────────┘               │ + flash a cannon      │                                └────────┬─────────┘
+                              └───────────────────────┘                                          │ TCP :3348
+                                                                                                 ▼
+                                                                                       ┌──────────────────┐
+                                                                                       │ FB4 DACs → lasers│
+                                                                                       └──────────────────┘
+</pre></div>
+
+<div class="note"><b>Why outbound?</b> The laser PCs sit on networks we don't control (often a phone hotspot). Rather than expose them, each agent makes an <b>outbound WSS</b> connection to the droplet and the relay pushes commands down that pipe. The droplet is the only thing with a public address.</div>
+
+<h2>2. Components</h2>
+
+<h3>Droplet — <code>droplet/relay.js</code></h3>
+<ul>
+  <li><b>Web UI</b> (single page): solid R/G/B tiles, ~80 live-preview pattern tiles (repo animations + 58 programs from <code>programs.js</code>), grouped <b>Sky Beams</b> and <b>Flags</b> sections (searchable), smiley faces, a colour wheel, and per-tile speed control. Each tile renders a live preview in-browser and, on click, ships a self-contained JS bundle to the agent.</li>
+  <li><b>Relay</b>: login-gated (cookie session). <code>POST /api/command</code> forwards JSON to the connected agent; <code>GET /api/status</code> reports agent connectivity. The agent connects to <code>/agent?token=AGENT_TOKEN</code> over WSS; the relay keeps a single agent socket and replaces it on a new connection.</li>
+  <li><b>TLS</b>: Caddy terminates HTTPS using a <a href="https://sslip.io">sslip.io</a> magic-DNS hostname (the droplet IP with dashes, e.g. <code>203-0-113-9.sslip.io</code>) so no domain registration is needed.</li>
+  <li><b>Secrets</b> come from env (<code>UI_USER</code>, <code>UI_PASSWORD</code>, <code>AGENT_TOKEN</code>) — see <code>creds.example.txt</code>.</li>
+</ul>
+
+<h3>Agent — <code>agent/agent.mjs</code></h3>
+<ul>
+  <li>Dials the droplet (auto-reconnect with capped back-off; pin the droplet IP in <code>hosts</code> if the local DNS is flaky).</li>
+  <li>Runs each pattern in a fresh <b>QuickJS sandbox</b> (<code>engine.mjs</code> + <code>sandbox-prelude.js</code>) with CPU/mem/stack limits — pattern code is treated as untrusted. The pattern fills a 49-cell RGB framebuffer through a <code>ctx</code> API (setHSV/fill/fade/noise/t/dt…).</li>
+  <li>A swappable <b>sink</b> consumes the framebuffer: <code>LocalUiSink</code> (canvas viewer, for dev) or <code>OscSink</code> (drives BEYOND). See §3.</li>
+  <li><b>Safety limiter</b> (<code>safety.mjs</code>): master <code>brightnessCap</code> and a flash/slew rate cap (<code>maxFlashHz</code>) applied to every frame before output — the sandbox cannot bypass it.</li>
+  <li><b>Arm gate</b>: <code>OscSink</code> emits nothing until <code>armed:true</code> (or an <code>arm</code> command) — so deploying never disturbs a live show.</li>
+  <li>Hosts the <b>mapper</b> on <code>:mapperPort</code> for direct LAN calibration.</li>
+</ul>
+
+<h3>Pattern library — <code>droplet/host.js</code> + <code>droplet/programs.js</code></h3>
+<p>UMD modules that run in <b>both</b> the browser (tile previews) and the QuickJS sandbox. <code>host.js</code> exposes <code>createNode/renderFrame</code>; <code>programs.js</code> is a catalogue of ~58 named programs. The droplet serves them at <code>/host.js</code> and <code>/programs.js</code> and bundles their source into the code it ships when you click a program tile.</p>
+
+<h3>Mapper — <code>agent/mapper.mjs</code> + <code>agent/mapper.html</code></h3>
+<p>Calibration tool the agent serves on the LAN (default <code>:8091/map</code>). It maps each <b>bitmap position</b> (a cell in the 7×7) to a BEYOND <b>zone index</b>, a <b>name</b> (e.g. <code>A1</code>), and a <b>target</b> machine. Two views — a 7×7 grid and an <em>index→name</em> list. Click a cell to <b>flash that cannon for 5&nbsp;s</b> (real OSC), to identify it. The map persists in <code>mapping.json</code> <em>on the PC</em> (source of truth); the droplet show-control reads the same file. A standalone test build lives in <code>mapper/</code> (runs without a real BEYOND, logs flashes).</p>
+
+<h3>Tools — <code>tools/simulator.html</code></h3>
+<p>A standalone in-browser simulator of the 7×7 grid for developing patterns without hardware.</p>
+
+<h2>3. OSC addressing (the important details)</h2>
+<p>BEYOND’s OSC input listens on <b>UDP&nbsp;8000</b>. Per-zone live control:</p>
+<pre>/beyond/zone/{N}/livecontrol/alpha        255   = take the zone (0 releases it)
+/beyond/zone/{N}/livecontrol/red          0..255
+/beyond/zone/{N}/livecontrol/green        0..255
+/beyond/zone/{N}/livecontrol/blue         0..255
+/beyond/zone/{N}/livecontrol/Brightness   0..100</pre>
+<table>
+<tr><th>Gotcha</th><th>Detail</th></tr>
+<tr><td>Value scale</td><td><b>0..255 floats</b> for RGB/alpha (not 0..1). Sending <code>1.0</code> looks “off”. <code>Brightness</code> is 0..100.</td></tr>
+<tr><td>Take vs release</td><td><code>alpha=255</code> to override the running cue; <code>alpha=0</code> to release back to it.</td></tr>
+<tr><td>Pacing</td><td>BEYOND drops bursts — <code>OscSink</code> diffs frames and only sends changed channels, capped per flush.</td></tr>
+<tr><td>Enable</td><td>BEYOND must have OSC input enabled and the R-G-B-A live-control layer active.</td></tr>
+</table>
+
+<h2>4. Topology &amp; multi-PC</h2>
+<p>Each <b>FB4</b> DAC is single-master (controlled by exactly one BEYOND, over <b>TCP&nbsp;3348</b> on a dedicated laser NIC). With two BEYOND PCs, each drives its <em>own</em> subset of the 49 cannons; they do <b>not</b> stream pixels to each other (BEYOND multi-PC sync is timecode/ArtNet/OSC, not pixel sharing). So to light all 49 from one agent, send OSC to <b>both</b> BEYONDs — that's what <code>osc.targets</code> (e.g. <code>pc1</code>=localhost, <code>pc2</code>=other-IP) and the mapper's per-cell <code>target</code> are for.</p>
+
+<h2>5. Deploy</h2>
+<div class="grid2">
+<div>
+<h3>Droplet</h3>
+<pre># on a fresh Debian/Ubuntu droplet
+cp creds.example.txt creds.txt   # fill in
+set -a; . ./creds.txt; set +a    # load into env
+scp relay.js host.js programs.js root@DROPLET:/root/
+bash setup.sh                    # node, Caddy (auto-TLS via sslip),
+                                 # systemd unit laser-relay
+# UI:  https://&lt;SSLIP&gt;/   (login with UI_USER/UI_PASSWORD)</pre>
+</div>
+<div>
+<h3>Agent (per BEYOND PC)</h3>
+<pre># needs Node 18+ on the PC
+cp config.example.json config.json   # fill in relayUrl+token+targets
+npm install                          # ws, quickjs-emscripten
+node agent.mjs                       # or use run.cmd as a
+                                     # SYSTEM startup task
+# mapper:  http://&lt;PC-IP&gt;:8091/map</pre>
+</div>
+</div>
+<div class="note">Calibrate with the mapper first (flash each cell → set its zone index + target → <b>Save to device</b>), then <code>arm</code> from the web UI to let patterns drive output.</div>
+
+<h2>6. Security</h2>
+<div class="danger"><b>No secrets are in this snapshot.</b> <code>creds.txt</code>, the agent <code>config.json</code>, runtime <code>mapping.json</code>, and <code>node_modules/</code> are git-ignored. The relay and setup script read all secrets from the environment. Use a strong <code>UI_PASSWORD</code> and a random <code>AGENT_TOKEN</code> — anyone with the token can connect an agent.</div>
+
+<h2>7. File manifest</h2>
+<table>
+<tr><th>Path</th><th>What it is</th></tr>
+<tr><td><code>droplet/relay.js</code></td><td>Cloud relay + web UI (Node, env-configured)</td></tr>
+<tr><td><code>droplet/host.js</code>, <code>programs.js</code></td><td>UMD pattern library (browser + sandbox)</td></tr>
+<tr><td><code>droplet/setup.sh</code></td><td>One-shot droplet provisioner (Node, Caddy, systemd)</td></tr>
+<tr><td><code>droplet/creds.example.txt</code></td><td>Secret template → copy to <code>creds.txt</code></td></tr>
+<tr><td><code>agent/agent.mjs</code></td><td>The agent: WSS client, loop, command handling, mapper host</td></tr>
+<tr><td><code>agent/engine.mjs</code>, <code>sandbox-prelude.js</code></td><td>QuickJS sandbox host + injected <code>ctx</code> API</td></tr>
+<tr><td><code>agent/sinks.mjs</code></td><td><code>LocalUiSink</code> (canvas) + <code>OscSink</code> (BEYOND OSC)</td></tr>
+<tr><td><code>agent/safety.mjs</code></td><td>Brightness cap + flash/slew limiter</td></tr>
+<tr><td><code>agent/mapper.mjs</code>, <code>mapper.html</code></td><td>Zone↔grid mapper (served on the LAN)</td></tr>
+<tr><td><code>agent/display.html</code></td><td>Local canvas viewer for <code>LocalUiSink</code></td></tr>
+<tr><td><code>agent/config.example.json</code></td><td>Agent config template → copy to <code>config.json</code></td></tr>
+<tr><td><code>agent/run.cmd</code></td><td>Windows supervisor (auto-restart) for a startup task</td></tr>
+<tr><td><code>mapper/*</code></td><td>Standalone mapper test server (no hardware needed)</td></tr>
+<tr><td><code>tools/simulator.html</code></td><td>Browser grid simulator for pattern dev</td></tr>
+</table>
+
+<p class="pill">Generated snapshot · sanitized · see <code>.gitignore</code> for excluded secret/runtime files</p>
+</div>
+</body></html>

@@ -1,0 +1,11 @@
+# Droplet secrets — copy to creds.txt and fill in. NEVER commit the real creds.txt.
+# setup.sh reads these into the systemd unit's Environment= lines.
+
+UI_USER=admin
+UI_PASSWORD=change-me-strong
+# AGENT_TOKEN: shared secret the PC agent must present in its wss URL (?token=...).
+# Generate e.g.:  node -e "console.log(require('crypto').randomBytes(16).toString('hex'))"
+AGENT_TOKEN=generate-a-random-hex-token
+# sslip.io magic-DNS host for the droplet IP, dashes instead of dots (e.g. 203-0-113-9.sslip.io)
+SSLIP=YOUR-DROPLET-IP-DASHED.sslip.io
+IP=YOUR.DROPLET.IP
