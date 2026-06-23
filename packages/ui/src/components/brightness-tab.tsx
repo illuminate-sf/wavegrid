@@ -1,13 +1,15 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+
+import type { CannonColor } from '@/lib/use-socket';
 
 export type BrightnessMode = 'off' | 'breathe' | 'ripple' | 'wave' | 'fire' | 'shimmer';
 
 interface BrightnessConfig {
   mode: BrightnessMode;
-  speed: number;
-  intensity: number;
+  speed: number;   // 1–10
+  intensity: number; // 0–100
 }
 
 const MODES: { key: BrightnessMode; label: string }[] = [
@@ -28,125 +30,187 @@ const MODE_GRADIENTS: Record<BrightnessMode, string> = {
   shimmer: 'linear-gradient(135deg, #3a2a5a, #6a4a9a)'
 };
 
-const MODE_PATTERNS: Record<Exclude<BrightnessMode, 'off'>, (speed: number, intensity: number) => string> = {
-  breathe: (speed, intensity) => `var meta = { name: 'Breathe FX' };
-function render(ctx) {
-  var spd = ${speed / 5};
-  var mix = ${intensity / 100};
-  var mod = 0.5 + 0.5 * Math.sin(ctx.t * spd * 1.5);
-  var v = (1 - mix) + mod * mix;
-  for (var i = 0; i < ctx.count; i++) ctx.setHSV(i, 220, 60, v * 80);
-}`,
-  ripple: (speed, intensity) => `var meta = { name: 'Ripple FX' };
-function render(ctx) {
-  var spd = ${speed / 5};
-  var mix = ${intensity / 100};
-  var cx = (ctx.cols-1)/2, cy = (ctx.rows-1)/2;
-  for (var i = 0; i < ctx.count; i++) {
-    var xy = ctx.xy(i);
-    var dist = Math.sqrt((xy[1]-cy)*(xy[1]-cy) + (xy[0]-cx)*(xy[0]-cx));
-    var mod = 0.5 + 0.5 * Math.sin(dist * 1.2 - ctx.t * spd * 2);
-    var v = (1 - mix) + mod * mix;
-    ctx.setHSV(i, 200 + dist * 8, 70, v * 90);
+// All modes ONLY modulate brightness — colors (h, s) are never changed
+function computeBrightnessMod(
+  mode: BrightnessMode,
+  r: number,
+  c: number,
+  i: number,
+  time: number,
+  spd: number,
+  cols: number,
+  rows: number,
+  noise: number
+): number {
+  const cx = (cols - 1) / 2;
+  const cy = (rows - 1) / 2;
+
+  switch (mode) {
+  case 'breathe':
+    // All beams pulse together
+    return 0.5 + 0.5 * Math.sin(time * spd * 1.5);
+  case 'ripple': {
+    // Radial wave from center
+    const dist = Math.sqrt((r - cy) ** 2 + (c - cx) ** 2);
+    return 0.5 + 0.5 * Math.sin(dist * 1.2 - time * spd * 2);
   }
-}`,
-  wave: (speed, intensity) => `var meta = { name: 'Wave FX' };
-function render(ctx) {
-  var spd = ${speed / 5};
-  var mix = ${intensity / 100};
-  for (var i = 0; i < ctx.count; i++) {
-    var uv = ctx.uv(i);
-    var mod = 0.5 + 0.5 * Math.sin(uv[0] * Math.PI * 2 - ctx.t * spd * 1.8);
-    var v = (1 - mix) + mod * mix;
-    ctx.setHSV(i, 200 + uv[0] * 40, 70, v * 90);
+  case 'wave':
+    // Horizontal sweep
+    return 0.5 + 0.5 * Math.sin((c / cols) * Math.PI * 2 - time * spd * 1.8);
+  case 'fire': {
+    // Organic flickering — multi-frequency noise, no color change
+    const t1 = Math.sin(time * spd * 3 + noise * 20);
+    const t2 = Math.sin(time * spd * 5.7 + i * 0.7);
+    const t3 = Math.sin(time * spd * 1.3 + noise * 10 + r * 0.5);
+    return 0.3 + 0.25 * t1 + 0.25 * t2 + 0.2 * t3;
   }
-}`,
-  fire: (speed, intensity) => `var meta = { name: 'Fire FX' };
-function render(ctx) {
-  var spd = ${speed / 5};
-  var mix = ${intensity / 100};
-  for (var i = 0; i < ctx.count; i++) {
-    var uv = ctx.uv(i);
-    var heat = ctx.noise(uv[0] * 3, uv[1] * 2 - ctx.t * spd * 2, ctx.t * spd * 0.5);
-    heat *= (1 - uv[1]);
-    var v = ctx.clamp(heat * 2 * mix + (1-mix), 0, 1);
-    var r = ctx.clamp(v * 3, 0, 1) * 255;
-    var g = ctx.clamp(v * 3 - 1, 0, 1) * 255;
-    var b = ctx.clamp(v * 3 - 2, 0, 1) * 255;
-    ctx.setRGB(i, r, g, b);
+  case 'shimmer':
+    // Per-beam random sparkle
+    return 0.5 + 0.5 * Math.sin(time * spd * 4 + noise * 30);
+  default:
+    return 1;
   }
-}`,
-  shimmer: (speed, intensity) => `var meta = { name: 'Shimmer FX' };
-function render(ctx) {
-  var spd = ${speed / 5};
-  var mix = ${intensity / 100};
-  for (var i = 0; i < ctx.count; i++) {
-    var noise = ctx.noise(i * 0.3, ctx.t * spd * 2, 0);
-    var mod = 0.5 + 0.5 * noise;
-    var v = (1 - mix) + mod * mix;
-    ctx.setHSV(i, 260 + noise * 30, 60, v * 85);
-  }
-}`
-};
+}
 
 export function useBrightnessAnimation(
-  loadPattern: (code: string) => Promise<void>,
-  stopPattern: () => Promise<void>
+  numCannons: number,
+  gridColumns: number,
+  gridData: CannonColor[],
+  send: (msg: Record<string, unknown>) => void
 ) {
   const [config, setConfig] = useState<BrightnessConfig>({
     mode: 'off',
     speed: 5,
     intensity: 60
   });
+  const configRef = useRef(config);
+  configRef.current = config;
+
+  // Snapshot of the grid colors taken when a mode is activated
+  const snapshotRef = useRef<CannonColor[] | null>(null);
+
+  // Live grid ref — only used to take a snapshot, never read during animation
+  const gridRef = useRef(gridData);
+  gridRef.current = gridData;
+
+  // Stable noise values per beam (for fire/shimmer)
+  const noiseRef = useRef<Float32Array>(new Float32Array(0));
+  if (noiseRef.current.length !== numCannons) {
+    const arr = new Float32Array(numCannons);
+    for (let i = 0; i < numCannons; i++) arr[i] = Math.random();
+    noiseRef.current = arr;
+  }
+
+  const rafRef = useRef(0);
+  const startRef = useRef(0);
+  const lastSeedRef = useRef(0);
 
   const setMode = useCallback((mode: BrightnessMode) => {
-    setConfig((c) => ({ ...c, mode }));
-    if (mode === 'off') {
-      stopPattern();
+    if (mode !== 'off') {
+      // Only snapshot if we don't already have one (switching between modes keeps the original)
+      if (!snapshotRef.current) {
+        snapshotRef.current = gridRef.current.map((c) => ({ ...c }));
+      }
     } else {
-      const gen = MODE_PATTERNS[mode];
-      loadPattern(gen(config.speed, config.intensity));
+      // Turning off — restore the snapshot colors one final time
+      if (snapshotRef.current) {
+        for (let i = 0; i < snapshotRef.current.length; i++) {
+          const { h, s, b } = snapshotRef.current[i];
+          send({ type: 'cannon', index: i, h, s, b });
+        }
+      }
+      snapshotRef.current = null;
     }
-  }, [config.speed, config.intensity, loadPattern, stopPattern]);
+    setConfig((c) => ({ ...c, mode }));
+  }, [send]);
 
   const setSpeed = useCallback((speed: number) => {
-    setConfig((c) => {
-      const next = { ...c, speed };
-      if (next.mode !== 'off') {
-        const gen = MODE_PATTERNS[next.mode];
-        loadPattern(gen(speed, next.intensity));
-      }
-      return next;
-    });
-  }, [loadPattern]);
+    setConfig((c) => ({ ...c, speed }));
+  }, []);
 
   const setIntensity = useCallback((intensity: number) => {
-    setConfig((c) => {
-      const next = { ...c, intensity };
-      if (next.mode !== 'off') {
-        const gen = MODE_PATTERNS[next.mode];
-        loadPattern(gen(next.speed, intensity));
-      }
-      return next;
-    });
-  }, [loadPattern]);
+    setConfig((c) => ({ ...c, intensity }));
+  }, []);
 
-  return { config, setMode, setSpeed, setIntensity };
+  // Re-snapshot: allow user to pick a new flag/scene and re-capture
+  const resnapshot = useCallback(() => {
+    if (configRef.current.mode !== 'off') {
+      snapshotRef.current = gridRef.current.map((c) => ({ ...c }));
+    }
+  }, []);
+
+  useEffect(() => {
+    if (config.mode === 'off') return;
+
+    startRef.current = performance.now() / 1000;
+    lastSeedRef.current = 0;
+    let running = true;
+
+    const tick = () => {
+      if (!running) return;
+      const snap = snapshotRef.current;
+      if (!snap) { rafRef.current = requestAnimationFrame(tick); return; }
+
+      const t = performance.now() / 1000 - startRef.current;
+      const cfg = configRef.current;
+      const spd = cfg.speed / 5;
+      const mix = cfg.intensity / 100;
+      const rows = Math.ceil(snap.length / gridColumns);
+
+      // Re-seed noise every ~0.3s for fire variation
+      if (cfg.mode === 'fire' && t - lastSeedRef.current > 0.3) {
+        lastSeedRef.current = t;
+        const arr = noiseRef.current;
+        for (let j = 0; j < arr.length; j++) {
+          arr[j] = arr[j] * 0.7 + Math.random() * 0.3;
+        }
+      }
+
+      for (let i = 0; i < snap.length; i++) {
+        const r = Math.floor(i / gridColumns);
+        const c = i % gridColumns;
+        const { h, s, b } = snap[i]; // Original colors — never modified
+
+        const bMod = computeBrightnessMod(
+          cfg.mode, r, c, i, t, spd, gridColumns, rows, noiseRef.current[i]
+        );
+
+        // Blend: original brightness mixed with modulated brightness
+        const modB = Math.max(5, Math.round(b * (1 - mix) + (b * bMod) * mix));
+
+        send({ type: 'cannon', index: i, h, s, b: modB });
+      }
+
+      rafRef.current = requestAnimationFrame(tick);
+    };
+
+    rafRef.current = requestAnimationFrame(tick);
+
+    return () => {
+      running = false;
+      cancelAnimationFrame(rafRef.current);
+    };
+  }, [config.mode, gridColumns, send]);
+
+  return { config, setMode, setSpeed, setIntensity, resnapshot };
 }
 
 export function BrightnessTab({
   config,
   onMode,
   onSpeed,
-  onIntensity
+  onIntensity,
+  onResnapshot
 }: {
-  config: { mode: BrightnessMode; speed: number; intensity: number };
+  config: BrightnessConfig;
   onMode: (m: BrightnessMode) => void;
   onSpeed: (v: number) => void;
   onIntensity: (v: number) => void;
+  onResnapshot: () => void;
 }) {
   return (
     <div className="space-y-3">
+      {/* Mode swatches */}
       <div className="flex gap-2.5 flex-wrap">
         {MODES.map((m) => (
           <button
@@ -175,6 +239,7 @@ export function BrightnessTab({
         ))}
       </div>
 
+      {/* Sliders + resnapshot */}
       {config.mode !== 'off' && (
         <div className="space-y-2">
           <div className="flex items-center gap-3">
@@ -221,6 +286,23 @@ export function BrightnessTab({
               {config.intensity}%
             </span>
           </div>
+          <button
+            onClick={onResnapshot}
+            className="px-4 py-2.5 rounded-lg text-sm font-medium transition-all"
+            style={{
+              background: '#12121a',
+              color: '#888898',
+              border: '1px solid #1a1a25'
+            }}
+          >
+            Recapture colors
+          </button>
+          <p
+            className="text-xs"
+            style={{ color: 'rgba(136,136,152,0.5)' }}
+          >
+            Colors are captured when you pick a mode. Change the scene/flag first, then tap Recapture.
+          </p>
         </div>
       )}
     </div>

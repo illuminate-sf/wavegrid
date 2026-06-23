@@ -1,11 +1,29 @@
 'use client';
 
-import type { SnippetPattern } from '@/lib/patterns';
-import { ANIMATIONS, SCENES } from '@/lib/patterns';
-
 const TILE = 72;
 const TILE_RADIUS = 16;
 const LABEL_SIZE = 10;
+
+const sceneGradients: Record<string, string> = {
+  civic: 'linear-gradient(135deg, #1a3a8a, #2563eb, #60a5fa)',
+  pride: 'linear-gradient(135deg, #e33, #f90, #ee0, #3a5, #35e, #a3e)',
+  gold: 'linear-gradient(135deg, #b8860b, #ffd700, #f0c040)',
+  white: 'linear-gradient(135deg, #ccc, #fff, #ddd)',
+  solstice: 'linear-gradient(135deg, #c2410c, #ea580c, #f97316)',
+  ocean: 'linear-gradient(135deg, #0e4580, #0891b2, #22d3ee)',
+  sunset: 'linear-gradient(135deg, #c2185b, #e65100, #f9a825)',
+  off: 'linear-gradient(135deg, #1a1a25, #0e0e14)'
+};
+
+const animGradients: Record<string, string> = {
+  wave: 'linear-gradient(135deg, #1e40af, #3b82f6)',
+  breathe: 'linear-gradient(135deg, #4338ca, #6366f1)',
+  rainbow: 'linear-gradient(135deg, #e33, #ee0, #3a5, #35e)',
+  pacman: 'linear-gradient(135deg, #ca8a04, #facc15)',
+  spiral: 'linear-gradient(135deg, #7e22ce, #a855f7)',
+  rain: 'linear-gradient(135deg, #0369a1, #0ea5e9)',
+  heartbeat: 'linear-gradient(135deg, #b91c1c, #ef4444)'
+};
 
 function Tile({
   name,
@@ -49,17 +67,17 @@ export function ScenePalette({
   onSelect
 }: {
   active: string | null;
-  onSelect: (pattern: SnippetPattern) => void;
+  onSelect: (name: string) => void;
 }) {
   return (
     <div className="flex gap-2.5 flex-wrap">
-      {SCENES.map((p) => (
+      {Object.keys(sceneGradients).map((name) => (
         <Tile
-          key={p.name}
-          name={p.name}
-          gradient={p.gradient}
-          active={active === p.name}
-          onClick={() => onSelect(p)}
+          key={name}
+          name={name}
+          gradient={sceneGradients[name]}
+          active={active === name}
+          onClick={() => onSelect(name)}
         />
       ))}
     </div>
@@ -72,18 +90,18 @@ export function AnimationPalette({
   onStop
 }: {
   active: string | null;
-  onSelect: (pattern: SnippetPattern) => void;
+  onSelect: (name: string) => void;
   onStop: () => void;
 }) {
   return (
     <div className="flex gap-2.5 flex-wrap">
-      {ANIMATIONS.map((p) => (
+      {Object.keys(animGradients).map((name) => (
         <Tile
-          key={p.name}
-          name={p.name}
-          gradient={p.gradient}
-          active={active === p.name}
-          onClick={() => onSelect(p)}
+          key={name}
+          name={name}
+          gradient={animGradients[name]}
+          active={active === name}
+          onClick={() => onSelect(name)}
         />
       ))}
       <button
