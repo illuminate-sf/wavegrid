@@ -4,6 +4,34 @@ import { useCallback, useEffect, useRef } from 'react';
 
 export type GridMode = 'paint' | 'gradient' | 'energy' | 'drops' | 'motion' | 'scenes' | 'animations' | 'audio' | 'flags' | 'brightness' | 'patterns';
 
+function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  if (max === min) return [0, 0, l * 100];
+  const d = max - min;
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  let h = 0;
+  if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+  else if (max === g) h = ((b - r) / d + 2) / 6;
+  else h = ((r - g) / d + 4) / 6;
+  return [h * 360, s * 100, l * 100];
+}
+
+function hslStr(h: number, s: number, l: number): string {
+  return `hsl(${h}, ${s}%, ${l}%)`;
+}
+
+function hslRgba(h: number, s: number, l: number, a: number): string {
+  s /= 100; l /= 100;
+  const c = s * Math.min(l, 1 - l);
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12;
+    return l - c * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+  };
+  return `rgba(${Math.round(f(0) * 255)},${Math.round(f(8) * 255)},${Math.round(f(4) * 255)},${a})`;
+}
+
 interface GridDisplayProps {
   /** RGB framebuffer from the agent viewer (3 bytes per cell: R, G, B). */
   framebuffer: Uint8Array | null;
@@ -84,7 +112,7 @@ export function GridDisplay({
       const cx = gridOffset + col * cellSize + cellSize / 2;
       const cy = gridOffset + row * cellSize + cellSize / 2;
 
-      // Get RGB from framebuffer (or default dark)
+      // Get RGB from framebuffer and convert to HSL for rendering
       let cr = 0, cg = 0, cb = 0;
       if (framebuffer && i * 3 + 2 < framebuffer.length) {
         cr = framebuffer[i * 3];
@@ -92,30 +120,33 @@ export function GridDisplay({
         cb = framebuffer[i * 3 + 2];
       }
 
-      const brightness = Math.max(cr, cg, cb) / 255;
+      const [h, s, l] = rgbToHsl(cr, cg, cb);
+      // Map brightness: HSL lightness as 0..100 value (like the old simulator's c.b)
+      // Old system: lightness = max(5, c.b * 0.5) where c.b is 0..100
+      // Here l is already 0..100 from rgbToHsl
+      const lightness = Math.max(5, l);
 
-      // Glow effect
-      if (brightness > 0.02) {
-        const glowR = r * (1.2 + brightness * 0.3);
+      // Glow effect (HSL-based, matches old system)
+      if (l > 2) {
+        const glowR = r * (1.2 + l * 0.012);
         const grad = ctx.createRadialGradient(cx, cy, r * 0.3, cx, cy, glowR);
-        grad.addColorStop(0, `rgba(${cr},${cg},${cb},0.5)`);
-        grad.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
+        grad.addColorStop(0, hslRgba(h, s, lightness, 0.5));
+        grad.addColorStop(1, hslRgba(h, s, lightness, 0));
         ctx.beginPath();
         ctx.arc(cx, cy, glowR, 0, Math.PI * 2);
         ctx.fillStyle = grad;
         ctx.fill();
       }
 
-      // Orb
+      // Orb (HSL-based gradient, matches old system)
       const orbGrad = ctx.createRadialGradient(cx - r * 0.2, cy - r * 0.2, r * 0.1, cx, cy, r);
-      if (brightness < 0.01) {
+      if (l < 1) {
         orbGrad.addColorStop(0, '#181820');
         orbGrad.addColorStop(1, '#0e0e14');
       } else {
-        const bright = Math.min(1, brightness + 0.15);
-        const dim = brightness * 0.6;
-        orbGrad.addColorStop(0, `rgb(${Math.round(cr * bright)},${Math.round(cg * bright)},${Math.round(cb * bright)})`);
-        orbGrad.addColorStop(1, `rgb(${Math.round(cr * dim)},${Math.round(cg * dim)},${Math.round(cb * dim)})`);
+        const bright = Math.min(lightness + 15, 95);
+        orbGrad.addColorStop(0, hslStr(h, s, bright));
+        orbGrad.addColorStop(1, hslStr(h, s, lightness * 0.6));
       }
       ctx.beginPath();
       ctx.arc(cx, cy, r, 0, Math.PI * 2);
@@ -123,10 +154,10 @@ export function GridDisplay({
       ctx.fill();
 
       // Specular highlight
-      if (brightness > 0.08) {
+      if (l > 8) {
         ctx.beginPath();
         ctx.arc(cx - r * 0.25, cy - r * 0.25, r * 0.2, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(255,255,255,${brightness * 0.2})`;
+        ctx.fillStyle = `rgba(255,255,255,${l * 0.002})`;
         ctx.fill();
       }
     }
