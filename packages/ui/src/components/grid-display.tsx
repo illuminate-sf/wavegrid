@@ -2,13 +2,13 @@
 
 import { useCallback, useEffect, useRef } from 'react';
 
-import type { CannonColor } from '@/lib/use-socket';
-
-export type GridMode = 'paint' | 'gradient' | 'energy' | 'drops' | 'motion' | 'scenes' | 'animations' | 'audio' | 'flags' | 'brightness';
+export type GridMode = 'paint' | 'gradient' | 'energy' | 'drops' | 'motion' | 'scenes' | 'animations' | 'audio' | 'flags' | 'brightness' | 'patterns';
 
 interface GridDisplayProps {
-  grid: CannonColor[];
+  /** RGB framebuffer from the agent viewer (3 bytes per cell: R, G, B). */
+  framebuffer: Uint8Array | null;
   columns: number;
+  rows: number;
   currentHue: number;
   currentSat: number;
   currentBright: number;
@@ -16,33 +16,16 @@ interface GridDisplayProps {
   brushSize: number;
   softEdge: boolean;
   motionPath?: number[];
-  onCannon: (index: number, h: number, s: number, b: number) => void;
+  onCannon: (index: number) => void;
   onDrop?: (index: number) => void;
   onMotionPoint?: (index: number) => void;
   onGradientDrag?: (startIdx: number, endIdx: number) => void;
 }
 
-function hslStr(h: number, s: number, l: number): string {
-  return `hsl(${h}, ${s}%, ${l}%)`;
-}
-
-function hslRgb(h: number, s: number, l: number): [number, number, number] {
-  s /= 100;
-  l /= 100;
-  const a = s * Math.min(l, 1 - l);
-  const f = (n: number) => {
-    const k = (n + h / 30) % 12;
-    return l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
-  };
-  return [f(0), f(8), f(4)];
-}
-
 export function GridDisplay({
-  grid,
+  framebuffer,
   columns,
-  currentHue,
-  currentSat,
-  currentBright,
+  rows,
   mode,
   brushSize,
   softEdge,
@@ -59,7 +42,7 @@ export function GridDisplay({
   const gradientStartRef = useRef(-1);
   const sizeRef = useRef({ cellSize: 0, gridOffset: 0, canvasW: 0, canvasH: 0 });
 
-  const rows = Math.ceil(grid.length / columns);
+  const count = columns * rows;
 
   const resize = useCallback(() => {
     const canvas = canvasRef.current;
@@ -95,44 +78,55 @@ export function GridDisplay({
 
     const r = cellSize * 0.34;
 
-    for (let i = 0; i < grid.length; i++) {
+    for (let i = 0; i < count; i++) {
       const row = Math.floor(i / columns);
       const col = i % columns;
       const cx = gridOffset + col * cellSize + cellSize / 2;
       const cy = gridOffset + row * cellSize + cellSize / 2;
-      const c = grid[i];
-      const lightness = Math.max(5, c.b * 0.5);
 
-      if (c.b > 5) {
-        const glowR = r * (1.2 + c.b * 0.012);
+      // Get RGB from framebuffer (or default dark)
+      let cr = 0, cg = 0, cb = 0;
+      if (framebuffer && i * 3 + 2 < framebuffer.length) {
+        cr = framebuffer[i * 3];
+        cg = framebuffer[i * 3 + 1];
+        cb = framebuffer[i * 3 + 2];
+      }
+
+      const brightness = Math.max(cr, cg, cb) / 255;
+
+      // Glow effect
+      if (brightness > 0.02) {
+        const glowR = r * (1.2 + brightness * 0.3);
         const grad = ctx.createRadialGradient(cx, cy, r * 0.3, cx, cy, glowR);
-        const [gr, gg, gb] = hslRgb(c.h, c.s, lightness);
-        grad.addColorStop(0, `rgba(${Math.round(gr * 255)},${Math.round(gg * 255)},${Math.round(gb * 255)},0.5)`);
-        grad.addColorStop(1, `rgba(${Math.round(gr * 255)},${Math.round(gg * 255)},${Math.round(gb * 255)},0)`);
+        grad.addColorStop(0, `rgba(${cr},${cg},${cb},0.5)`);
+        grad.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
         ctx.beginPath();
         ctx.arc(cx, cy, glowR, 0, Math.PI * 2);
         ctx.fillStyle = grad;
         ctx.fill();
       }
 
+      // Orb
       const orbGrad = ctx.createRadialGradient(cx - r * 0.2, cy - r * 0.2, r * 0.1, cx, cy, r);
-      if (c.b < 2) {
+      if (brightness < 0.01) {
         orbGrad.addColorStop(0, '#181820');
         orbGrad.addColorStop(1, '#0e0e14');
       } else {
-        const bright = Math.min(lightness + 15, 95);
-        orbGrad.addColorStop(0, hslStr(c.h, c.s, bright));
-        orbGrad.addColorStop(1, hslStr(c.h, c.s, lightness * 0.6));
+        const bright = Math.min(1, brightness + 0.15);
+        const dim = brightness * 0.6;
+        orbGrad.addColorStop(0, `rgb(${Math.round(cr * bright)},${Math.round(cg * bright)},${Math.round(cb * bright)})`);
+        orbGrad.addColorStop(1, `rgb(${Math.round(cr * dim)},${Math.round(cg * dim)},${Math.round(cb * dim)})`);
       }
       ctx.beginPath();
       ctx.arc(cx, cy, r, 0, Math.PI * 2);
       ctx.fillStyle = orbGrad;
       ctx.fill();
 
-      if (c.b > 20) {
+      // Specular highlight
+      if (brightness > 0.08) {
         ctx.beginPath();
         ctx.arc(cx - r * 0.25, cy - r * 0.25, r * 0.2, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(255,255,255,${c.b * 0.002})`;
+        ctx.fillStyle = `rgba(255,255,255,${brightness * 0.2})`;
         ctx.fill();
       }
     }
@@ -153,15 +147,11 @@ export function GridDisplay({
         const pcol = pidx % columns;
         const px = gridOffset + pcol * cellSize + cellSize / 2;
         const py = gridOffset + prow * cellSize + cellSize / 2;
-        if (i === 0) {
-          ctx.moveTo(px, py);
-        } else {
-          ctx.lineTo(px, py);
-        }
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
       }
       ctx.stroke();
 
-      // Draw dots at each point
       for (let i = 0; i < motionPath.length; i++) {
         const pidx = motionPath[i];
         const prow = Math.floor(pidx / columns);
@@ -179,7 +169,7 @@ export function GridDisplay({
 
       ctx.restore();
     }
-  }, [grid, columns, motionPath]);
+  }, [framebuffer, columns, count, motionPath]);
 
   const cannonAtXY = useCallback((clientX: number, clientY: number): number => {
     const canvas = canvasRef.current;
@@ -192,8 +182,8 @@ export function GridDisplay({
     const row = Math.floor((y - gridOffset) / cellSize);
     if (col < 0 || col >= columns || row < 0 || row >= rows) return -1;
     const idx = row * columns + col;
-    return idx < grid.length ? idx : -1;
-  }, [columns, rows, grid.length]);
+    return idx < count ? idx : -1;
+  }, [columns, rows, count]);
 
   const getAffectedCannons = useCallback((centerIdx: number): { idx: number; falloff: number }[] => {
     const result: { idx: number; falloff: number }[] = [{ idx: centerIdx, falloff: 1 }];
@@ -218,11 +208,11 @@ export function GridDisplay({
 
     const seen = new Set<number>();
     return result.filter((m) => {
-      if (m.idx < 0 || m.idx >= grid.length || seen.has(m.idx)) return false;
+      if (m.idx < 0 || m.idx >= count || seen.has(m.idx)) return false;
       seen.add(m.idx);
       return true;
     });
-  }, [columns, rows, brushSize, softEdge, grid.length]);
+  }, [columns, rows, brushSize, softEdge, count]);
 
   const handleStart = useCallback((e: React.PointerEvent) => {
     paintingRef.current = true;
@@ -249,11 +239,11 @@ export function GridDisplay({
     if (idx >= 0 && mode === 'paint') {
       const affected = getAffectedCannons(idx);
       for (const a of affected) {
-        onCannon(a.idx, currentHue, currentSat, currentBright * a.falloff);
+        onCannon(a.idx);
       }
       lastPaintedRef.current = idx;
     }
-  }, [cannonAtXY, mode, onDrop, onMotionPoint, getAffectedCannons, onCannon, currentHue, currentSat, currentBright]);
+  }, [cannonAtXY, mode, onDrop, onMotionPoint, getAffectedCannons, onCannon]);
 
   const handleMove = useCallback((e: React.PointerEvent) => {
     if (!paintingRef.current) return;
@@ -281,11 +271,11 @@ export function GridDisplay({
     if (mode === 'paint') {
       const affected = getAffectedCannons(idx);
       for (const a of affected) {
-        onCannon(a.idx, currentHue, currentSat, currentBright * a.falloff);
+        onCannon(a.idx);
       }
       lastPaintedRef.current = idx;
     }
-  }, [cannonAtXY, mode, onDrop, onMotionPoint, onGradientDrag, getAffectedCannons, onCannon, currentHue, currentSat, currentBright]);
+  }, [cannonAtXY, mode, onDrop, onMotionPoint, onGradientDrag, getAffectedCannons, onCannon]);
 
   const handleEnd = useCallback(() => {
     paintingRef.current = false;

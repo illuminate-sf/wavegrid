@@ -12,7 +12,7 @@
 
 ## Overview
 
-**Wavegrid** is a modular laser grid controller for arrays of Laser Space Cannons on Global Truss F34 structures. It includes a web-based simulation UI, an artist-facing creative canvas, a WebSocket relay, and OSC output adapters for BEYOND and FB4 hardware.
+**Wavegrid** is a modular laser grid controller for arrays of Laser Space Cannons on Global Truss F34 structures. Patterns are written as JavaScript snippets that run inside a QuickJS sandbox on the agent, producing an RGB framebuffer rendered by the local viewer and/or sent to laser hardware via OSC.
 
 Grid size defaults to 7x7 (49 cannons) but is fully configurable for any layout.
 
@@ -33,50 +33,79 @@ pnpm build
 
 | Package | Name | Description |
 |---------|------|-------------|
-| `packages/simulator` | `@wavegrid/simulator` | Grid state engine and master controller UI |
+| `packages/patterns` | `@wavegrid/patterns` | QuickJS sandbox engine — ctx API, safety limiter, CPU + memory deadlines |
+| `packages/programs` | `@wavegrid/programs` | 58 animation programs + host ABI runtime |
+| `packages/agent` | `@wavegrid/agent` | Agent runtime — connects to relay, runs patterns, dispatches to sinks |
+| `packages/cloud-relay` | `@wavegrid/cloud-relay` | Cloud relay — auth, pattern gallery, token-gated WSS agent relay |
+| `packages/mapper` | `@wavegrid/mapper` | Zone-to-grid calibration tool (flash-to-identify) |
 | `packages/ui` | `@wavegrid/ui` | Next.js artist UI — Paint, Gradient, Drops, Motion, Scenes, Animations, Flags, Brightness, Audio |
-| `packages/receiver` | `wavegrid` | Receiver brain — LP filter, sine fallback, pluggable adapter pattern |
-| `packages/relay` | `@wavegrid/relay` | Transparent WebSocket message router |
 | `packages/osc` | `@wavegrid/osc` | OSC output adapters for BEYOND and FB4 laser hardware |
 | `packages/webgl` | `@wavegrid/webgl` | Three.js 3D Civic Center viewer — volumetric laser beams, bloom, camera presets |
+
+### Legacy (deprecated)
+
+| Package | Name | Description |
+|---------|------|-------------|
+| `packages/simulator` | `@wavegrid/simulator` | Replaced by cloud-relay + agent |
+| `packages/receiver` | `wavegrid` | Replaced by agent |
+| `packages/relay` | `@wavegrid/relay` | Replaced by cloud-relay |
 
 ## Architecture
 
 ```
-┌──────────────┐         ┌──────────────┐         ┌──────────────┐
-│   UI         │ ──ws──▶ │  Simulator   │ ──ws──▶ │  Receiver    │
-│  (artist UI) │ ◀──ws── │ (state + LP) │         │  (brain)     │
-│  :3003       │         │  :3000       │         │  own LP      │
-└──────────────┘         └──────────────┘         │  sine fbk    │
-       │                        │                 │  → hardware  │
-       │    ┌──────────────┐    │                 └──────────────┘
-       └──▶ │    Relay     │ ◀──┘                        │
-            │  (optional)  │                      ┌──────────────┐
-            │  :3002       │                      │  @wavegrid/  │
-            └──────────────┘                      │  osc         │
-                                                  │  → BEYOND    │
-                                                  │  → FB4       │
-                                                  └──────────────┘
+┌──────────────┐  HTTP commands  ┌──────────────┐   WSS    ┌──────────────┐
+│   UI         │ ──────────────▶ │ Cloud Relay  │ ───────▶ │    Agent     │
+│  (React)     │                 │  :3000       │          │  (QuickJS)   │
+│  :3003       │                 │  auth + cmds │          │  sandbox     │
+└──────────────┘                 └──────────────┘          │  safety lim  │
+       │                                                   └──────┬───────┘
+       │  WS binary (RGB framebuffer)                             │
+       └──────────────────────────────────────────────────────────┘
+              ▲                                                   │
+              │                                            ┌──────┴───────┐
+         Local Viewer                                      │ @wavegrid/   │
+           :8090                                           │  osc         │
+                                                           │  → BEYOND    │
+                                                           └──────────────┘
 ```
 
-- **Simulator** — state engine with exponential low-pass filtering and master controller UI. Scenes, animations, ambient presets, idle timeout. Runs at 60fps, broadcasts only on change.
-- **UI** — Next.js artist-facing creative instrument. Paint, Gradient, Drops, Motion, Scenes, Animations, Flags, Brightness, Audio. iPad-optimized touch UI.
-- **Receiver** — the "brain" that controls physical hardware. Runs its own independent LP filter so output never jolts. On signal loss, smoothly transitions into ambient 3D sine waves. Pluggable input/output adapters.
-- **Relay** — transparent WebSocket message router for remote access or multi-receiver setups. Optional — direct connections still work.
-- **OSC** — output adapters for Pangolin BEYOND and FB4 laser hardware. HSB-to-RGB color conversion, per-cannon routing via JSON config.
+- **Cloud Relay** — command router with cookie-session auth. Accepts HTTP commands from the UI, forwards them to the agent over WSS.
+- **Agent** — runs pattern JavaScript in a QuickJS sandbox with CPU deadlines and memory limits. Produces an RGB framebuffer each frame. Output goes to a local canvas viewer (`:8090`) and/or BEYOND via OSC.
+- **UI** — Next.js artist-facing creative instrument. Sends `loadPattern`, `setZone`, `solid`, `stopPattern` commands to the relay via HTTP POST. Receives the live RGB framebuffer from the agent viewer via WebSocket binary frames.
+- **Patterns** — JavaScript snippets with a `render(ctx)` function. The `ctx` API provides `setHSV`, `setRGB`, `fill`, `fade`, `noise`, `xy`, `uv`, `polar`, timing, and more.
+- **OSC** — output adapters for Pangolin BEYOND and FB4 laser hardware. Zero-dep raw UDP, per-channel diff, burst guard, arm/disarm gate.
 
-## Running
+## Running Locally
+
+Start three terminals — **relay**, **agent**, and **UI**:
 
 ```sh
-# Start the full stack (each in its own terminal)
-pnpm dev:sim       # Simulator at :3000 (master controller)
-pnpm dev:ui        # UI at :3003 (artist UI)
-pnpm dev:receiver  # Receiver (brain)
+# Terminal 1 — Cloud Relay (command server)
+pnpm dev:relay
+# → http://localhost:3000 (login password: set RELAY_PASSWORD env, default "demo")
 
-# Optional
-pnpm dev:relay     # Relay at :3002
-pnpm dev:webgl     # 3D Civic Center viewer at :3004
+# Terminal 2 — Agent (pattern engine + local viewer)
+pnpm dev:agent
+# → Connects to ws://localhost:3000/agent?token=changeme
+# → Local canvas viewer at http://localhost:8090
+
+# Terminal 3 — React UI (artist tool)
+pnpm dev:ui
+# → http://localhost:3003
 ```
+
+Open **http://localhost:3003** in your browser. Log in, then pick a scene or animation — you'll see the pattern rendered live on the grid.
+
+To also see the raw framebuffer output, open **http://localhost:8090** in a second tab.
+
+### Environment Variables for the UI
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `NEXT_PUBLIC_RELAY_URL` | `http://localhost:3000` | Cloud relay HTTP endpoint |
+| `NEXT_PUBLIC_VIEWER_URL` | `ws://localhost:8090` | Agent viewer WebSocket (RGB framebuffer) |
+| `NEXT_PUBLIC_NUM_CANNONS` | `49` | Total grid cells |
+| `NEXT_PUBLIC_GRID_COLUMNS` | `7` | Grid columns |
 
 ## Configurable Grid Size
 
@@ -105,45 +134,45 @@ Both connect to the same Simulator (or Relay). The UI stays unified.
 
 ## Data Flow
 
-The UI never sends OSC — only the **Receiver** talks to laser hardware:
+The UI never sends OSC — only the **Agent** talks to laser hardware:
 
 ```
-┌──────────┐   HSB grid (WebSocket)   ┌──────────┐   HSB grid (WebSocket)   ┌──────────┐   OSC/UDP   ┌──────────┐
-│    UI    │ ────────────────────────► │Simulator │ ────────────────────────► │ Receiver │ ──────────► │  BEYOND  │
-│ (browser)│                           │  :3000   │                           │  (brain) │            │  (laser) │
-└──────────┘                           └──────────┘                           └──────────┘            └──────────┘
-  Paints colors                     Broadcasts state                     Smooths + converts            Drives
-  & scenes                          to all clients                       HSB → RGB/OSC                 hardware
+┌──────────┐    HTTP POST     ┌──────────┐      WSS       ┌──────────┐   OSC/UDP   ┌──────────┐
+│    UI    │ ───────────────► │  Relay   │ ──────────────► │  Agent   │ ──────────► │  BEYOND  │
+│ (browser)│                  │  :3000   │  pattern code   │ (QuickJS)│            │  (laser) │
+└──────────┘                  └──────────┘                 └──────────┘            └──────────┘
+  Picks patterns              Routes commands              Runs JS in sandbox        Drives
+  & paints zones              to agent                     → RGB framebuffer         hardware
 ```
 
-- **UI** sends high-level grid state (HSB colors per cell) over WebSocket
-- **Simulator** broadcasts that state to all connected WebSocket clients
-- **Receiver** applies LP smoothing, converts HSB to the configured color format, and sends OSC messages over UDP to BEYOND
-- The UI has no knowledge of OSC, projectors, or zones
+- **UI** sends commands (loadPattern, setZone, solid, stopPattern) via HTTP POST to the relay
+- **Relay** forwards commands to the connected agent over WSS
+- **Agent** runs pattern JavaScript in a QuickJS sandbox, produces RGB framebuffer, optionally sends to BEYOND via OSC
+- The UI receives the live RGB framebuffer from the agent's local viewer via WebSocket binary frames
 
 ## Deployment
 
 ### Local (all-in-one)
 
-For a live event where everything runs on a single machine at the venue:
+For a live event where everything runs on a single machine:
 
 ```sh
-pnpm dev:sim                             # :3000 (master controller)
+pnpm dev:relay                           # :3000 (command relay)
+pnpm dev:agent                           # QuickJS sandbox + viewer at :8090
 pnpm dev:ui                              # :3003 (artist UI)
-pnpm dev:receiver                        # brain → hardware
 ```
 
 iPads connect to `http://<machine-ip>:3003` for the UI.
 
-### Remote (cloud server + on-site hardware)
+### Remote (cloud relay + on-site agent)
 
-When the UI/Simulator run on a cloud server and the laser hardware is on-site:
+When the UI/Relay run on a cloud server and the laser hardware is on-site:
 
 ```
 ┌───────────────────────────────────┐              ┌──────────────────────────────┐
 │        Cloud Server               │              │       On-Site (Pangolin PC)  │
-│                                   │   WebSocket  │                              │
-│  Simulator (:3000)  ◄─────────────┼──────────────┼──  Receiver                  │
+│                                   │   WSS        │                              │
+│  Relay (:3000)  ◄─────────────────┼──────────────┼──  Agent                     │
 │  UI (:3003)                       │              │       │                      │
 │                                   │              │       ▼ OSC/UDP (localhost)  │
 │  Artists connect via browser      │              │    BEYOND (:7001)            │
@@ -153,40 +182,26 @@ When the UI/Simulator run on a cloud server and the laser hardware is on-site:
 **On the cloud server** (e.g. DigitalOcean):
 
 ```sh
-# Terminal 1 — Simulator (WebSocket server)
-pnpm dev:sim
+# Terminal 1 — Cloud Relay
+RELAY_PASSWORD=your-password pnpm dev:relay
 
-# Terminal 2 — UI (Next.js, tells browsers where the simulator is)
-NEXT_PUBLIC_SIMULATOR_URL=ws://203.0.113.50:3000 pnpm dev:ui
+# Terminal 2 — UI
+NEXT_PUBLIC_RELAY_URL=http://203.0.113.50:3000 pnpm dev:ui
 ```
 
-Replace `203.0.113.50` with your server's public IP. Ensure ports **3000** and **3003** are open in the firewall.
+Replace `203.0.113.50` with your server's public IP. Ensure ports **3000** and **3003** are open.
 
-**On the Pangolin PC** (on-site, Windows — same network as BEYOND):
+**On the Pangolin PC** (on-site):
 
-PowerShell:
-```powershell
-$env:SIMULATOR_URL = "ws://203.0.113.50:3000"
-$env:BEYOND_HOST = "127.0.0.1"
-$env:BEYOND_PORT = "7001"
-$env:SHARD_START = "0"
-$env:SHARD_END = "23"
-$env:DEBUG_OSC = "1"
-pnpm dev:receiver
-```
-
-Bash (Linux/macOS):
+Bash:
 ```sh
-SIMULATOR_URL=ws://203.0.113.50:3000 \
+RELAY_URL=ws://203.0.113.50:3000/agent?token=changeme \
 BEYOND_HOST=127.0.0.1 \
 BEYOND_PORT=7001 \
-SHARD_START=0 \
-SHARD_END=23 \
-DEBUG_OSC=1 \
-pnpm dev:receiver
+pnpm dev:agent
 ```
 
-The receiver connects outward to the cloud simulator and sends OSC locally to BEYOND. `BEYOND_HOST=127.0.0.1` when BEYOND runs on the same machine; use the LAN IP if BEYOND is on a different box.
+The agent connects outward to the cloud relay and sends OSC locally to BEYOND.
 
 ### Multi-Target Routing (multiple BEYOND machines)
 
@@ -280,19 +295,19 @@ The `.users` file is gitignored — only `.users.example` (with fake credentials
 
 | Variable | Default | Description |
 |----------|---------|-------------|
+| `RELAY_PASSWORD` | `demo` | Login password for the cloud relay |
+| `RELAY_URL` | `ws://localhost:3000/agent?token=changeme` | Agent: WSS endpoint to connect to |
+| `NEXT_PUBLIC_RELAY_URL` | `http://localhost:3000` | UI: cloud relay HTTP endpoint |
+| `NEXT_PUBLIC_VIEWER_URL` | `ws://localhost:8090` | UI: agent viewer WebSocket (RGB framebuffer) |
+| `NEXT_PUBLIC_NUM_CANNONS` | `49` | Total grid cells |
+| `NEXT_PUBLIC_GRID_COLUMNS` | `7` | Grid columns |
 | `USERS_FILE` | `../../.users` | Path to credentials file (UI only) |
-| `SIMULATOR_URL` | `ws://localhost:3000` | WebSocket upstream for the receiver |
-| `NEXT_PUBLIC_SIMULATOR_URL` | `ws://localhost:3000` | WebSocket URL the browser UI connects to |
 | `BEYOND_HOST` | — | BEYOND PC IP (enables OSC output) |
 | `BEYOND_PORT` | `7001` | BEYOND OSC receive port |
 | `BEYOND_GRID_ORDER` | `row` | Grid-to-zone mapping: `row` or `column` |
-| `SHARD_START` / `SHARD_END` | — | Cannon index range for this receiver |
 | `NUM_CANNONS` | `49` | Total cannons in grid |
 | `GRID_COLUMNS` | `7` | Number of columns |
 | `DEBUG_OSC` | — | Set to `1` to log every OSC message |
-| `RECEIVER_ALPHA` | `0.06` | LP filter smoothing factor |
-| `FALLBACK_DELAY` | `3000` | Ms before sine fallback on signal loss |
-| `FB4_HOST` / `FB4_PORT` | — | FB4 device IP and port (default port 8000) |
 | `ROUTING_CONFIG` | — | Path to JSON routing config file |
 
 ## Credits

@@ -8,11 +8,10 @@ interface AudioTabProps {
   audio: AudioEngine;
 }
 
-const modes: { key: 'spectrum' | 'energy' | 'beat' | 'drops'; label: string }[] = [
+const modes: { key: 'spectrum' | 'energy' | 'beat'; label: string }[] = [
   { key: 'spectrum', label: 'Spectrum' },
   { key: 'energy', label: 'Energy' },
-  { key: 'beat', label: 'Beat' },
-  { key: 'drops', label: 'Drops' }
+  { key: 'beat', label: 'Beat' }
 ];
 
 const blends: { key: 'replace' | 'multiply' | 'additive'; label: string; desc: string }[] = [
@@ -75,7 +74,7 @@ export function AudioTab({ audio }: AudioTabProps) {
             <p className="text-sm font-medium">{audio.state.fileName}</p>
             <p className="text-xs mt-0.5" style={{ color: '#888898' }}>
               {formatTime(audio.state.duration)}
-              {audio.state.bpm && ` · ~${audio.state.bpm} BPM`}
+              {audio.state.bpm && ` \u00B7 ~${audio.state.bpm} BPM`}
             </p>
           </div>
         ) : (
@@ -99,7 +98,7 @@ export function AudioTab({ audio }: AudioTabProps) {
                 border: `1px solid ${audio.state.playing ? 'rgba(221,68,68,0.4)' : 'rgba(74,124,255,0.4)'}`
               }}
             >
-              {audio.state.playing ? '■ Stop' : '▶ Play'}
+              {audio.state.playing ? '\u25A0 Stop' : '\u25B6 Play'}
             </button>
             <button
               onClick={() => audio.setLoop(!audio.loop)}
@@ -110,7 +109,7 @@ export function AudioTab({ audio }: AudioTabProps) {
                 border: `1px solid ${audio.loop ? '#4a7cff' : '#1a1a25'}`
               }}
             >
-              {audio.loop ? '⟳ Loop' : '⟳'}
+              {audio.loop ? '\u27F3 Loop' : '\u27F3'}
             </button>
             <span className="text-sm font-mono" style={{ color: '#888898' }}>
               {formatTime(audio.state.currentTime)} / {formatTime(audio.state.duration)}
@@ -122,7 +121,6 @@ export function AudioTab({ audio }: AudioTabProps) {
             )}
           </div>
 
-          {/* Timeline scrub slider */}
           <input
             type="range"
             className="w-full"
@@ -189,31 +187,18 @@ export function AudioTab({ audio }: AudioTabProps) {
         </p>
       </div>
 
-      {/* Toggles */}
-      <div className="flex items-center gap-4">
-        <button
-          onClick={() => audio.setSineSpread(!audio.sineSpread)}
-          className="px-4 py-2.5 rounded-2xl text-sm font-medium transition-all"
-          style={{
-            background: audio.sineSpread ? 'rgba(74,124,255,0.15)' : '#12121a',
-            color: audio.sineSpread ? '#4a7cff' : '#888898',
-            border: `1px solid ${audio.sineSpread ? '#4a7cff' : '#1a1a25'}`
-          }}
-        >
-          Sine Spread
-        </button>
-        <div className="flex items-center gap-2 flex-1">
-          <span className="text-sm font-medium" style={{ color: '#888898' }}>Sens</span>
-          <input
-            type="range"
-            className="flex-1"
-            min={10}
-            max={100}
-            value={audio.sensitivity}
-            onChange={(e) => audio.setSensitivity(Number(e.target.value))}
-          />
-          <span className="text-sm font-mono min-w-8 text-right" style={{ color: '#888898' }}>{audio.sensitivity}%</span>
-        </div>
+      {/* Sensitivity */}
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-medium" style={{ color: '#888898' }}>Sens</span>
+        <input
+          type="range"
+          className="flex-1"
+          min={10}
+          max={100}
+          value={audio.sensitivity}
+          onChange={(e) => audio.setSensitivity(Number(e.target.value))}
+        />
+        <span className="text-sm font-mono min-w-8 text-right" style={{ color: '#888898' }}>{audio.sensitivity}%</span>
       </div>
 
       {audio.state.playing && (

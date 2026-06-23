@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { hsbToRgb } from '@/lib/color';
+
 export interface MotionState {
   recording: boolean;
   playing: boolean;
@@ -12,26 +14,22 @@ export function useMotion(
   hue: number,
   saturation: number,
   brightness: number,
-  send: (msg: Record<string, unknown>) => void
+  loadPattern: (code: string) => Promise<void>
 ) {
   const [state, setState] = useState<MotionState>({
     recording: false,
     playing: false,
     path: []
   });
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const frameRef = useRef(0);
   const speedRef = useRef(5);
   const hueRef = useRef(hue);
   const satRef = useRef(saturation);
   const brightRef = useRef(brightness);
-  const sendRef = useRef(send);
   const stateRef = useRef(state);
 
   useEffect(() => { hueRef.current = hue; }, [hue]);
   useEffect(() => { satRef.current = saturation; }, [saturation]);
   useEffect(() => { brightRef.current = brightness; }, [brightness]);
-  useEffect(() => { sendRef.current = send; }, [send]);
   useEffect(() => { stateRef.current = state; }, [state]);
 
   const recordPoint = useCallback((cannonIndex: number) => {
@@ -42,41 +40,9 @@ export function useMotion(
     });
   }, []);
 
-  const playStep = useCallback(() => {
-    const s = stateRef.current;
-    if (!s.playing || s.path.length < 2) {
-      setState((prev) => ({ ...prev, playing: false }));
-      return;
-    }
-
-    const path = s.path;
-    const frame = frameRef.current;
-
-    for (let i = 0; i < path.length; i++) {
-      const dist = Math.min(
-        Math.abs(i - (frame % path.length)),
-        path.length - Math.abs(i - (frame % path.length))
-      );
-      const falloff = Math.max(0, 1 - dist * 0.3);
-      sendRef.current({
-        type: 'cannon',
-        index: path[i],
-        h: hueRef.current,
-        s: satRef.current,
-        b: brightRef.current * falloff
-      });
-    }
-
-    frameRef.current++;
-    const speed = speedRef.current;
-    timerRef.current = setTimeout(playStep, 300 - speed * 25);
-  }, []);
-
   const toggleRecord = useCallback(() => {
     setState((s) => {
       if (s.recording) return { ...s, recording: false };
-      // Start fresh recording
-      if (timerRef.current) clearTimeout(timerRef.current);
       return { recording: true, playing: false, path: [] };
     });
   }, []);
@@ -84,28 +50,37 @@ export function useMotion(
   const togglePlay = useCallback(() => {
     setState((s) => {
       if (s.playing) {
-        if (timerRef.current) clearTimeout(timerRef.current);
         return { ...s, playing: false };
       }
       if (s.path.length < 2) return s;
-      frameRef.current = 0;
-      setTimeout(playStep, 0);
+
+      // Generate a snippet pattern that animates along the path
+      const [r, g, b] = hsbToRgb(hueRef.current, satRef.current, brightRef.current);
+      const speed = speedRef.current;
+      const pathStr = s.path.join(',');
+      const code = `var meta = { name: 'Motion' };
+var path = [${pathStr}];
+var speed = ${speed};
+function render(ctx) {
+  ctx.fade(0.7);
+  var frame = ctx.t * (speed * 2);
+  var idx = Math.floor(frame) % path.length;
+  for (var i = 0; i < path.length; i++) {
+    var dist = Math.min(Math.abs(i - idx), path.length - Math.abs(i - idx));
+    var falloff = Math.max(0, 1 - dist * 0.3);
+    if (falloff > 0) ctx.setRGB(path[i], ${r} * falloff, ${g} * falloff, ${b} * falloff);
+  }
+}`;
+      loadPattern(code);
       return { ...s, recording: false, playing: true };
     });
-  }, [playStep]);
+  }, [loadPattern]);
 
   const clear = useCallback(() => {
-    if (timerRef.current) clearTimeout(timerRef.current);
     setState({ recording: false, playing: false, path: [] });
   }, []);
 
   const setSpeed = useCallback((s: number) => { speedRef.current = s; }, []);
-
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, []);
 
   return { state, recordPoint, toggleRecord, togglePlay, clear, setSpeed };
 }
@@ -137,7 +112,7 @@ export function MotionControls({
             border: `1px solid ${state.recording ? 'rgba(221,68,68,0.4)' : '#1a1a25'}`
           }}
         >
-          {state.recording ? '● Recording...' : 'Draw Path'}
+          {state.recording ? '\u25CF Recording...' : 'Draw Path'}
         </button>
         <button
           onClick={onPlay}
@@ -149,7 +124,7 @@ export function MotionControls({
             opacity: state.path.length < 2 ? 0.5 : 1
           }}
         >
-          {state.playing ? '■ Stop' : '▶ Play'}
+          {state.playing ? '\u25A0 Stop' : '\u25B6 Play'}
         </button>
         <button
           onClick={onClear}

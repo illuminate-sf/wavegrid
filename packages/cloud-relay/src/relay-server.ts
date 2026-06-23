@@ -14,6 +14,7 @@ import { readFileSync } from 'fs';
 import http from 'http';
 import { WebSocket,WebSocketServer } from 'ws';
 
+import { generateGalleryHtml } from './gallery';
 import type { RelayCommand, RelayServerConfig, RelayState } from './types';
 
 function cookies(req: http.IncomingMessage): Record<string, string> {
@@ -125,7 +126,7 @@ export function createRelayServer(config: RelayServerConfig = {}): RelayServerHa
 
     if (u.pathname === '/' || u.pathname === '/patterns') {
       res.setHeader('content-type', 'text/html');
-      return res.end('<html><body><h1>Pattern Gallery</h1><p>Patterns UI coming soon</p></body></html>');
+      return res.end(generateGalleryHtml());
     }
 
     if (u.pathname === '/map') {
