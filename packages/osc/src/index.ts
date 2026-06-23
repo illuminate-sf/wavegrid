@@ -22,3 +22,7 @@ export {
   encodeBeyondMessages,
   encodeFB4Messages
 } from './osc-adapters';
+
+// Raw OSC sink — direct UDP, no node-osc dependency
+export type { OscSinkHandle, RawOscSinkConfig } from './raw-osc-sink';
+export { createRawOscSink } from './raw-osc-sink';
