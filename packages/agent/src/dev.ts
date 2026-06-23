@@ -17,12 +17,15 @@ import { createLocalUiSink } from './local-ui-sink';
 import { createRelayClient } from './relay-client';
 import type { AgentCommand, RuntimeState } from './types';
 
-function parseRelayUrl(): string | null {
+const DEFAULT_RELAY = 'ws://localhost:3000/agent?token=changeme';
+
+function parseRelayUrl(): string {
   const wsArg = process.argv.find(a => a.startsWith('ws://') || a.startsWith('wss://'));
   if (wsArg) return wsArg;
   const idx = process.argv.indexOf('--relay');
   if (idx !== -1 && idx + 1 < process.argv.length) return process.argv[idx + 1];
-  return process.env.RELAY_URL ?? null;
+  if (process.argv.includes('--no-relay')) return '';
+  return process.env.RELAY_URL ?? DEFAULT_RELAY;
 }
 
 const RELAY_URL = parseRelayUrl();
