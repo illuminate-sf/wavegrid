@@ -14,14 +14,18 @@ import { GridDisplay } from '@/components/grid-display';
 import { LoginScreen } from '@/components/login-screen';
 import { MotionControls, useMotion } from '@/components/motion-tab';
 import { AnimationPalette, ScenePalette } from '@/components/palette';
+import { hsbToRgb } from '@/lib/color';
+import type { SnippetPattern } from '@/lib/patterns';
 import { useAudio } from '@/lib/use-audio';
 import { useAuth } from '@/lib/use-auth';
 import { useIsPhone } from '@/lib/use-media-query';
-import { useSocket } from '@/lib/use-socket';
+import { useRelay } from '@/lib/use-relay';
 
 const NUM_CANNONS = parseInt(process.env.NEXT_PUBLIC_NUM_CANNONS || '49', 10);
 const GRID_COLUMNS = parseInt(process.env.NEXT_PUBLIC_GRID_COLUMNS || '7', 10);
-const SIMULATOR_URL = process.env.NEXT_PUBLIC_SIMULATOR_URL || 'ws://localhost:3000';
+const GRID_ROWS = Math.ceil(NUM_CANNONS / GRID_COLUMNS);
+const RELAY_URL = process.env.NEXT_PUBLIC_RELAY_URL || 'http://localhost:3000';
+const VIEWER_URL = process.env.NEXT_PUBLIC_VIEWER_URL || 'ws://localhost:8090';
 
 type PanelLayout = 'bottom' | 'right';
 
@@ -38,7 +42,7 @@ const tabs: { key: GridMode; label: string }[] = [
   { key: 'audio', label: 'Audio' }
 ];
 
-/* ---------- Tool content (no tabs, just the active tool) ---------- */
+/* ---------- Tool content ---------- */
 
 function ToolContent({
   tab,
@@ -62,9 +66,9 @@ function ToolContent({
   handleEnergyChange: (v: number) => void;
   motion: ReturnType<typeof useMotion>;
   activeScene: string | null;
-  handleScene: (name: string) => void;
+  handleScene: (pattern: SnippetPattern) => void;
   activeAnim: string | null;
-  handleAnim: (name: string) => void;
+  handleAnim: (pattern: SnippetPattern) => void;
   handleAnimStop: () => void;
   flags: ReturnType<typeof useFlagAnimation>;
   brightness: ReturnType<typeof useBrightnessAnimation>;
@@ -126,7 +130,7 @@ function ToolContent({
             </span>
           </div>
           <p className="text-sm" style={{ color: 'rgba(136,136,152,0.5)' }}>
-            Master intensity — controls overall brightness
+            Master intensity — controls overall brightness cap
           </p>
         </div>
       )}
@@ -174,7 +178,6 @@ function ToolContent({
           onMode={brightness.setMode}
           onSpeed={brightness.setSpeed}
           onIntensity={brightness.setIntensity}
-          onResnapshot={brightness.resnapshot}
         />
       )}
 
@@ -230,7 +233,7 @@ function TabStrip({
   );
 }
 
-/* ---------- Desktop/tablet ToolPanel (non-phone) ---------- */
+/* ---------- Desktop/tablet ToolPanel ---------- */
 
 function ToolPanel({
   tab,
@@ -267,31 +270,26 @@ function ToolPanel({
   );
 }
 
-/* ---------- Master sliders (top bar on desktop, expandable on phone) ---------- */
+/* ---------- Master sliders ---------- */
 
 function MasterSliders({
-  masterBright,
-  smoothness,
-  attack,
-  onMasterBright,
-  onSmooth,
-  onAttack,
+  speed,
+  brightnessCap,
+  onSpeed,
+  onBrightnessCap,
   throttledSlider,
   vertical
 }: {
-  masterBright: number;
-  smoothness: number;
-  attack: number;
-  onMasterBright: (v: number) => void;
-  onSmooth: (v: number) => void;
-  onAttack: (v: number) => void;
+  speed: number;
+  brightnessCap: number;
+  onSpeed: (v: number) => void;
+  onBrightnessCap: (v: number) => void;
   throttledSlider: (handler: (v: number) => void) => (e: React.ChangeEvent<HTMLInputElement>) => void;
   vertical?: boolean;
 }) {
   const sliders = [
-    { label: 'Bright', value: masterBright, handler: onMasterBright },
-    { label: 'Fade', value: smoothness, handler: onSmooth },
-    { label: 'Attack', value: attack, handler: onAttack }
+    { label: 'Speed', value: Math.round(speed * 100), handler: onSpeed, max: 200 },
+    { label: 'Bright', value: Math.round(brightnessCap * 100), handler: onBrightnessCap, max: 100 }
   ];
 
   if (vertical) {
@@ -306,7 +304,7 @@ function MasterSliders({
               type="range"
               className="flex-1"
               min={0}
-              max={100}
+              max={s.max}
               value={s.value}
               onChange={throttledSlider(s.handler)}
             />
@@ -330,7 +328,7 @@ function MasterSliders({
             type="range"
             style={{ width: 100 }}
             min={0}
-            max={100}
+            max={s.max}
             value={s.value}
             onChange={throttledSlider(s.handler)}
           />
@@ -347,19 +345,18 @@ function MasterSliders({
 
 export default function Home() {
   const { user, checked, login, logout } = useAuth();
-  const { connected, grid, send } = useSocket(SIMULATOR_URL);
+  const relay = useRelay({ relayUrl: RELAY_URL, viewerUrl: VIEWER_URL });
   const isPhone = useIsPhone();
 
-  const [tab, setTab] = useState<GridMode>('paint');
+  const [tab, setTab] = useState<GridMode>('scenes');
   const [layout, setLayout] = useState<PanelLayout>('bottom');
   const [hue, setHue] = useState(220);
   const [sat, setSat] = useState(90);
   const [bright, setBright] = useState(80);
   const [brushSize, setBrushSize] = useState(1);
   const [softEdge, setSoftEdge] = useState(false);
-  const [smoothness, setSmoothness] = useState(50);
-  const [attack, setAttack] = useState(80);
-  const [masterBright, setMasterBright] = useState(100);
+  const [speed, setSpeed] = useState(1);
+  const [brightnessCap, setBrightnessCap] = useState(1);
   const [sheetSnap, setSheetSnap] = useState<SnapPoint>('peek');
   const [showMasterSliders, setShowMasterSliders] = useState(false);
 
@@ -383,77 +380,67 @@ export default function Home() {
     width: 2
   });
 
-  const gridData = grid.length > 0 ? grid : Array.from({ length: NUM_CANNONS }, () => ({ h: 220, s: 90, b: 80 }));
-
-  const audio = useAudio(NUM_CANNONS, GRID_COLUMNS, gridData, send);
-  const { addDrop } = useDrops(NUM_CANNONS, GRID_COLUMNS, dropsConfig, send);
-  const motion = useMotion(hue, sat, bright, send);
+  const audio = useAudio(NUM_CANNONS, GRID_COLUMNS, relay.setZone);
+  const { addDrop } = useDrops(NUM_CANNONS, GRID_COLUMNS, dropsConfig, relay.loadPattern);
+  const motion = useMotion(hue, sat, bright, relay.loadPattern);
   const gradient = useGradient();
+  const flags = useFlagAnimation(relay.loadPattern);
+  const brightness = useBrightnessAnimation(relay.loadPattern, relay.stop);
 
   const handleCannon = useCallback(
-    (index: number, h: number, s: number, b: number) => {
-      send({ type: 'cannon', index, h, s, b });
+    (index: number) => {
+      const [r, g, b] = hsbToRgb(hue, sat, bright);
+      relay.setZone(index, r, g, b);
     },
-    [send]
+    [hue, sat, bright, relay]
   );
 
-  const flags = useFlagAnimation(send);
-  const brightness = useBrightnessAnimation(NUM_CANNONS, GRID_COLUMNS, gridData, send);
-
   const handleScene = useCallback(
-    (name: string) => {
-      setActiveScene(name);
+    (pattern: SnippetPattern) => {
+      setActiveScene(pattern.name);
       setActiveAnim(null);
-      send({ type: 'scene', name });
+      relay.loadPattern(pattern.code, pattern.speed);
     },
-    [send]
+    [relay]
   );
 
   const handleAnim = useCallback(
-    (name: string) => {
-      setActiveAnim(name);
-      send({ type: 'animation', name });
+    (pattern: SnippetPattern) => {
+      setActiveAnim(pattern.name);
+      relay.loadPattern(pattern.code, pattern.speed);
     },
-    [send]
+    [relay]
   );
 
   const handleAnimStop = useCallback(() => {
     setActiveAnim(null);
-    send({ type: 'animation', name: 'stop' });
-  }, [send]);
+    relay.stop();
+  }, [relay]);
 
-  const handleSmooth = useCallback(
+  const handleSpeed = useCallback(
     (pct: number) => {
-      setSmoothness(pct);
-      const alpha = Math.pow(10, -2.7 * (pct / 100));
-      send({ type: 'smoothness', value: alpha });
+      const s = pct / 100;
+      setSpeed(s);
+      relay.sendCommand({ action: 'setSpeed', speed: s });
     },
-    [send]
+    [relay]
   );
 
-  const handleAttack = useCallback(
+  const handleBrightnessCap = useCallback(
     (pct: number) => {
-      setAttack(pct);
-      const value = 0.05 + (pct / 100) * 0.95;
-      send({ type: 'attack', value });
+      const cap = pct / 100;
+      setBrightnessCap(cap);
+      relay.sendCommand({ action: 'setBrightnessCap', brightnessCap: cap });
     },
-    [send]
-  );
-
-  const handleMasterBright = useCallback(
-    (pct: number) => {
-      setMasterBright(pct);
-      send({ type: 'master_brightness', value: pct / 100 });
-    },
-    [send]
+    [relay]
   );
 
   const handleEnergyChange = useCallback(
     (val: number) => {
       setEnergyValue(val);
-      send({ type: 'master_brightness', value: val / 100 });
+      relay.sendCommand({ action: 'setBrightnessCap', brightnessCap: val / 100 });
     },
-    [send]
+    [relay]
   );
 
   const handleGradientDrag = useCallback(
@@ -471,10 +458,11 @@ export default function Home() {
         const proj = ((r - startRow) * (endRow - startRow) + (c - startCol) * (endCol - startCol)) / (dist * dist);
         const t = Math.max(0, Math.min(1, proj));
         const gc = gradient.colorAt(t);
-        send({ type: 'cannon', index: i, h: gc.h, s: gc.s, b: gc.b });
+        const [cr, cg, cb] = hsbToRgb(gc.h, gc.s, gc.b);
+        relay.setZone(i, cr, cg, cb);
       }
     },
-    [send, gradient]
+    [relay, gradient]
   );
 
   const handleTabChange = useCallback((t: GridMode) => {
@@ -483,6 +471,8 @@ export default function Home() {
       setSheetSnap('half');
     }
   }, [isPhone, sheetSnap]);
+
+  const connected = relay.connected || relay.agentConnected;
 
   const toolContentProps = {
     hue, sat, bright, brushSize, softEdge,
@@ -495,7 +485,7 @@ export default function Home() {
     isPhone
   };
 
-  /* ---------- Auth gate (after all hooks, to respect Rules of Hooks) ---------- */
+  /* ---------- Auth gate ---------- */
   if (!checked) {
     return <div className="h-screen" style={{ background: '#050508' }} />;
   }
@@ -508,7 +498,6 @@ export default function Home() {
   if (isPhone) {
     return (
       <div className="flex flex-col h-screen" style={{ background: '#050508' }}>
-        {/* Minimal top bar */}
         <header
           className="flex items-center justify-between px-4 py-2 shrink-0"
           style={{ background: '#0c0c12', borderBottom: '1px solid #1a1a25' }}
@@ -520,7 +509,7 @@ export default function Home() {
               style={{ background: connected ? '#4a4' : '#d44' }}
             />
             {audio.state.playing && (
-              <span className="text-sm animate-pulse" style={{ color: '#4a7cff' }}>♪</span>
+              <span className="text-sm animate-pulse" style={{ color: '#4a7cff' }}>&diams;</span>
             )}
             <span className="text-xs" style={{ color: '#555' }}>
               {user}
@@ -547,35 +536,32 @@ export default function Home() {
                 fontSize: 18
               }}
             >
-              ≡
+              &equiv;
             </button>
           </div>
         </header>
 
-        {/* Expandable master sliders */}
         {showMasterSliders && (
           <div style={{ background: '#0c0c12', borderBottom: '1px solid #1a1a25' }}>
             <MasterSliders
-              masterBright={masterBright}
-              smoothness={smoothness}
-              attack={attack}
-              onMasterBright={handleMasterBright}
-              onSmooth={handleSmooth}
-              onAttack={handleAttack}
+              speed={speed}
+              brightnessCap={brightnessCap}
+              onSpeed={handleSpeed}
+              onBrightnessCap={handleBrightnessCap}
               throttledSlider={throttledSlider}
               vertical
             />
           </div>
         )}
 
-        {/* Grid canvas — takes remaining space above the sheet */}
         <div
           className="flex-1 flex items-center justify-center overflow-hidden"
           style={{ padding: 12, paddingBottom: 88 }}
         >
           <GridDisplay
-            grid={gridData}
+            framebuffer={relay.framebuffer}
             columns={GRID_COLUMNS}
+            rows={GRID_ROWS}
             currentHue={hue}
             currentSat={sat}
             currentBright={bright}
@@ -590,7 +576,6 @@ export default function Home() {
           />
         </div>
 
-        {/* Bottom sheet */}
         <BottomSheet snap={sheetSnap} onSnapChange={setSheetSnap}>
           <TabStrip tab={tab} setTab={handleTabChange} variant="phone" />
           <div style={{ padding: '4px 16px 24px' }}>
@@ -604,7 +589,6 @@ export default function Home() {
   /* ---------- TABLET / DESKTOP LAYOUT ---------- */
   return (
     <div className="flex flex-col h-screen" style={{ background: '#050508' }}>
-      {/* Top Bar */}
       <header
         className="flex items-center justify-between px-5 py-3 shrink-0"
         style={{ background: '#0c0c12', borderBottom: '1px solid #1a1a25' }}
@@ -621,7 +605,7 @@ export default function Home() {
             style={{ background: connected ? '#4a4' : '#d44' }}
           />
           {audio.state.playing && (
-            <span className="text-sm animate-pulse" style={{ color: '#4a7cff' }}>♪</span>
+            <span className="text-sm animate-pulse" style={{ color: '#4a7cff' }}>&diams;</span>
           )}
           <span className="text-xs" style={{ color: '#555' }}>
             {user}
@@ -636,16 +620,13 @@ export default function Home() {
         </div>
         <div className="flex items-center gap-5">
           <MasterSliders
-            masterBright={masterBright}
-            smoothness={smoothness}
-            attack={attack}
-            onMasterBright={handleMasterBright}
-            onSmooth={handleSmooth}
-            onAttack={handleAttack}
+            speed={speed}
+            brightnessCap={brightnessCap}
+            onSpeed={handleSpeed}
+            onBrightnessCap={handleBrightnessCap}
             throttledSlider={throttledSlider}
           />
 
-          {/* Layout toggle */}
           <button
             onClick={() => setLayout((l) => l === 'bottom' ? 'right' : 'bottom')}
             className="flex items-center justify-center transition-all"
@@ -660,18 +641,17 @@ export default function Home() {
               fontSize: 16
             }}
           >
-            {layout === 'bottom' ? '⊟' : '⊞'}
+            {layout === 'bottom' ? '\u229F' : '\u229E'}
           </button>
         </div>
       </header>
 
-      {/* Main content: canvas + tool panel */}
       <div className={`flex-1 flex ${layout === 'right' ? 'flex-row' : 'flex-col'} overflow-hidden`}>
-        {/* Grid Canvas */}
         <div className="flex-1 flex items-center justify-center overflow-hidden" style={{ padding: 16 }}>
           <GridDisplay
-            grid={gridData}
+            framebuffer={relay.framebuffer}
             columns={GRID_COLUMNS}
+            rows={GRID_ROWS}
             currentHue={hue}
             currentSat={sat}
             currentBright={bright}
@@ -686,7 +666,6 @@ export default function Home() {
           />
         </div>
 
-        {/* Tool Panel */}
         <div className={layout === 'right' ? 'shrink-0 h-full' : 'shrink-0'}>
           <ToolPanel
             tab={tab}

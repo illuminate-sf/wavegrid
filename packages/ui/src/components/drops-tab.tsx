@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useRef } from 'react';
 
 interface DropsConfig {
   spectrumStart: number;
@@ -10,106 +10,47 @@ interface DropsConfig {
   width: number;
 }
 
-interface Drop {
-  origin: number;
-  tick: number;
-}
-
 export function useDrops(
-  numCannons: number,
-  gridColumns: number,
+  _numCannons: number,
+  _gridColumns: number,
   config: DropsConfig,
-  send: (msg: Record<string, unknown>) => void
+  loadPattern: (code: string) => Promise<void>
 ) {
-  const dropsRef = useRef<Drop[]>([]);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const configRef = useRef(config);
-  const sendRef = useRef(send);
-
-  useEffect(() => { configRef.current = config; }, [config]);
-  useEffect(() => { sendRef.current = send; }, [send]);
+  configRef.current = config;
 
   const addDrop = useCallback((originIndex: number) => {
-    dropsRef.current.push({ origin: originIndex, tick: 0 });
-    if (!timerRef.current) {
-      timerRef.current = setInterval(() => tickDrops(), 80);
-    }
-  }, []);
-
-  const tickDrops = useCallback(() => {
-    const drops = dropsRef.current;
     const cfg = configRef.current;
-    const s = sendRef.current;
-    if (drops.length === 0) {
-      if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
-      return;
-    }
-
-    const rows = Math.ceil(numCannons / gridColumns);
-    const contrib = new Float32Array(numCannons);
-    const hues = new Float32Array(numCannons);
-    const sats = new Float32Array(numCannons);
-    const counts = new Float32Array(numCannons);
-    const maxRadius = Math.max(gridColumns, rows) * 1.5;
-    const decayRate = 0.6 + (10 - cfg.decay) * 0.06;
-    const speedMult = 0.3 + cfg.speed * 0.15;
-    const ringWidth = cfg.width;
-
-    for (let d = drops.length - 1; d >= 0; d--) {
-      const drop = drops[d];
-      const radius = drop.tick * speedMult;
-      if (radius > maxRadius + ringWidth) {
-        drops.splice(d, 1);
-        continue;
-      }
-
-      const oRow = Math.floor(drop.origin / gridColumns);
-      const oCol = drop.origin % gridColumns;
-
-      for (let i = 0; i < numCannons; i++) {
-        const r = Math.floor(i / gridColumns);
-        const c = i % gridColumns;
-        const dist = Math.sqrt((r - oRow) * (r - oRow) + (c - oCol) * (c - oCol));
-        const delta = Math.abs(dist - radius);
-        if (delta > ringWidth) continue;
-
-        const ringFalloff = 1 - (delta / ringWidth);
-        const ageFalloff = Math.pow(decayRate, drop.tick * 0.3);
-        const intensity = ringFalloff * ageFalloff * 80;
-        if (intensity < 1) continue;
-
-        const specRange = cfg.spectrumEnd - cfg.spectrumStart;
-        const hue = (cfg.spectrumStart + (dist / maxRadius) * specRange + 360) % 360;
-
-        contrib[i] += intensity;
-        hues[i] += hue * intensity;
-        sats[i] += 90 * intensity;
-        counts[i] += intensity;
-      }
-
-      drop.tick++;
-    }
-
-    for (let i = 0; i < numCannons; i++) {
-      if (counts[i] > 0) {
-        const h = (hues[i] / counts[i] + 360) % 360;
-        const sat = sats[i] / counts[i];
-        const b = Math.min(100, contrib[i]);
-        s({ type: 'cannon', index: i, h, s: sat, b });
-      }
-    }
-
-    if (drops.length === 0 && timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-  }, [numCannons, gridColumns]);
-
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, []);
+    const code = `var meta = { name: 'Drop' };
+var origin = ${originIndex};
+var specStart = ${cfg.spectrumStart};
+var specEnd = ${cfg.spectrumEnd};
+var speed = ${cfg.speed};
+var decay = ${cfg.decay};
+var ringWidth = ${cfg.width};
+function render(ctx) {
+  ctx.fade(0.8);
+  var oRow = Math.floor(origin / ctx.cols);
+  var oCol = origin % ctx.cols;
+  var radius = ctx.t * (0.3 + speed * 0.15) * 8;
+  var maxR = Math.max(ctx.cols, ctx.rows) * 1.5;
+  var decayRate = 0.6 + (10 - decay) * 0.06;
+  for (var i = 0; i < ctx.count; i++) {
+    var xy = ctx.xy(i);
+    var dist = Math.sqrt((xy[1] - oRow) * (xy[1] - oRow) + (xy[0] - oCol) * (xy[0] - oCol));
+    var delta = Math.abs(dist - radius);
+    if (delta > ringWidth) continue;
+    var ringFalloff = 1 - (delta / ringWidth);
+    var ageFalloff = Math.pow(decayRate, ctx.t * 4);
+    var v = ringFalloff * ageFalloff;
+    if (v < 0.01) continue;
+    var specRange = specEnd - specStart;
+    var h = (specStart + (dist / maxR) * specRange + 360) % 360;
+    ctx.setHSV(i, h, 90, v * 100);
+  }
+}`;
+    loadPattern(code);
+  }, [loadPattern]);
 
   return { addDrop };
 }
@@ -125,7 +66,7 @@ export function DropsControls({
   const draggingRef = useRef<'start' | 'end' | null>(null);
   const rafRef = useRef(0);
 
-  useEffect(() => {
+  const drawSpectrum = useCallback(() => {
     const canvas = spectrumRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -138,6 +79,13 @@ export function DropsControls({
       ctx.fillRect(x, 0, 1, h);
     }
   }, []);
+
+  const spectrumRefCallback = useCallback((el: HTMLCanvasElement | null) => {
+    (spectrumRef as React.MutableRefObject<HTMLCanvasElement | null>).current = el;
+    if (el) {
+      requestAnimationFrame(drawSpectrum);
+    }
+  }, [drawSpectrum]);
 
   const hueFromPointer = useCallback((clientX: number) => {
     const canvas = spectrumRef.current;
@@ -188,7 +136,6 @@ export function DropsControls({
 
   return (
     <div className="space-y-3">
-      {/* Spectrum range */}
       <div>
         <p className="text-sm font-medium mb-2" style={{ color: '#888898', letterSpacing: '0.05em' }}>
           Spectrum
@@ -202,13 +149,12 @@ export function DropsControls({
           onPointerCancel={handleSpectrumUp}
         >
           <canvas
-            ref={spectrumRef}
+            ref={spectrumRefCallback}
             width={200}
             height={44}
             className="w-full rounded-md"
             style={{ height: 44 }}
           />
-          {/* Start handle */}
           <div
             className="absolute pointer-events-none"
             style={{
@@ -231,7 +177,6 @@ export function DropsControls({
               }}
             />
           </div>
-          {/* End handle */}
           <div
             className="absolute pointer-events-none"
             style={{
@@ -254,7 +199,6 @@ export function DropsControls({
               }}
             />
           </div>
-          {/* Selected range overlay */}
           <div
             className="absolute top-0 bottom-0 pointer-events-none"
             style={{
@@ -267,12 +211,11 @@ export function DropsControls({
           />
         </div>
         <div className="flex justify-between mt-1">
-          <span className="text-xs font-mono" style={{ color: '#888898', fontSize: 9 }}>{config.spectrumStart}°</span>
-          <span className="text-xs font-mono" style={{ color: '#888898', fontSize: 9 }}>{config.spectrumEnd}°</span>
+          <span className="text-xs font-mono" style={{ color: '#888898', fontSize: 9 }}>{config.spectrumStart}&deg;</span>
+          <span className="text-xs font-mono" style={{ color: '#888898', fontSize: 9 }}>{config.spectrumEnd}&deg;</span>
         </div>
       </div>
 
-      {/* Sliders */}
       <div className="flex gap-4 flex-wrap">
         {[
           { label: 'Speed', key: 'speed' as const, min: 1, max: 10, val: config.speed },
