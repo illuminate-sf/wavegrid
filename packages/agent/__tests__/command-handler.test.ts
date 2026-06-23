@@ -15,7 +15,7 @@ function render(ctx) {
 `;
 
 function makeState(): RuntimeState {
-  return { fps: 60, bpm: 120, speed: 1, brightnessCap: 1, maxFlashHz: 0, armed: false };
+  return { fps: 60, bpm: 120, speed: 1, brightnessCap: 1, maxFlashHz: 0, fade: 1, armed: false };
 }
 
 function makeSink(): Sink & { frames: number[][]; released: boolean } {
@@ -73,41 +73,68 @@ describe('createCommandHandler', () => {
     expect(state.speed).toBe(2.5);
   });
 
-  it('handles solid command', () => {
+  it('handles setFade', () => {
     const sink = makeSink();
     const state = makeState();
     const loop = createRenderLoop({ engine, sink, state }, 9);
     const handle = createCommandHandler({ engine, sink, state }, loop, 9);
 
+    handle({ action: 'setFade', fade: 0.05 });
+    expect(state.fade).toBeCloseTo(0.05);
+    // Clamps below minimum
+    handle({ action: 'setFade', fade: 0.0001 });
+    expect(state.fade).toBeCloseTo(0.002);
+  });
+
+  it('handles solid command (LP-filtered)', async () => {
+    const sink = makeSink();
+    const state = makeState();
+    // fade=1 means instant (no smoothing)
+    state.fade = 1;
+    const loop = createRenderLoop({ engine, sink, state }, 9);
+    const handle = createCommandHandler({ engine, sink, state }, loop, 9);
+
     handle({ action: 'solid', r: 255, g: 0, b: 128 });
-    expect(sink.frames.length).toBe(1);
-    const fb = sink.frames[0];
+    // solid now starts the render loop; wait for a frame
+    await new Promise(r => setTimeout(r, 100));
+    loop.stop();
+
+    expect(sink.frames.length).toBeGreaterThan(0);
+    const fb = sink.frames[sink.frames.length - 1];
     expect(fb[0]).toBe(255);
     expect(fb[1]).toBe(0);
     expect(fb[2]).toBe(128);
   });
 
-  it('handles blackout command', () => {
+  it('handles blackout command', async () => {
     const sink = makeSink();
     const state = makeState();
+    state.fade = 1;
     const loop = createRenderLoop({ engine, sink, state }, 9);
     const handle = createCommandHandler({ engine, sink, state }, loop, 9);
 
     handle({ action: 'blackout' });
-    expect(sink.frames.length).toBe(1);
-    const fb = sink.frames[0];
+    await new Promise(r => setTimeout(r, 100));
+    loop.stop();
+
+    expect(sink.frames.length).toBeGreaterThan(0);
+    const fb = sink.frames[sink.frames.length - 1];
     expect(fb.every(v => v === 0)).toBe(true);
   });
 
-  it('handles setZone command', () => {
+  it('handles setZone command', async () => {
     const sink = makeSink();
     const state = makeState();
+    state.fade = 1;
     const loop = createRenderLoop({ engine, sink, state }, 9);
     const handle = createCommandHandler({ engine, sink, state }, loop, 9);
 
     handle({ action: 'setZone', zone: 2, r: 100, g: 200, b: 50 });
-    expect(sink.frames.length).toBe(1);
-    const fb = sink.frames[0];
+    await new Promise(r => setTimeout(r, 100));
+    loop.stop();
+
+    expect(sink.frames.length).toBeGreaterThan(0);
+    const fb = sink.frames[sink.frames.length - 1];
     // Zone 2 should be (100, 200, 50)
     expect(fb[6]).toBe(100);
     expect(fb[7]).toBe(200);
@@ -118,9 +145,10 @@ describe('createCommandHandler', () => {
     expect(fb[2]).toBe(0);
   });
 
-  it('handles stopPattern command', () => {
+  it('handles stopPattern command', async () => {
     const sink = makeSink();
     const state = makeState();
+    state.fade = 1;
     const loop = createRenderLoop({ engine, sink, state }, 9);
     const handle = createCommandHandler({ engine, sink, state }, loop, 9);
 
@@ -129,34 +157,44 @@ describe('createCommandHandler', () => {
     expect(loop.running).toBe(true);
 
     handle({ action: 'stopPattern' });
-    expect(loop.running).toBe(false);
-    // Last frame should be all black
+    // stopPattern now sets target to black; loop keeps running for LP fade
+    await new Promise(r => setTimeout(r, 100));
+    loop.stop();
+
     const lastFb = sink.frames[sink.frames.length - 1];
     expect(lastFb.every(v => v === 0)).toBe(true);
   });
 
-  it('does not present to osc sink when not armed', () => {
+  it('does not present to osc sink when not armed', async () => {
     const sink = makeSink();
     sink.kind = 'osc';
     const state = makeState();
     state.armed = false;
+    state.fade = 1;
     const loop = createRenderLoop({ engine, sink, state }, 9);
     const handle = createCommandHandler({ engine, sink, state }, loop, 9);
 
     handle({ action: 'solid', r: 255, g: 0, b: 0 });
+    await new Promise(r => setTimeout(r, 100));
+    loop.stop();
+
     expect(sink.frames.length).toBe(0); // Not armed, should not present
   });
 
-  it('presents to osc sink when armed', () => {
+  it('presents to osc sink when armed', async () => {
     const sink = makeSink();
     sink.kind = 'osc';
     const state = makeState();
     state.armed = true;
+    state.fade = 1;
     const loop = createRenderLoop({ engine, sink, state }, 9);
     const handle = createCommandHandler({ engine, sink, state }, loop, 9);
 
     handle({ action: 'solid', r: 255, g: 0, b: 0 });
-    expect(sink.frames.length).toBe(1);
+    await new Promise(r => setTimeout(r, 100));
+    loop.stop();
+
+    expect(sink.frames.length).toBeGreaterThan(0);
   });
 
   it('logs unknown commands', () => {
@@ -168,6 +206,26 @@ describe('createCommandHandler', () => {
 
     handle({ action: 'foobar' });
     expect(logs.some(l => l.includes('unknown command'))).toBe(true);
+  });
+
+  it('LP filter smoothes transitions when fade < 1', async () => {
+    const sink = makeSink();
+    const state = makeState();
+    state.fade = 0.1; // slow fade
+    state.fps = 60;
+    const loop = createRenderLoop({ engine, sink, state }, 9);
+    const handle = createCommandHandler({ engine, sink, state }, loop, 9);
+
+    handle({ action: 'solid', r: 255, g: 0, b: 0 });
+    await new Promise(r => setTimeout(r, 50));
+    loop.stop();
+
+    // First frames should be partially faded (not yet at 255)
+    expect(sink.frames.length).toBeGreaterThan(0);
+    const firstFb = sink.frames[0];
+    // With fade=0.1, first frame R should be ~25.5 (0 + (255-0)*0.1)
+    expect(firstFb[0]).toBeGreaterThan(0);
+    expect(firstFb[0]).toBeLessThan(255);
   });
 });
 
@@ -196,7 +254,8 @@ describe('createRenderLoop', () => {
   it('produces frames when running', async () => {
     const sink = makeSink();
     const state = makeState();
-    state.fps = 30; // slower for test reliability
+    state.fps = 30;
+    state.fade = 1;
     const loop = createRenderLoop({ engine, sink, state }, 9);
 
     loop.start();
@@ -204,7 +263,6 @@ describe('createRenderLoop', () => {
     loop.stop();
 
     expect(sink.frames.length).toBeGreaterThan(0);
-    // Each frame should have 27 values (9 pixels * 3 channels)
     for (const fb of sink.frames) {
       expect(fb.length).toBe(27);
     }

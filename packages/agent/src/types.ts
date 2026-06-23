@@ -65,6 +65,8 @@ export interface RuntimeState {
   speed: number;
   brightnessCap: number;
   maxFlashHz: number;
+  /** LP filter alpha (0..1). Lower = smoother transitions. Default 0.08. */
+  fade: number;
   armed: boolean;
 }
 

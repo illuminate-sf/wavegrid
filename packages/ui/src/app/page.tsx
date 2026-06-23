@@ -273,22 +273,22 @@ function ToolPanel({
 /* ---------- Master sliders ---------- */
 
 function MasterSliders({
-  speed,
+  fadePct,
   brightnessCap,
-  onSpeed,
+  onFade,
   onBrightnessCap,
   throttledSlider,
   vertical
 }: {
-  speed: number;
+  fadePct: number;
   brightnessCap: number;
-  onSpeed: (v: number) => void;
+  onFade: (v: number) => void;
   onBrightnessCap: (v: number) => void;
   throttledSlider: (handler: (v: number) => void) => (e: React.ChangeEvent<HTMLInputElement>) => void;
   vertical?: boolean;
 }) {
   const sliders = [
-    { label: 'Speed', value: Math.round(speed * 100), handler: onSpeed, max: 200 },
+    { label: 'Fade', value: fadePct, handler: onFade, max: 100 },
     { label: 'Bright', value: Math.round(brightnessCap * 100), handler: onBrightnessCap, max: 100 }
   ];
 
@@ -355,7 +355,7 @@ export default function Home() {
   const [bright, setBright] = useState(80);
   const [brushSize, setBrushSize] = useState(1);
   const [softEdge, setSoftEdge] = useState(false);
-  const [speed, setSpeed] = useState(1);
+  const [fadePct, setFadePct] = useState(50);
   const [brightnessCap, setBrightnessCap] = useState(1);
   const [sheetSnap, setSheetSnap] = useState<SnapPoint>('peek');
   const [showMasterSliders, setShowMasterSliders] = useState(false);
@@ -417,11 +417,12 @@ export default function Home() {
     relay.stop();
   }, [relay]);
 
-  const handleSpeed = useCallback(
+  const handleFade = useCallback(
     (pct: number) => {
-      const s = pct / 100;
-      setSpeed(s);
-      relay.sendCommand({ action: 'setSpeed', speed: s });
+      setFadePct(pct);
+      // Logarithmic mapping: 0 = very smooth (0.002), 100 = instant (1.0)
+      const alpha = pct >= 100 ? 1 : Math.max(0.002, Math.pow(10, -2.7 * (1 - pct / 100)));
+      relay.sendCommand({ action: 'setFade', fade: alpha });
     },
     [relay]
   );
@@ -544,9 +545,9 @@ export default function Home() {
         {showMasterSliders && (
           <div style={{ background: '#0c0c12', borderBottom: '1px solid #1a1a25' }}>
             <MasterSliders
-              speed={speed}
+              fadePct={fadePct}
               brightnessCap={brightnessCap}
-              onSpeed={handleSpeed}
+              onFade={handleFade}
               onBrightnessCap={handleBrightnessCap}
               throttledSlider={throttledSlider}
               vertical
@@ -620,9 +621,9 @@ export default function Home() {
         </div>
         <div className="flex items-center gap-5">
           <MasterSliders
-            speed={speed}
+            fadePct={fadePct}
             brightnessCap={brightnessCap}
-            onSpeed={handleSpeed}
+            onFade={handleFade}
             onBrightnessCap={handleBrightnessCap}
             throttledSlider={throttledSlider}
           />

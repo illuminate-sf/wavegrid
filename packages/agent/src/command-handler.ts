@@ -18,22 +18,37 @@ export interface CommandHandlerDeps {
 export interface RenderLoop {
   start(): void;
   stop(): void;
+  /** Directly set a zone in the display buffer (for paint). */
+  setZone(index: number, r: number, g: number, b: number): void;
+  /** Set all zones to a solid color in the display buffer. */
+  setSolid(r: number, g: number, b: number): void;
   readonly running: boolean;
 }
 
 /**
  * Create a render loop that ticks the pattern engine and presents to the sink.
+ *
+ * The loop maintains two buffers:
+ *   - target: raw pattern output (updated every frame by the engine)
+ *   - display: what's actually shown (LP-filtered toward target)
+ *
+ * The LP filter (controlled by state.fade) produces smooth transitions
+ * identical to the old simulator's tickGrid() / exponential smoothing.
  */
 export function createRenderLoop(
   deps: CommandHandlerDeps,
   count: number
 ): RenderLoop {
   const { engine, sink, state } = deps;
-  const prev = new Array<number>(count * 3).fill(0);
+  const len = count * 3;
+  const display = new Array<number>(len).fill(0);
+  const target = new Array<number>(len).fill(0);
   let t = 0;
   let frame = 0;
   let lastNow = 0;
   let timer: ReturnType<typeof setInterval> | null = null;
+  // When true, pattern engine drives the target buffer
+  let patternActive = true;
 
   function tick(): void {
     const now = performance.now();
@@ -43,23 +58,41 @@ export function createRenderLoop(
     t += dt;
     frame++;
 
-    const fb = engine.renderFrame(t, dt, frame, state.bpm);
-    if (fb) {
-      applySafety(fb, prev, rdt, {
-        brightnessCap: state.brightnessCap,
-        maxFlashHz: state.maxFlashHz
-      });
-      if (sink.kind !== 'osc' || state.armed) {
-        sink.present(fb);
+    // Update target from pattern engine
+    if (patternActive) {
+      const fb = engine.renderFrame(t, dt, frame, state.bpm);
+      if (fb) {
+        for (let i = 0; i < len && i < fb.length; i++) target[i] = fb[i];
       }
-      // Update prev for next safety pass
-      for (let i = 0; i < fb.length; i++) prev[i] = fb[i];
+    }
+
+    // Exponential LP filter: display lerps toward target
+    const alpha = state.fade;
+    for (let i = 0; i < len; i++) {
+      const d = target[i] - display[i];
+      if (Math.abs(d) < 0.5) {
+        display[i] = target[i];
+      } else {
+        display[i] += d * alpha;
+      }
+    }
+
+    // Safety limiter on the display buffer
+    const out = display.slice();
+    applySafety(out, null, rdt, {
+      brightnessCap: state.brightnessCap,
+      maxFlashHz: state.maxFlashHz
+    });
+
+    if (sink.kind !== 'osc' || state.armed) {
+      sink.present(out);
     }
   }
 
   return {
     start(): void {
       if (timer) return;
+      patternActive = true;
       lastNow = performance.now();
       timer = setInterval(tick, 1000 / state.fps);
     },
@@ -67,6 +100,32 @@ export function createRenderLoop(
       if (timer) {
         clearInterval(timer);
         timer = null;
+      }
+    },
+    setZone(index: number, r: number, g: number, b: number): void {
+      if (index < 0 || index >= count) return;
+      const o = index * 3;
+      target[o] = r;
+      target[o + 1] = g;
+      target[o + 2] = b;
+      patternActive = false;
+      // Ensure the loop is running so LP filter still ticks
+      if (!timer) {
+        lastNow = performance.now();
+        timer = setInterval(tick, 1000 / state.fps);
+      }
+    },
+    setSolid(r: number, g: number, b: number): void {
+      for (let i = 0; i < count; i++) {
+        const o = i * 3;
+        target[o] = r;
+        target[o + 1] = g;
+        target[o + 2] = b;
+      }
+      patternActive = false;
+      if (!timer) {
+        lastNow = performance.now();
+        timer = setInterval(tick, 1000 / state.fps);
       }
     },
     get running(): boolean {
@@ -85,23 +144,6 @@ export function createCommandHandler(
 ): (cmd: AgentCommand) => void {
   const { engine, sink, state, onLog } = deps;
   const log = onLog ?? console.log;
-
-  function solidFb(r: number, g: number, b: number): number[] {
-    const fb = new Array<number>(count * 3);
-    for (let i = 0; i < count; i++) {
-      fb[i * 3] = r;
-      fb[i * 3 + 1] = g;
-      fb[i * 3 + 2] = b;
-    }
-    return fb;
-  }
-
-  function manual(fb: number[]): void {
-    loop.stop();
-    if (sink.kind !== 'osc' || state.armed) {
-      sink.present(fb);
-    }
-  }
 
   return function handle(cmd: AgentCommand): void {
     switch (cmd.action) {
@@ -138,6 +180,12 @@ export function createCommandHandler(
       state.speed = cmd.speed ?? 1;
       break;
 
+    case 'setFade':
+      state.fade = Math.max(0.002, Math.min(1,
+        (cmd.fade as number) ?? state.fade
+      ));
+      break;
+
     case 'setBrightnessCap':
       state.brightnessCap = Math.max(0, Math.min(1,
         (cmd.brightnessCap as number) ?? state.brightnessCap
@@ -145,7 +193,7 @@ export function createCommandHandler(
       break;
 
     case 'stopPattern':
-      manual(solidFb(0, 0, 0));
+      loop.setSolid(0, 0, 0);
       break;
 
     case 'setParam':
@@ -163,25 +211,17 @@ export function createCommandHandler(
 
     case 'solid':
     case 'live':
-      manual(solidFb(cmd.r ?? 0, cmd.g ?? 0, cmd.b ?? 0));
+      loop.setSolid(cmd.r ?? 0, cmd.g ?? 0, cmd.b ?? 0);
       break;
 
     case 'blackout':
     case 'restore':
-      manual(solidFb(0, 0, 0));
+      loop.setSolid(0, 0, 0);
       break;
 
-    case 'setZone': {
-      const fb = solidFb(0, 0, 0);
-      const z = cmd.zone ?? 0;
-      if (z >= 0 && z < count) {
-        fb[z * 3] = cmd.r ?? 0;
-        fb[z * 3 + 1] = cmd.g ?? 0;
-        fb[z * 3 + 2] = cmd.b ?? 0;
-      }
-      manual(fb);
+    case 'setZone':
+      loop.setZone(cmd.zone ?? 0, cmd.r ?? 0, cmd.g ?? 0, cmd.b ?? 0);
       break;
-    }
 
     default:
       log(`unknown command: ${cmd.action}`);

@@ -21,7 +21,7 @@ function render(ctx) {
   for (var i = 0; i < ctx.count; i++) {
     var uv = ctx.uv(i);
     var h = 210 + uv[0] * 20 + Math.sin(ctx.t * 0.3 + uv[1] * 3) * 10;
-    ctx.setHSV(i, h, 90, 70 + uv[1] * 20);
+    ctx.setHSV(i, h, 90, 85 + uv[1] * 15);
   }
 }`
   },
@@ -49,7 +49,7 @@ function render(ctx) {
   for (var i = 0; i < ctx.count; i++) {
     var uv = ctx.uv(i);
     var shimmer = 0.85 + 0.15 * Math.sin(uv[0] * 4 + uv[1] * 3 + ctx.t * 1.5);
-    ctx.setHSV(i, 45 + uv[0] * 5, 100, 80 * shimmer);
+    ctx.setHSV(i, 45 + uv[0] * 5, 100, 100 * shimmer);
   }
 }`
   },
@@ -71,7 +71,7 @@ function render(ctx) {
   for (var i = 0; i < ctx.count; i++) {
     var uv = ctx.uv(i);
     var h = 15 + uv[1] * 25 + Math.sin(ctx.t * 0.5 + uv[0] * 4) * 8;
-    ctx.setHSV(i, h, 95, 75 + uv[0] * 15);
+    ctx.setHSV(i, h, 95, 85 + uv[0] * 15);
   }
 }`
   },
@@ -84,7 +84,7 @@ function render(ctx) {
     var uv = ctx.uv(i);
     var wave = Math.sin(uv[0] * 4 + ctx.t * 1.5) * 0.1 + Math.sin(uv[0] * 7 - ctx.t * 2) * 0.05;
     var depth = uv[1] + wave;
-    ctx.setHSV(i, 200 + depth * 20, 70 + depth * 20, 90 - depth * 50);
+    ctx.setHSV(i, 200 + depth * 20, 75 + depth * 20, 100 - depth * 40);
   }
 }`
   },
@@ -97,7 +97,7 @@ function render(ctx) {
     var uv = ctx.uv(i);
     var h = ctx.lerp(30, 280, uv[1]);
     var wobble = Math.sin(uv[0] * 3 + ctx.t) * 5;
-    ctx.setHSV(i, h + wobble, 90, 100 - uv[1] * 30);
+    ctx.setHSV(i, h + wobble, 90, 100 - uv[1] * 20);
   }
 }`
   },
