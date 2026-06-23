@@ -138,6 +138,12 @@ export function createCommandHandler(
       state.speed = cmd.speed ?? 1;
       break;
 
+    case 'setBrightnessCap':
+      state.brightnessCap = Math.max(0, Math.min(1,
+        (cmd.brightnessCap as number) ?? state.brightnessCap
+      ));
+      break;
+
     case 'stopPattern':
       manual(solidFb(0, 0, 0));
       break;

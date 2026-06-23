@@ -75,10 +75,27 @@ export function createRelayServer(config: RelayServerConfig = {}): RelayServerHa
     return false;
   }
 
+  function setCors(req: http.IncomingMessage, res: http.ServerResponse): void {
+    const origin = req.headers.origin;
+    if (origin) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    }
+  }
+
   const server = http.createServer(async (req, res) => {
     const u = new URL(req.url ?? '/', 'http://x');
     const ck = cookies(req);
     const authed = ck.sid ? sessions.has(ck.sid) : false;
+
+    // CORS preflight
+    setCors(req, res);
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204);
+      return res.end();
+    }
 
     // Login routes (no auth required)
     if (u.pathname === '/login' && req.method === 'POST') {
@@ -118,22 +135,7 @@ export function createRelayServer(config: RelayServerConfig = {}): RelayServerHa
       return res.end(programsJs);
     }
 
-    // Everything else requires auth
-    if (!authed) {
-      res.writeHead(302, { Location: '/login' });
-      return res.end();
-    }
-
-    if (u.pathname === '/' || u.pathname === '/patterns') {
-      res.setHeader('content-type', 'text/html');
-      return res.end(generateGalleryHtml());
-    }
-
-    if (u.pathname === '/map') {
-      res.setHeader('content-type', 'text/html');
-      return res.end('<html><body><h1>Zone Mapping</h1><p>Map UI coming soon</p></body></html>');
-    }
-
+    // Command API — no session auth required (agent connection is token-gated)
     if (u.pathname === '/api/command' && req.method === 'POST') {
       let cmd: RelayCommand;
       try {
@@ -148,6 +150,22 @@ export function createRelayServer(config: RelayServerConfig = {}): RelayServerHa
       }
       res.writeHead(503);
       return res.end(JSON.stringify({ ok: false, error: 'agent disconnected' }));
+    }
+
+    // Everything else requires auth (gallery UI, map, etc.)
+    if (!authed) {
+      res.writeHead(302, { Location: '/login' });
+      return res.end();
+    }
+
+    if (u.pathname === '/' || u.pathname === '/patterns') {
+      res.setHeader('content-type', 'text/html');
+      return res.end(generateGalleryHtml());
+    }
+
+    if (u.pathname === '/map') {
+      res.setHeader('content-type', 'text/html');
+      return res.end('<html><body><h1>Zone Mapping</h1><p>Map UI coming soon</p></body></html>');
     }
 
     res.writeHead(404);
