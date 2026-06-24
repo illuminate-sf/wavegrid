@@ -313,7 +313,7 @@ export function GridDisplay({
   return (
     <div
       ref={wrapRef}
-      className="flex-1 flex items-center justify-center"
+      className="w-full h-full flex items-center justify-center"
       style={{ touchAction: 'none', minWidth: 0, minHeight: 0, overflow: 'hidden' }}
     >
       <canvas
