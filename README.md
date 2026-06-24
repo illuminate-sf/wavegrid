@@ -22,7 +22,7 @@ The stack is three processes. The only dev-vs-prod difference is the UI: prod se
 
 | Process | Script | Port | Role |
 |---|---|---|---|
-| Simulator | `pnpm dev:sim` | `:3000` | master controller / grid state engine |
+| Server | `pnpm dev:server` (or `dev:sim`) | `:3000` | master controller / grid state engine |
 | UI | `pnpm dev:ui` (dev) / `pnpm start:ui` (prod) | `:3003` | artist UI |
 | Receiver | `pnpm dev:receiver` | — | brain → OSC to BEYOND |
 
@@ -52,7 +52,7 @@ pnpm build
 
 | Package | Name | Description |
 |---------|------|-------------|
-| `packages/simulator` | `@wavegrid/simulator` | Grid state engine and master controller UI |
+| `packages/server` | `@wavegrid/server` | Grid state engine and master controller UI |
 | `packages/ui` | `@wavegrid/ui` | Next.js artist UI — Paint, Gradient, Drops, Motion, Scenes, Animations, Flags, Brightness, Audio |
 | `packages/receiver` | `wavegrid` | Receiver brain — LP filter, sine fallback, pluggable adapter pattern |
 | `packages/relay` | `@wavegrid/relay` | Transparent WebSocket message router |
@@ -88,7 +88,7 @@ pnpm build
 
 ```sh
 # Start the full stack (each in its own terminal)
-pnpm dev:sim       # Simulator at :3000 (master controller)
+pnpm dev:server    # Server at :3000 (master controller)
 pnpm dev:ui        # UI at :3003 (artist UI)
 pnpm dev:receiver  # Receiver (brain)
 
@@ -103,7 +103,7 @@ Everything defaults to 7x7 (49 cannons). Override with environment variables:
 
 ```sh
 # 10x10 grid (100 cannons)
-NUM_CANNONS=100 GRID_COLUMNS=10 pnpm dev:sim
+NUM_CANNONS=100 GRID_COLUMNS=10 pnpm dev:server
 NUM_CANNONS=100 GRID_COLUMNS=10 pnpm dev:ui
 NUM_CANNONS=100 GRID_COLUMNS=10 pnpm dev:receiver
 ```
@@ -147,7 +147,7 @@ The UI never sends OSC — only the **Receiver** talks to laser hardware:
 For a live event where everything runs on a single machine at the venue:
 
 ```sh
-pnpm dev:sim                             # :3000 (master controller)
+pnpm dev:server                          # :3000 (master controller)
 pnpm dev:ui                              # :3003 (artist UI)
 pnpm dev:receiver                        # brain → hardware
 ```
@@ -173,7 +173,7 @@ When the UI/Simulator run on a cloud server and the laser hardware is on-site:
 
 ```sh
 # Terminal 1 — Simulator (WebSocket server)
-pnpm dev:sim
+pnpm dev:server
 
 # Terminal 2 — UI (Next.js, tells browsers where the simulator is)
 NEXT_PUBLIC_SIMULATOR_URL=ws://203.0.113.50:3000 pnpm dev:ui

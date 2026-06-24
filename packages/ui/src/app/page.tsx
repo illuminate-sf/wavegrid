@@ -552,8 +552,8 @@ export default function Home() {
               className="w-2.5 h-2.5 rounded-full"
               style={{ background: connected ? '#4a4' : '#d44' }}
             />
-            {audio.state.playing && (
-              <span className="text-sm animate-pulse" style={{ color: '#4a7cff' }}>♪</span>
+            {(audio.state.playing || audio.state.micActive) && (
+              <span className="text-sm animate-pulse" style={{ color: '#4a7cff' }}>{audio.state.micActive ? '🎤' : '♪'}</span>
             )}
             <span className="text-xs" style={{ color: '#555' }}>
               {user}
@@ -723,8 +723,8 @@ export default function Home() {
             className="w-2.5 h-2.5 rounded-full"
             style={{ background: connected ? '#4a4' : '#d44' }}
           />
-          {audio.state.playing && (
-            <span className="text-sm animate-pulse" style={{ color: '#4a7cff' }}>♪</span>
+          {(audio.state.playing || audio.state.micActive) && (
+            <span className="text-sm animate-pulse" style={{ color: '#4a7cff' }}>{audio.state.micActive ? '🎤' : '♪'}</span>
           )}
           <span className="text-xs" style={{ color: '#555' }}>
             {user}

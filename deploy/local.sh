@@ -48,8 +48,8 @@ cleanup() {
 }
 trap cleanup INT TERM EXIT
 
-echo "▶ simulator → http://localhost:${SIM_PORT}  (master controller)"
-pnpm dev:sim & pids+=("$!")
+echo "▶ server    → http://localhost:${SIM_PORT}  (master controller)"
+pnpm dev:server & pids+=("$!")
 
 echo "▶ ui        → http://localhost:3003  (prod build)"
 pnpm start:ui & pids+=("$!")

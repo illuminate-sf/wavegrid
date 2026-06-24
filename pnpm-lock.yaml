@@ -113,7 +113,7 @@ importers:
         version: 0.3.1
     publishDirectory: dist
 
-  packages/simulator:
+  packages/server:
     dependencies:
       ws:
         specifier: ^8.18.0

@@ -39,7 +39,7 @@ export function createCivicBuildings(timeOfDay: string): THREE.Group {
     // Federal Building (right of plaza)
     { x: 350 * FT, z: 250 * FT, w: 180 * FT, d: 100 * FT, h: 80 * FT, mat: darkBuildingMat },
     // Pioneer Monument pedestal (between City Hall and plaza)
-    { x: 0, z: -20 * FT, w: 20 * FT, d: 20 * FT, h: 25 * FT, mat: buildingMat },
+    { x: 0, z: -20 * FT, w: 20 * FT, d: 20 * FT, h: 25 * FT, mat: buildingMat }
   ];
 
   for (const b of buildings) {

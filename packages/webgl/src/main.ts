@@ -1,8 +1,9 @@
 import * as THREE from 'three';
-import { CivicCenterScene } from './scene/CivicCenterScene';
-import { StateController } from './control/StateController';
+
 import { MessageReceiver } from './control/MessageReceiver';
+import { StateController } from './control/StateController';
 import { DEFAULT_CONFIG, type TimeOfDay } from './installation/BeamState';
+import { CivicCenterScene } from './scene/CivicCenterScene';
 
 const SIMULATOR_URL = 'ws://localhost:3000';
 

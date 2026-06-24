@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+
 import type { InstallationConfig } from './BeamState';
 
 const FT = 0.3048;
@@ -60,7 +61,7 @@ export function createTrussGrid(config: InstallationConfig): THREE.Group {
     [-halfW, 0],
     [halfW, 0],
     [0, -halfD],
-    [0, halfD],
+    [0, halfD]
   ];
 
   for (const [x, z] of legPositions) {

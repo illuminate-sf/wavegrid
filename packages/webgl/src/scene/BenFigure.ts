@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+
 import type { InstallationConfig } from '../installation/BeamState';
 
 const FT = 0.3048;

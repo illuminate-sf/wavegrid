@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Load env vars into the current shell, then run the dev servers manually.
 #
-#   shell one:   source deploy/load-env.sh && pnpm dev:sim
+#   shell one:   source deploy/load-env.sh && pnpm dev:server
 #   shell two:   source deploy/load-env.sh && pnpm dev:ui
 #
 # Works in bash and zsh. Must be *sourced* (not executed) so exports stick.
@@ -45,6 +45,6 @@ echo "  NEXT_PUBLIC_SIMULATOR_URL = ${NEXT_PUBLIC_SIMULATOR_URL:-<unset>}"
 echo "  SIMULATOR_URL             = ${SIMULATOR_URL:-<unset>}"
 echo
 echo "Now run:"
-echo "  pnpm dev:sim        # cloud shell one"
+echo "  pnpm dev:server     # cloud shell one"
 echo "  pnpm dev:ui         # cloud shell two"
 echo "  pnpm dev:receiver   # pangolin (or use deploy/receiver.cmd on Windows)"

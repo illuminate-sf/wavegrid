@@ -37,7 +37,7 @@ pnpm dev:ui        # → http://localhost:3003
 
 Requires the Simulator running on `:3000`:
 ```bash
-pnpm dev:sim       # start the simulator first
+pnpm dev:server    # start the server first
 pnpm dev:ui        # then the UI
 ```
 

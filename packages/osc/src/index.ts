@@ -15,10 +15,9 @@ export type {
 } from './osc-adapters';
 export {
   BeyondOscOutput,
-  DEBUG_OSC,
-  FB4OscOutput,
-  RoutedOscOutput,
   createRoutedOutput,
+  DEBUG_OSC,
   encodeBeyondMessages,
-  encodeFB4Messages
-} from './osc-adapters';
+  encodeFB4Messages,
+  FB4OscOutput,
+  RoutedOscOutput} from './osc-adapters';

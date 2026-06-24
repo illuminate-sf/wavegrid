@@ -8,7 +8,7 @@ WebGL 3D viewer for the 7×7 laser installation at San Francisco's Civic Center 
 
 ```sh
 # From repo root
-pnpm dev:sim    # start Simulator on :3000
+pnpm dev:server # start Server on :3000
 pnpm dev:webgl  # start 3D viewer on :3004
 ```
 

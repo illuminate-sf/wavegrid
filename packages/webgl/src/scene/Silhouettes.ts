@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+
 import type { InstallationConfig } from '../installation/BeamState';
 
 const FT = 0.3048;
@@ -32,7 +33,7 @@ export function createHumanSilhouettes(config: InstallationConfig): THREE.Group 
     [5 * FT, 0, 3 * FT],
     // People further away
     [half + 30 * FT, 0, 10 * FT],
-    [-half - 25 * FT, 0, -15 * FT],
+    [-half - 25 * FT, 0, -15 * FT]
   ];
 
   for (const [x, _, z] of positions) {

@@ -13,7 +13,7 @@ cp deploy/.env.example deploy/.env   # set CLOUD_IP=…
 
 ## Machine 1 — cloud server (Linux, at CLOUD_IP)
 
-Runs the **simulator** + **ui** under PM2 so they stay up unattended.
+Runs the **server** + **ui** under PM2 so they stay up unattended.
 
 ```bash
 deploy/cloud.sh setup     # install pm2 if needed, start both, enable boot persistence
@@ -23,14 +23,14 @@ deploy/cloud.sh status
 deploy/cloud.sh stop
 ```
 
-Processes: `wavegrid-sim` (`pnpm dev:sim`, binds `0.0.0.0:SIM_PORT`) and
+Processes: `wavegrid-sim` (`pnpm dev:server`, binds `0.0.0.0:SIM_PORT`) and
 `wavegrid-ui` (`pnpm dev:ui`, serves `:3003`). Both auto-restart on crash. See
 `ecosystem.config.js`.
 
 ### Manual (mac/linux dev, two terminals)
 
 ```bash
-source deploy/load-env.sh && pnpm dev:sim   # shell one
+source deploy/load-env.sh && pnpm dev:server # shell one
 source deploy/load-env.sh && pnpm dev:ui    # shell two
 ```
 

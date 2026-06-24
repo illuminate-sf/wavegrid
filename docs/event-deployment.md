@@ -5,7 +5,7 @@
 ```mermaid
 graph LR
     subgraph Cloud["☁️ Cloud Server (DigitalOcean)"]
-        SIM["Simulator :3000"]
+        SIM["Server :3000"]
         UI["UI :3003"]
     end
 
@@ -41,8 +41,8 @@ graph LR
 Open two terminals:
 
 ```sh
-# Terminal 1 — Simulator
-pnpm dev:sim
+# Terminal 1 — Server
+pnpm dev:server
 ```
 
 ```sh
@@ -128,7 +128,7 @@ Replace these before running:
 ```mermaid
 graph TD
     subgraph Commands
-        A["Cloud Terminal 1"] -->|"pnpm dev:sim"| SIM["Simulator :3000"]
+        A["Cloud Terminal 1"] -->|"pnpm dev:server"| SIM["Server :3000"]
         B["Cloud Terminal 2"] -->|"NEXT_PUBLIC_SIMULATOR_URL=ws://‹CLOUD_IP›:3000 pnpm dev:ui"| UI["UI :3003"]
         C["Pangolin PowerShell"] -->|"set env vars + pnpm dev:receiver"| RX["Receiver"]
     end

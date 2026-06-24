@@ -86,6 +86,19 @@ export function AudioTab({ audio }: AudioTabProps) {
         )}
       </div>
 
+      {/* Mic input */}
+      <button
+        onClick={audio.state.micActive ? audio.stopMic : audio.startMic}
+        className="w-full px-4 py-3 rounded-lg text-sm font-medium transition-all"
+        style={{
+          background: audio.state.micActive ? 'rgba(221,68,68,0.2)' : 'rgba(74,124,255,0.1)',
+          color: audio.state.micActive ? '#d44' : '#888898',
+          border: `1px solid ${audio.state.micActive ? 'rgba(221,68,68,0.4)' : '#1a1a25'}`
+        }}
+      >
+        {audio.state.micActive ? '⏹ Stop Mic' : '🎤 Live Mic'}
+      </button>
+
       {/* Transport */}
       {audio.state.fileName && (
         <div className="space-y-2">
@@ -216,9 +229,9 @@ export function AudioTab({ audio }: AudioTabProps) {
         </div>
       </div>
 
-      {audio.state.playing && (
+      {(audio.state.playing || audio.state.micActive) && (
         <p className="text-xs" style={{ color: '#4a7cff', opacity: 0.7 }}>
-          Audio keeps playing when you switch tabs
+          {audio.state.micActive ? 'Mic input active — switch tabs freely' : 'Audio keeps playing when you switch tabs'}
         </p>
       )}
     </div>

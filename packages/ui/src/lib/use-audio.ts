@@ -15,6 +15,7 @@ interface Drop {
 
 export interface AudioEngineState {
   playing: boolean;
+  micActive: boolean;
   fileName: string | null;
   duration: number;
   currentTime: number;
@@ -37,6 +38,8 @@ export interface AudioEngine {
   play: () => void;
   stop: () => void;
   seek: (time: number) => void;
+  startMic: () => void;
+  stopMic: () => void;
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
 }
 
@@ -48,6 +51,7 @@ export function useAudio(
 ): AudioEngine {
   const [audioState, setAudioState] = useState<AudioEngineState>({
     playing: false,
+    micActive: false,
     fileName: null,
     duration: 0,
     currentTime: 0,
@@ -63,6 +67,8 @@ export function useAudio(
   const sourceRef = useRef<AudioBufferSourceNode | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const audioBufferRef = useRef<AudioBuffer | null>(null);
+  const micStreamRef = useRef<MediaStream | null>(null);
+  const micSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const animFrameRef = useRef<number>(0);
   const startTimeRef = useRef(0);
   const offsetRef = useRef(0);
@@ -289,6 +295,17 @@ export function useAudio(
   const startPlaybackAt = useCallback((offset: number) => {
     if (!audioBufferRef.current || !audioContextRef.current) return;
 
+    // Stop mic if active
+    if (micSourceRef.current) {
+      micSourceRef.current.disconnect();
+      micSourceRef.current = null;
+    }
+    if (micStreamRef.current) {
+      micStreamRef.current.getTracks().forEach((t) => t.stop());
+      micStreamRef.current = null;
+    }
+    setAudioState((s) => ({ ...s, micActive: false }));
+
     // Stop any existing source without clearing state
     if (sourceRef.current) {
       try {
@@ -379,21 +396,65 @@ export function useAudio(
     return bpm;
   }, []);
 
+  const stopMic = useCallback(() => {
+    if (micSourceRef.current) {
+      micSourceRef.current.disconnect();
+      micSourceRef.current = null;
+    }
+    if (micStreamRef.current) {
+      micStreamRef.current.getTracks().forEach((t) => t.stop());
+      micStreamRef.current = null;
+    }
+    if (animFrameRef.current) {
+      cancelAnimationFrame(animFrameRef.current);
+      animFrameRef.current = 0;
+    }
+    dropsRef.current = [];
+    sendRef.current({ type: 'audio_layer_clear' });
+    setAudioState((s) => ({ ...s, micActive: false }));
+  }, []);
+
+  const startMic = useCallback(async () => {
+    // Stop any file playback first
+    stopPlayback();
+
+    if (!audioContextRef.current) audioContextRef.current = new AudioContext();
+    const ctx = audioContextRef.current;
+    if (ctx.state === 'suspended') await ctx.resume();
+
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    micStreamRef.current = stream;
+
+    const source = ctx.createMediaStreamSource(stream);
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = 256;
+    source.connect(analyser);
+    // Don't connect to destination — avoid feedback loop
+    micSourceRef.current = source;
+    analyserRef.current = analyser;
+
+    setAudioState((s) => ({ ...s, micActive: true }));
+    animFrameRef.current = requestAnimationFrame(processFrame);
+  }, [stopPlayback, processFrame]);
+
   const loadFile = useCallback(async (file: File) => {
+    // Stop mic if active
+    stopMic();
     if (!audioContextRef.current) audioContextRef.current = new AudioContext();
     const arrayBuffer = await file.arrayBuffer();
     const audioBuffer = await audioContextRef.current.decodeAudioData(arrayBuffer);
     audioBufferRef.current = audioBuffer;
     const bpm = detectBPM(audioBuffer);
-    setAudioState({ playing: false, fileName: file.name, duration: audioBuffer.duration, currentTime: 0, bpm });
-  }, [detectBPM]);
+    setAudioState({ playing: false, micActive: false, fileName: file.name, duration: audioBuffer.duration, currentTime: 0, bpm });
+  }, [detectBPM, stopMic]);
 
   useEffect(() => {
     return () => {
       stopPlayback();
+      stopMic();
       if (audioContextRef.current) audioContextRef.current.close();
     };
-  }, [stopPlayback]);
+  }, [stopPlayback, stopMic]);
 
   return {
     state: audioState,
@@ -411,6 +472,8 @@ export function useAudio(
     play: startPlayback,
     stop: stopPlayback,
     seek,
+    startMic,
+    stopMic,
     canvasRef
   };
 }

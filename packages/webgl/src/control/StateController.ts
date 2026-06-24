@@ -1,4 +1,4 @@
-import { createDefaultState, hsbToRgb, type BeamState, type InstallationConfig, type InstallationState, type TimeOfDay } from '../installation/BeamState';
+import { type BeamState, createDefaultState, hsbToRgb, type InstallationConfig, type InstallationState, type TimeOfDay } from '../installation/BeamState';
 
 export type StateChangeCallback = (state: InstallationState) => void;
 

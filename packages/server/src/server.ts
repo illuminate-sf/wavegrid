@@ -203,13 +203,17 @@ function handleMessage(msg: any) {
     }
     break;
   case 'clear':
+    currentAnimation = null;
     setAllTargets(grid, 0, 0, 0, 1.0);
+    broadcastState();
     break;
   case 'rotate':
     rotateGrid(grid, GRID_COLUMNS, msg.direction === 'ccw' ? 'ccw' : 'cw');
+    broadcastState();
     break;
   case 'mirror':
     mirrorGrid(grid, GRID_COLUMNS, msg.axis === 'vertical' ? 'vertical' : 'horizontal');
+    broadcastState();
     break;
   }
 }
@@ -238,7 +242,7 @@ const GRID_ROWS = Math.ceil(NUM_CANNONS / GRID_COLUMNS);
 server.listen(PORT, '0.0.0.0', () => {
   console.log('');
   console.log('╔══════════════════════════════════════════╗');
-  console.log(`║   Wavegrid · ${GRID_COLUMNS}×${GRID_ROWS} Grid Simulator${' '.repeat(Math.max(0, 16 - String(GRID_COLUMNS).length - String(GRID_ROWS).length))}║`);
+  console.log(`║   Wavegrid · ${GRID_COLUMNS}×${GRID_ROWS} Grid Server${' '.repeat(Math.max(0, 18 - String(GRID_COLUMNS).length - String(GRID_ROWS).length))}║`);
   console.log(`║   ${NUM_CANNONS} virtual cannons ready${' '.repeat(Math.max(0, 21 - String(NUM_CANNONS).length))}║`);
   console.log('╚══════════════════════════════════════════╝');
   console.log('');

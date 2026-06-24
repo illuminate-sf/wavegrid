@@ -1,17 +1,18 @@
+import { BloomEffect, EffectComposer, EffectPass,RenderPass } from 'postprocessing';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { EffectComposer, RenderPass, BloomEffect, EffectPass } from 'postprocessing';
+
 import type { InstallationConfig, InstallationState, TimeOfDay } from '../installation/BeamState';
 import { DEFAULT_CONFIG } from '../installation/BeamState';
 import { LaserArray } from '../installation/LaserArray';
 import { createTrussGrid } from '../installation/TrussGrid';
-import { createCityHall, updateCityHallLighting } from './CityHall';
-import { createPlaza, createStreetLamps } from './Plaza';
-import { createTrees } from './Trees';
-import { createCivicBuildings } from './CivicBuildings';
-import { getCameraPresets, type CameraPreset } from '../ui/CameraPresets';
-import { createHumanSilhouettes } from './Silhouettes';
+import { type CameraPreset,getCameraPresets } from '../ui/CameraPresets';
 import { createBenFigure, updateBenIPad } from './BenFigure';
+import { createCityHall, updateCityHallLighting } from './CityHall';
+import { createCivicBuildings } from './CivicBuildings';
+import { createPlaza, createStreetLamps } from './Plaza';
+import { createHumanSilhouettes } from './Silhouettes';
+import { createTrees } from './Trees';
 
 const FT = 0.3048;
 
@@ -274,7 +275,7 @@ export class CivicCenterScene {
       new THREE.Vector3(halfW + 1, 0.1, -halfD - 1),
       new THREE.Vector3(halfW + 1, 0.1, halfD + 1),
       new THREE.Vector3(-halfW - 1, 0.1, halfD + 1),
-      new THREE.Vector3(-halfW - 1, 0.1, -halfD - 1),
+      new THREE.Vector3(-halfW - 1, 0.1, -halfD - 1)
     ]);
     const footprintLine = new THREE.Line(
       footprintGeo,
