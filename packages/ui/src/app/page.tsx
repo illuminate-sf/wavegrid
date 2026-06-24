@@ -497,7 +497,7 @@ export default function Home() {
 
   /* ---------- Auth gate (after all hooks, to respect Rules of Hooks) ---------- */
   if (!checked) {
-    return <div className="h-screen" style={{ background: '#050508' }} />;
+    return <div style={{ background: '#050508', height: '100dvh' }} />;
   }
 
   if (!user) {
@@ -507,11 +507,11 @@ export default function Home() {
   /* ---------- PHONE LAYOUT ---------- */
   if (isPhone) {
     return (
-      <div className="flex flex-col h-screen" style={{ background: '#050508' }}>
+      <div className="flex flex-col" style={{ background: '#050508', height: '100dvh' }}>
         {/* Minimal top bar */}
         <header
-          className="flex items-center justify-between px-4 py-2 shrink-0"
-          style={{ background: '#0c0c12', borderBottom: '1px solid #1a1a25' }}
+          className="flex items-center justify-between px-4 shrink-0"
+          style={{ background: '#0c0c12', borderBottom: '1px solid #1a1a25', paddingTop: 'max(8px, env(safe-area-inset-top))', paddingBottom: 8 }}
         >
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium" style={{ color: '#888898' }}>Wavegrid</span>
@@ -571,7 +571,7 @@ export default function Home() {
         {/* Grid canvas — takes remaining space above the sheet */}
         <div
           className="flex-1 flex items-center justify-center overflow-hidden"
-          style={{ padding: 12, paddingBottom: 88 }}
+          style={{ padding: 8, paddingBottom: 80, minHeight: 0 }}
         >
           <GridDisplay
             grid={gridData}
@@ -603,7 +603,7 @@ export default function Home() {
 
   /* ---------- TABLET / DESKTOP LAYOUT ---------- */
   return (
-    <div className="flex flex-col h-screen" style={{ background: '#050508' }}>
+    <div className="flex flex-col" style={{ background: '#050508', height: '100dvh' }}>
       {/* Top Bar */}
       <header
         className="flex items-center justify-between px-5 py-3 shrink-0"
@@ -666,9 +666,9 @@ export default function Home() {
       </header>
 
       {/* Main content: canvas + tool panel */}
-      <div className={`flex-1 flex ${layout === 'right' ? 'flex-row' : 'flex-col'} overflow-hidden`}>
+      <div className={`flex-1 flex ${layout === 'right' ? 'flex-row' : 'flex-col'} overflow-hidden`} style={{ minHeight: 0 }}>
         {/* Grid Canvas */}
-        <div className="flex-1 flex items-center justify-center overflow-hidden" style={{ padding: 16 }}>
+        <div className="flex-1 flex items-center justify-center overflow-hidden" style={{ padding: 16, minHeight: 0, minWidth: 0 }}>
           <GridDisplay
             grid={gridData}
             columns={GRID_COLUMNS}

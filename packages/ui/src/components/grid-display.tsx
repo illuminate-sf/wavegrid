@@ -66,10 +66,9 @@ export function GridDisplay({
     const wrap = wrapRef.current;
     if (!canvas || !wrap) return;
 
-    const maxW = wrap.clientWidth - 32;
-    const maxH = wrap.clientHeight - 32;
-    const isSmall = window.innerWidth < 768;
-    const size = isSmall ? Math.min(maxW, maxH) * 0.92 : Math.min(maxW, maxH);
+    const maxW = wrap.clientWidth;
+    const maxH = wrap.clientHeight;
+    const size = Math.min(maxW, maxH);
     const dpr = window.devicePixelRatio || 1;
 
     canvas.width = size * dpr;
@@ -307,7 +306,7 @@ export function GridDisplay({
     <div
       ref={wrapRef}
       className="flex-1 flex items-center justify-center"
-      style={{ touchAction: 'none' }}
+      style={{ touchAction: 'none', minWidth: 0, minHeight: 0, overflow: 'hidden' }}
     >
       <canvas
         ref={canvasRef}
