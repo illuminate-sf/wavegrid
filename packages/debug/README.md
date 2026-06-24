@@ -24,4 +24,11 @@ pnpm dev:debug
 
 | Variable | Default | Description |
 |----------|---------|-------------|
+| `SIMULATOR_URL` | `ws://localhost:3000` | WebSocket URL of the simulator |
 | `DEBUG_PORT` | `3005` | HTTP server port |
+
+Example on a remote droplet:
+
+```sh
+SIMULATOR_URL=ws://localhost:3000 pnpm dev:debug
+```

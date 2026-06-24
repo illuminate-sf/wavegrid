@@ -4,6 +4,7 @@ import { GRID_DATA } from './grid-data';
 import { getDebugHTML } from './ui';
 
 const PORT = parseInt(process.env.DEBUG_PORT || '3005', 10);
+const SIMULATOR_URL = process.env.SIMULATOR_URL || 'ws://localhost:3000';
 
 const server = http.createServer((req, res) => {
   if (req.url === '/api/grid-data') {
@@ -13,7 +14,7 @@ const server = http.createServer((req, res) => {
   }
 
   res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-  res.end(getDebugHTML());
+  res.end(getDebugHTML(SIMULATOR_URL));
 });
 
 server.listen(PORT, '0.0.0.0', () => {
