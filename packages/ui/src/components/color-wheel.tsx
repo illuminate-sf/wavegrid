@@ -13,6 +13,7 @@ interface ColorWheelProps {
   onBrightChange: (b: number) => void;
   onBrushSizeChange: (s: number) => void;
   onSoftEdgeChange: (v: boolean) => void;
+  onClear?: () => void;
   compact?: boolean;
 }
 
@@ -37,6 +38,7 @@ export function ColorWheel({
   onBrightChange,
   onBrushSizeChange,
   onSoftEdgeChange,
+  onClear,
   compact = false
 }: ColorWheelProps) {
   const wheelRef = useRef<HTMLCanvasElement>(null);
@@ -239,6 +241,21 @@ export function ColorWheel({
           >
             Soft Edge
           </button>
+
+          {/* Clear canvas */}
+          {onClear && (
+            <button
+              onClick={onClear}
+              className="px-4 py-2.5 rounded-2xl text-sm font-medium transition-all"
+              style={{
+                background: '#12121a',
+                color: '#d44',
+                border: '1px solid #1a1a25'
+              }}
+            >
+              Clear
+            </button>
+          )}
         </div>
       </div>
     </div>

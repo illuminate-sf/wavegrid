@@ -46,6 +46,7 @@ function ToolContent({
   tab,
   hue, sat, bright, brushSize, softEdge,
   setHue, setSat, setBright, setBrushSize, setSoftEdge,
+  onClear,
   gradient, dropsConfig, setDropsConfig,
   energyValue, handleEnergyChange,
   motion, activeScene, handleScene,
@@ -58,6 +59,7 @@ function ToolContent({
   hue: number; sat: number; bright: number; brushSize: number; softEdge: boolean;
   setHue: (v: number) => void; setSat: (v: number) => void; setBright: (v: number) => void;
   setBrushSize: (v: number) => void; setSoftEdge: (v: boolean) => void;
+  onClear?: () => void;
   gradient: ReturnType<typeof useGradient>;
   dropsConfig: { spectrumStart: number; spectrumEnd: number; speed: number; decay: number; width: number };
   setDropsConfig: (c: typeof dropsConfig) => void;
@@ -89,6 +91,7 @@ function ToolContent({
           onBrightChange={setBright}
           onBrushSizeChange={setBrushSize}
           onSoftEdgeChange={setSoftEdge}
+          onClear={onClear}
           compact={isPhone}
         />
       )}
@@ -434,6 +437,14 @@ export default function Home() {
     send({ type: 'animation', name: 'stop' });
   }, [send]);
 
+  const handleClear = useCallback(() => {
+    send({ type: 'clear' });
+  }, [send]);
+
+  const handleRotate = useCallback((direction: 'cw' | 'ccw') => {
+    send({ type: 'rotate', direction });
+  }, [send]);
+
   const handleSmooth = useCallback(
     (pct: number) => {
       setSmoothness(pct);
@@ -503,6 +514,7 @@ export default function Home() {
   const toolContentProps = {
     hue, sat, bright, brushSize, softEdge,
     setHue, setSat, setBright, setBrushSize, setSoftEdge,
+    onClear: handleClear,
     gradient, dropsConfig, setDropsConfig,
     energyValue, handleEnergyChange,
     motion, activeScene, handleScene,
@@ -582,6 +594,41 @@ export default function Home() {
               throttledSlider={throttledSlider}
               vertical
             />
+            <div className="flex items-center gap-2 px-4 pb-4">
+              <span className="text-sm font-medium" style={{ color: '#888898', minWidth: 56 }}>Rotate</span>
+              <button
+                onClick={() => handleRotate('ccw')}
+                className="flex items-center justify-center transition-all"
+                title="Rotate 90° CCW"
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 8,
+                  background: '#12121a',
+                  border: '1px solid #1a1a25',
+                  color: '#888898',
+                  fontSize: 16
+                }}
+              >
+                ↺
+              </button>
+              <button
+                onClick={() => handleRotate('cw')}
+                className="flex items-center justify-center transition-all"
+                title="Rotate 90° CW"
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 8,
+                  background: '#12121a',
+                  border: '1px solid #1a1a25',
+                  color: '#888898',
+                  fontSize: 16
+                }}
+              >
+                ↻
+              </button>
+            </div>
           </div>
         )}
 
@@ -661,6 +708,42 @@ export default function Home() {
             onAttack={handleAttack}
             throttledSlider={throttledSlider}
           />
+
+          {/* Rotate buttons */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => handleRotate('ccw')}
+              className="flex items-center justify-center transition-all"
+              title="Rotate 90° CCW"
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 8,
+                background: '#12121a',
+                border: '1px solid #1a1a25',
+                color: '#888898',
+                fontSize: 16
+              }}
+            >
+              ↺
+            </button>
+            <button
+              onClick={() => handleRotate('cw')}
+              className="flex items-center justify-center transition-all"
+              title="Rotate 90° CW"
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 8,
+                background: '#12121a',
+                border: '1px solid #1a1a25',
+                color: '#888898',
+                fontSize: 16
+              }}
+            >
+              ↻
+            </button>
+          </div>
 
           {/* Layout toggle */}
           <button

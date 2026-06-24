@@ -97,6 +97,33 @@ export function setAllTargets(grid: CannonTarget[], h?: number, s?: number, b?: 
   }
 }
 
+/**
+ * Rotate the grid 90° in-place (CW or CCW).
+ * Only works correctly for square grids (rows === columns).
+ */
+export function rotateGrid(grid: CannonTarget[], columns: number, direction: 'cw' | 'ccw'): void {
+  const rows = Math.ceil(grid.length / columns);
+  const snapshot = grid.map(c => ({ h: c.targetH, s: c.targetS, b: c.targetB }));
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < columns; c++) {
+      const oldIdx = r * columns + c;
+      if (oldIdx >= grid.length) continue;
+      const newIdx = direction === 'cw'
+        ? c * columns + (rows - 1 - r)
+        : (rows - 1 - c) * columns + r;
+      if (newIdx >= grid.length) continue;
+      const src = snapshot[oldIdx];
+      grid[newIdx].targetH = src.h;
+      grid[newIdx].targetS = src.s;
+      grid[newIdx].targetB = src.b;
+      grid[newIdx].h = src.h;
+      grid[newIdx].s = src.s;
+      grid[newIdx].b = src.b;
+    }
+  }
+}
+
 export type BlendMode = 'replace' | 'multiply' | 'additive';
 
 /**
