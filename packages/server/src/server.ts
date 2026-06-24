@@ -4,8 +4,8 @@ import { resolve } from 'path';
 import { WebSocket,WebSocketServer } from 'ws';
 
 import { animations } from './animations';
-import type { BlendMode, CannonState } from './grid';
-import {compositeLayer, createGrid, DEFAULT_ALPHA, DEFAULT_GRID_COLUMNS, DEFAULT_NUM_CANNONS, mirrorGrid, rotateGrid, setAllTargets, setCannonTarget, tickGrid } from './grid';
+import type { BlendMode, CannonState, Orientation, Rotation } from './grid';
+import {compositeLayer, createGrid, DEFAULT_ALPHA, DEFAULT_GRID_COLUMNS, DEFAULT_NUM_CANNONS, defaultOrientation, mapUiToGrid, remapGridForUi, setAllTargets, setCannonTarget, tickGrid } from './grid';
 import { applyScene, scenes } from './scenes';
 import { getHTML } from './ui';
 
@@ -24,6 +24,8 @@ let audioLayer: CannonState[] | null = null;
 let audioBlend: BlendMode = 'replace';
 let calibrationMode = false;
 let previewPhysicalIndex: number | null = null;
+let orientation: Orientation = defaultOrientation();
+const GRID_ROWS = Math.ceil(NUM_CANNONS / GRID_COLUMNS);
 
 // constructive.io brand mark — served as the favicon
 const FAVICON_SVG = `<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -54,9 +56,10 @@ function broadcastState() {
 
 function getBroadcastOutput(): CannonState[] {
   if (calibrationMode) return getCalibrationOutput();
-  return audioLayer
+  const base = audioLayer
     ? compositeLayer(grid, audioLayer, audioBlend)
     : grid.map(c => ({ h: c.h, s: c.s, b: c.b }));
+  return remapGridForUi(base, GRID_COLUMNS, GRID_ROWS, orientation);
 }
 
 function getCalibrationOutput(): CannonState[] {
@@ -93,6 +96,15 @@ function loadPhysicalLightMap(): number[] {
   }
 }
 
+function broadcastOrientation() {
+  const payload = JSON.stringify({ type: 'orientation', ...orientation });
+  wss.clients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(payload);
+    }
+  });
+}
+
 function broadcastComposite(output: CannonState[]) {
   const payload = JSON.stringify({
     type: 'state',
@@ -106,11 +118,13 @@ function broadcastComposite(output: CannonState[]) {
 }
 
 wss.on('connection', (ws) => {
-  // Send initial state
-  ws.send(JSON.stringify({
-    type: 'state',
-    grid: grid.map(c => ({ h: c.h, s: c.s, b: c.b }))
-  }));
+  // Send initial state + orientation
+  const initGrid = remapGridForUi(
+    grid.map(c => ({ h: c.h, s: c.s, b: c.b })),
+    GRID_COLUMNS, GRID_ROWS, orientation
+  );
+  ws.send(JSON.stringify({ type: 'state', grid: initGrid }));
+  ws.send(JSON.stringify({ type: 'orientation', ...orientation }));
 
   ws.on('message', (raw) => {
     try {
@@ -124,16 +138,18 @@ wss.on('connection', (ws) => {
 
 function handleMessage(msg: any) {
   switch (msg.type) {
-  case 'cannon':
+  case 'cannon': {
+    const gi = mapUiToGrid(msg.index, GRID_COLUMNS, GRID_ROWS, orientation);
     setCannonTarget(
       grid,
-      msg.index,
+      gi,
       msg.h ?? undefined,
       msg.s ?? undefined,
       msg.b ?? undefined,
       currentAttack
     );
     break;
+  }
   case 'master_brightness':
     setAllTargets(grid, undefined, undefined, msg.value * 100, currentAttack);
     break;
@@ -169,11 +185,12 @@ function handleMessage(msg: any) {
     break;
   case 'selection':
     if (Array.isArray(msg.indices)) {
-      for (const idx of msg.indices) {
-        if (idx >= 0 && idx < grid.length) {
+      for (const uiIdx of msg.indices) {
+        const gi = mapUiToGrid(uiIdx, GRID_COLUMNS, GRID_ROWS, orientation);
+        if (gi >= 0 && gi < grid.length) {
           setCannonTarget(
             grid,
-            idx,
+            gi,
             msg.h ?? undefined,
             msg.s ?? undefined,
             msg.b ?? undefined,
@@ -185,7 +202,13 @@ function handleMessage(msg: any) {
     break;
   case 'audio_layer':
     if (Array.isArray(msg.grid)) {
-      audioLayer = msg.grid;
+      // Remap audio layer from UI coordinate space to grid space
+      const remapped = new Array<CannonState>(msg.grid.length);
+      for (let ui = 0; ui < msg.grid.length; ui++) {
+        const gi = mapUiToGrid(ui, GRID_COLUMNS, GRID_ROWS, orientation);
+        remapped[gi] = msg.grid[ui];
+      }
+      audioLayer = remapped;
       audioBlend = msg.blend || 'replace';
     }
     break;
@@ -207,12 +230,23 @@ function handleMessage(msg: any) {
     setAllTargets(grid, 0, 0, 0, 1.0);
     broadcastState();
     break;
-  case 'rotate':
-    rotateGrid(grid, GRID_COLUMNS, msg.direction === 'ccw' ? 'ccw' : 'cw');
+  case 'rotate': {
+    const delta = msg.direction === 'ccw' ? 270 : 90;
+    orientation = {
+      ...orientation,
+      rotation: ((orientation.rotation + delta) % 360) as Rotation
+    };
+    broadcastOrientation();
     broadcastState();
     break;
+  }
   case 'mirror':
-    mirrorGrid(grid, GRID_COLUMNS, msg.axis === 'vertical' ? 'vertical' : 'horizontal');
+    if (msg.axis === 'vertical') {
+      orientation = { ...orientation, flipV: !orientation.flipV };
+    } else {
+      orientation = { ...orientation, flipH: !orientation.flipH };
+    }
+    broadcastOrientation();
     broadcastState();
     break;
   }
@@ -236,8 +270,6 @@ setInterval(() => {
     framesSinceLastBroadcast = 0;
   }
 }, TICK_MS);
-
-const GRID_ROWS = Math.ceil(NUM_CANNONS / GRID_COLUMNS);
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log('');

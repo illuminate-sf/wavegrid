@@ -150,6 +150,82 @@ export function mirrorGrid(grid: CannonTarget[], columns: number, axis: 'horizon
   }
 }
 
+// ── Orientation transform ──────────────────────────────────────────────
+
+export type Rotation = 0 | 90 | 180 | 270;
+
+export interface Orientation {
+  rotation: Rotation;
+  flipH: boolean;
+  flipV: boolean;
+}
+
+export function defaultOrientation(): Orientation {
+  return { rotation: 0, flipH: false, flipV: false };
+}
+
+/**
+ * Map a UI grid index through the orientation transform to a server grid index.
+ * UI sends index in its own coordinate space; we remap to the physical grid.
+ */
+export function mapUiToGrid(uiIndex: number, columns: number, rows: number, orient: Orientation): number {
+  let r = Math.floor(uiIndex / columns);
+  let c = uiIndex % columns;
+
+  // Apply flips first (in UI space)
+  if (orient.flipH) c = columns - 1 - c;
+  if (orient.flipV) r = rows - 1 - r;
+
+  // Apply rotation (UI → grid)
+  let gr: number, gc: number;
+  switch (orient.rotation) {
+  case 90:  gr = c;             gc = rows - 1 - r;    break;
+  case 180: gr = rows - 1 - r;  gc = columns - 1 - c; break;
+  case 270: gr = columns - 1 - c; gc = r;              break;
+  default:  gr = r;              gc = c;               break;
+  }
+
+  const idx = gr * columns + gc;
+  return idx >= 0 && idx < rows * columns ? idx : uiIndex;
+}
+
+/**
+ * Map a server grid index back to UI coordinate space for broadcasts.
+ */
+export function mapGridToUi(gridIndex: number, columns: number, rows: number, orient: Orientation): number {
+  const gr = Math.floor(gridIndex / columns);
+  const gc = gridIndex % columns;
+
+  // Inverse rotation (grid → UI)
+  let r: number, c: number;
+  switch (orient.rotation) {
+  case 90:  r = rows - 1 - gc;    c = gr;              break;
+  case 180: r = rows - 1 - gr;    c = columns - 1 - gc; break;
+  case 270: r = gc;                c = columns - 1 - gr; break;
+  default:  r = gr;                c = gc;               break;
+  }
+
+  // Inverse flips
+  if (orient.flipH) c = columns - 1 - c;
+  if (orient.flipV) r = rows - 1 - r;
+
+  const idx = r * columns + c;
+  return idx >= 0 && idx < rows * columns ? idx : gridIndex;
+}
+
+/**
+ * Remap an entire grid array from server order to UI order.
+ */
+export function remapGridForUi<T>(grid: T[], columns: number, rows: number, orient: Orientation): T[] {
+  if (orient.rotation === 0 && !orient.flipH && !orient.flipV) return grid;
+  const result = new Array<T>(grid.length);
+  for (let gi = 0; gi < grid.length; gi++) {
+    const uiIdx = mapGridToUi(gi, columns, rows, orient);
+    result[uiIdx] = grid[gi];
+  }
+  return result;
+}
+
 export type BlendMode = 'replace' | 'multiply' | 'additive';
 
 /**

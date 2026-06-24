@@ -1,4 +1,4 @@
-import { compositeLayer, createGrid, tickGrid, setCannonTarget, setAllTargets, NUM_CANNONS } from '../src/grid';
+import { compositeLayer, createGrid, tickGrid, setCannonTarget, setAllTargets, NUM_CANNONS, mapUiToGrid, mapGridToUi, remapGridForUi, defaultOrientation } from '../src/grid';
 
 describe('grid', () => {
   it('should create a grid of 49 cannons', () => {
@@ -69,6 +69,85 @@ describe('grid', () => {
     setCannonTarget(grid, 0, 0, 0, 0);
     const changed = tickGrid(grid);
     expect(changed).toBe(true);
+  });
+});
+
+describe('orientation transform', () => {
+  const cols = 7;
+  const rows = 7;
+
+  it('identity orientation should not change index', () => {
+    const orient = defaultOrientation();
+    for (let i = 0; i < 49; i++) {
+      expect(mapUiToGrid(i, cols, rows, orient)).toBe(i);
+      expect(mapGridToUi(i, cols, rows, orient)).toBe(i);
+    }
+  });
+
+  it('90° CW rotation: top-left → top-right', () => {
+    const orient = { rotation: 90 as const, flipH: false, flipV: false };
+    // UI index 0 (row 0, col 0) → grid (col 0, row 6) = row 0, col 6 = index 6
+    expect(mapUiToGrid(0, cols, rows, orient)).toBe(6);
+  });
+
+  it('180° rotation: top-left → bottom-right', () => {
+    const orient = { rotation: 180 as const, flipH: false, flipV: false };
+    expect(mapUiToGrid(0, cols, rows, orient)).toBe(48);
+  });
+
+  it('270° rotation: top-left → bottom-left', () => {
+    const orient = { rotation: 270 as const, flipH: false, flipV: false };
+    expect(mapUiToGrid(0, cols, rows, orient)).toBe(42);
+  });
+
+  it('flipH: top-left → top-right', () => {
+    const orient = { rotation: 0 as const, flipH: true, flipV: false };
+    expect(mapUiToGrid(0, cols, rows, orient)).toBe(6);
+    expect(mapUiToGrid(6, cols, rows, orient)).toBe(0);
+  });
+
+  it('flipV: top-left → bottom-left', () => {
+    const orient = { rotation: 0 as const, flipH: false, flipV: true };
+    expect(mapUiToGrid(0, cols, rows, orient)).toBe(42);
+    expect(mapUiToGrid(42, cols, rows, orient)).toBe(0);
+  });
+
+  it('mapUiToGrid and mapGridToUi are inverses', () => {
+    const orientations = [
+      { rotation: 0 as const, flipH: false, flipV: false },
+      { rotation: 90 as const, flipH: false, flipV: false },
+      { rotation: 180 as const, flipH: false, flipV: false },
+      { rotation: 270 as const, flipH: false, flipV: false },
+      { rotation: 0 as const, flipH: true, flipV: false },
+      { rotation: 0 as const, flipH: false, flipV: true },
+      { rotation: 90 as const, flipH: true, flipV: false },
+      { rotation: 270 as const, flipH: true, flipV: true },
+    ];
+    for (const orient of orientations) {
+      for (let ui = 0; ui < 49; ui++) {
+        const grid = mapUiToGrid(ui, cols, rows, orient);
+        const back = mapGridToUi(grid, cols, rows, orient);
+        expect(back).toBe(ui);
+      }
+    }
+  });
+
+  it('remapGridForUi returns identity for default orientation', () => {
+    const data = Array.from({ length: 49 }, (_, i) => i);
+    const result = remapGridForUi(data, cols, rows, defaultOrientation());
+    expect(result).toBe(data); // same reference (early return)
+  });
+
+  it('remapGridForUi correctly remaps for 90° rotation', () => {
+    const orient = { rotation: 90 as const, flipH: false, flipV: false };
+    const data = Array.from({ length: 49 }, (_, i) => i);
+    const result = remapGridForUi(data, cols, rows, orient);
+    // Grid index 0 should appear at UI index mapGridToUi(0, ...)
+    const uiIdx = mapGridToUi(0, cols, rows, orient);
+    expect(result[uiIdx]).toBe(0);
+    // Every grid value should be reachable
+    expect(result).toHaveLength(49);
+    expect(new Set(result).size).toBe(49);
   });
 });
 
