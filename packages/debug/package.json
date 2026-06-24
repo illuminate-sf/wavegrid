@@ -1,0 +1,47 @@
+{
+  "name": "@wavegrid/debug",
+  "version": "0.1.0",
+  "author": "Dan Lynch <pyramation@gmail.com>",
+  "description": "Interactive 7×7 grid debugger — toggle cannons on/off, assign zone mappings, export config JSON",
+  "main": "index.js",
+  "module": "esm/index.js",
+  "types": "index.d.ts",
+  "homepage": "https://github.com/illuminate-sf/wavegrid",
+  "license": "SEE LICENSE IN LICENSE",
+  "publishConfig": {
+    "access": "public",
+    "directory": "dist"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/illuminate-sf/wavegrid"
+  },
+  "bugs": {
+    "url": "https://github.com/illuminate-sf/wavegrid/issues"
+  },
+  "scripts": {
+    "clean": "makage clean",
+    "prepack": "npm run build",
+    "build": "makage build",
+    "build:dev": "makage build --dev",
+    "lint": "ESLINT_USE_FLAT_CONFIG=false eslint src --fix",
+    "test": "jest --passWithNoTests",
+    "test:watch": "jest --watch",
+    "dev": "ts-node src/server.ts"
+  },
+  "keywords": [
+    "wavegrid",
+    "debug",
+    "calibration",
+    "zone-mapping",
+    "laser",
+    "7x7"
+  ],
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "makage": "^0.3.0",
+    "@types/ws": "^8.5.13"
+  }
+}
