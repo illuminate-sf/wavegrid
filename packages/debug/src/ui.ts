@@ -1,6 +1,7 @@
 import { GRID_DATA, ROWS, TOTAL_CANNONS } from './grid-data';
 
-export function getDebugHTML(): string {
+export function getDebugHTML(simulatorUrl?: string): string {
+  const wsUrl = simulatorUrl || 'ws://localhost:3000';
   // Build grid rows with headers
   let gridInner = '';
   // Column headers
@@ -228,7 +229,7 @@ h1 {
 
 <div class="status-bar">
   <span id="ws-status" class="disconnected">\u25cf Disconnected</span>
-  <span style="margin-left: 16px;">Simulator: <span id="sim-url">ws://localhost:3000</span></span>
+  <span style="margin-left: 16px;">Simulator: <span id="sim-url">${wsUrl}</span></span>
 </div>
 
 <div class="export-panel" id="export-panel">
