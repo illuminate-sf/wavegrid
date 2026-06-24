@@ -2,6 +2,70 @@ import { CannonTarget, DEFAULT_GRID_COLUMNS, setCannonTarget } from './grid';
 
 export type AnimationFn = (grid: CannonTarget[], tick: number, attack: number, gridColumns?: number) => void;
 
+function clamp(value: number, min = 0, max = 1): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+function smooth(value: number): number {
+  const x = clamp(value);
+  return x * x * (3 - 2 * x);
+}
+
+const PRIDE_COLORS = ['#e40303', '#ff8c00', '#ffed00', '#008026', '#24408e', '#732982'];
+
+function wrapUnit(value: number): number {
+  return ((value % 1) + 1) % 1;
+}
+
+function hexToRgb(hex: string): { r: number; g: number; b: number } {
+  const value = hex.replace('#', '');
+  const normalized = value.length === 3
+    ? value.split('').map(part => `${part}${part}`).join('')
+    : value.padEnd(6, '0').slice(0, 6);
+  const number = Number.parseInt(normalized, 16);
+
+  return {
+    r: (number >> 16) & 255,
+    g: (number >> 8) & 255,
+    b: number & 255
+  };
+}
+
+function prideColorAt(position: number, time: number): { h: number; s: number } {
+  const scaled = wrapUnit(position + time * 0.025) * PRIDE_COLORS.length;
+  const index = Math.floor(scaled);
+  const nextIndex = (index + 1) % PRIDE_COLORS.length;
+  const mix = scaled - index;
+  const from = hexToRgb(PRIDE_COLORS[index]);
+  const to = hexToRgb(PRIDE_COLORS[nextIndex]);
+  const r = Math.round(from.r + (to.r - from.r) * mix);
+  const g = Math.round(from.g + (to.g - from.g) * mix);
+  const b = Math.round(from.b + (to.b - from.b) * mix);
+
+  return rgbToHsb(r, g, b);
+}
+
+function rgbToHsb(r: number, g: number, b: number): { h: number; s: number } {
+  const rn = r / 255;
+  const gn = g / 255;
+  const bn = b / 255;
+  const max = Math.max(rn, gn, bn);
+  const min = Math.min(rn, gn, bn);
+  const delta = max - min;
+  let h = 0;
+
+  if (delta !== 0) {
+    if (max === rn) h = 60 * (((gn - bn) / delta) % 6);
+    else if (max === gn) h = 60 * ((bn - rn) / delta + 2);
+    else h = 60 * ((rn - gn) / delta + 4);
+  }
+
+  return {
+    h: (h + 360) % 360,
+    s: max === 0 ? 0 : (delta / max) * 100
+  };
+}
+
 export const animations: Record<string, AnimationFn> = {
   wave: (grid, tick, attack, cols = DEFAULT_GRID_COLUMNS) => {
     for (let i = 0; i < grid.length; i++) {
@@ -47,14 +111,23 @@ export const animations: Record<string, AnimationFn> = {
     const rows = Math.ceil(grid.length / cols);
     const cx = (cols - 1) / 2;
     const cy = (rows - 1) / 2;
+    const maxDistance = Math.max(1, Math.hypot(cx, cy));
+    const time = tick / 60;
+
     for (let i = 0; i < grid.length; i++) {
       const row = Math.floor(i / cols);
       const col = i % cols;
-      const dx = col - cx, dy = row - cy;
-      const angle = Math.atan2(dy, dx);
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      const hue = (angle * 57.3 + dist * 40 + tick * 3) % 360;
-      setCannonTarget(grid, i, (hue + 360) % 360, 85, 75, attack);
+      const dx = col - cx;
+      const dy = row - cy;
+      const phase = Math.atan2(dy, dx);
+      const distance = Math.hypot(dx, dy) / maxDistance;
+      const arms = Math.cos(phase * 3 - time * 1.55 + distance * 6.2);
+      const tail = Math.cos(phase * 3 - time * 1.55 + distance * 6.2 - 0.72);
+      const coreVoid = smooth((distance - 0.16) / 0.18);
+      const intensity = (smooth((arms - 0.18) / 0.82) * 0.78 + smooth((tail - 0.2) / 0.8) * 0.24) * coreVoid;
+      const color = prideColorAt(0.78 + phase / (Math.PI * 2) + time * 0.1 + tail * 0.08, time);
+
+      setCannonTarget(grid, i, color.h, color.s, intensity * 100, attack);
     }
   },
 

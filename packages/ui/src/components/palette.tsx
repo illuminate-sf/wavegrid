@@ -20,7 +20,10 @@ const animGradients: Record<string, string> = {
   breathe: 'linear-gradient(135deg, #4338ca, #6366f1)',
   rainbow: 'linear-gradient(135deg, #e33, #ee0, #3a5, #35e)',
   pacman: 'linear-gradient(135deg, #ca8a04, #facc15)',
-  spiral: 'linear-gradient(135deg, #7e22ce, #a855f7)',
+  spiral: [
+    'radial-gradient(circle at 50% 50%, #05070d 0 16%, rgba(5, 7, 13, 0.72) 17%, transparent 27%)',
+    'repeating-conic-gradient(from 18deg at 50% 50%, #05070d 0deg 18deg, #e40303 20deg, #ff8c00 29deg, #ffed00 38deg, #008026 47deg, #24408e 56deg, #732982 66deg, #05070d 78deg 120deg)'
+  ].join(', '),
   rain: 'linear-gradient(135deg, #0369a1, #0ea5e9)',
   heartbeat: 'linear-gradient(135deg, #b91c1c, #ef4444)'
 };
