@@ -16,10 +16,9 @@
  *   FB4_HOST/PORT      Quick single-target FB4 OSC (alternative to routing file)
  */
 
+import { BeyondOscOutput, createRoutedOutput, FB4OscOutput } from '@wavegrid/osc';
 import * as fs from 'fs';
 import { resolve } from 'path';
-
-import { BeyondOscOutput, createRoutedOutput, FB4OscOutput } from '@wavegrid/osc';
 
 import { ConsoleOutput, MultiOutput, OutputAdapter, WebSocketInput, WebSocketOutput } from './adapters';
 import { DEFAULT_GRID_COLUMNS, DEFAULT_NUM_CANNONS } from './filter';
@@ -51,7 +50,10 @@ const savedPhysicalMap = loadPhysicalLightMap(NUM_CANNONS);
 
 // ─── OSC output adapters (from @wavegrid/osc) ───
 if (process.env.ROUTING_CONFIG) {
-  const raw = fs.readFileSync(process.env.ROUTING_CONFIG, 'utf8');
+  const configPath = resolve(process.env.ROUTING_CONFIG.startsWith('/')
+    ? process.env.ROUTING_CONFIG
+    : resolve(process.cwd(), '../../', process.env.ROUTING_CONFIG));
+  const raw = fs.readFileSync(configPath, 'utf8');
   const routingConfig = savedPhysicalMap
     ? applyPhysicalMapToRoutingConfig(JSON.parse(raw), savedPhysicalMap)
     : JSON.parse(raw);
