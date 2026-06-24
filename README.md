@@ -16,6 +16,25 @@
 
 Grid size defaults to 7x7 (49 cannons) but is fully configurable for any layout.
 
+## Run Locally (prod-like)
+
+The stack is three processes. The only dev-vs-prod difference is the UI: prod serves a Next.js production build (`build:ui` → `start:ui`) with `NEXT_PUBLIC_SIMULATOR_URL` baked in at build time; dev uses `dev:ui` with hot reload.
+
+| Process | Script | Port | Role |
+|---|---|---|---|
+| Simulator | `pnpm dev:sim` | `:3000` | master controller / grid state engine |
+| UI | `pnpm dev:ui` (dev) / `pnpm start:ui` (prod) | `:3003` | artist UI |
+| Receiver | `pnpm dev:receiver` | — | brain → OSC to BEYOND |
+
+For a prod-parity run on localhost (builds the UI, then boots all three in one terminal, `Ctrl-C` stops everything):
+
+```sh
+deploy/local.sh                # build UI (prod) + start sim + ui + receiver
+deploy/local.sh --skip-build   # reuse the last UI build
+```
+
+Then open **http://localhost:3003**. The receiver emits OSC only when `BEYOND_HOST` / `ROUTING_CONFIG` is set, so it's safe to run with no hardware attached.
+
 ## Getting Started
 
 ```sh
