@@ -293,9 +293,17 @@ export function GridDisplay({
   }, []);
 
   useEffect(() => {
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+
     resize();
-    window.addEventListener('resize', resize);
-    return () => window.removeEventListener('resize', resize);
+
+    const ro = new ResizeObserver(() => {
+      resize();
+    });
+    ro.observe(wrap);
+
+    return () => ro.disconnect();
   }, [resize]);
 
   useEffect(() => {
