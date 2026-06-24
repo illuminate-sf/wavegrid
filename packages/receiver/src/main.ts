@@ -19,7 +19,7 @@
 import * as fs from 'fs';
 import { resolve } from 'path';
 
-import { BeyondOscOutput, createRoutedOutput, FB4OscOutput } from '@wavegrid/osc';
+import { BeyondOscOutput, createRoutedOutput, FB4OscOutput, type BeyondZoneAddress } from '@wavegrid/osc';
 
 import { ConsoleOutput, MultiOutput, OutputAdapter, WebSocketInput, WebSocketOutput } from './adapters';
 import { DEFAULT_GRID_COLUMNS, DEFAULT_NUM_CANNONS } from './filter';
@@ -65,23 +65,23 @@ if (process.env.BEYOND_HOST) {
   const host = process.env.BEYOND_HOST;
   const port = parseInt(process.env.BEYOND_PORT || '7001', 10);
   const gridOrder = (process.env.BEYOND_GRID_ORDER || 'row').toLowerCase();
-  const projectorMap: Record<number, number> = {};
+  const projectorMap: Record<number, BeyondZoneAddress> = {};
   const rows = Math.ceil(NUM_CANNONS / GRID_COLUMNS);
   for (let i = 0; i < NUM_CANNONS; i++) {
     if (savedPhysicalMap) {
-      projectorMap[i] = savedPhysicalMap[i];
+      projectorMap[i] = hardwareZoneName(savedPhysicalMap[i], GRID_COLUMNS);
     } else if (gridOrder === 'column') {
       const r = Math.floor(i / GRID_COLUMNS);
       const c = i % GRID_COLUMNS;
-      projectorMap[i] = c * rows + r;
+      projectorMap[i] = hardwareZoneName(c * rows + r, GRID_COLUMNS);
     } else {
-      projectorMap[i] = i;
+      projectorMap[i] = hardwareZoneName(i, GRID_COLUMNS);
     }
   }
   const beyond = new BeyondOscOutput({ host, port, projectorMap });
   beyond.connect();
   outputs.push(beyond);
-  outputLabels.push(`BEYOND OSC → ${host}:${port} (${savedPhysicalMap ? 'light-map' : `${gridOrder}-major`}, rgb)`);
+  outputLabels.push(`BEYOND OSC → ${host}:${port} (${savedPhysicalMap ? 'light-map' : `${gridOrder}-major`}, zone names, rgb)`);
 }
 
 if (process.env.FB4_HOST) {
@@ -194,6 +194,7 @@ function applyPhysicalMapToRoutingConfig(config: any, physicalMap: number[]) {
       return {
         ...route,
         logical: logicalIndex,
+        zoneName: route.zoneName || hardwareZoneName(physicalIndex, GRID_COLUMNS),
         label: route.label ? `${route.label} ← software ${logicalIndex}` : `software ${logicalIndex} → physical ${physicalIndex}`
       };
     })
@@ -203,4 +204,10 @@ function applyPhysicalMapToRoutingConfig(config: any, physicalMap: number[]) {
     ...config,
     cannons
   };
+}
+
+function hardwareZoneName(index: number, columns: number): string {
+  const row = Math.floor(index / columns);
+  const col = (index % columns) + 1;
+  return `${String.fromCharCode(65 + row)}${col}`;
 }
