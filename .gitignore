@@ -15,3 +15,4 @@ lerna-debug.log
 
 # generated machine config (holds real LAN/cloud IPs)
 deploy/routing.json
+deploy/light-map.json

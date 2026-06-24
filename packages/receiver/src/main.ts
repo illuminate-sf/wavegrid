@@ -17,6 +17,7 @@
  */
 
 import * as fs from 'fs';
+import { resolve } from 'path';
 
 import { BeyondOscOutput, createRoutedOutput, FB4OscOutput } from '@wavegrid/osc';
 
@@ -30,6 +31,7 @@ const FALLBACK_DELAY = parseInt(process.env.FALLBACK_DELAY || '3000', 10);
 const WS_OUTPUT_PORT = process.env.WS_OUTPUT_PORT ? parseInt(process.env.WS_OUTPUT_PORT, 10) : undefined;
 const NUM_CANNONS = process.env.NUM_CANNONS ? parseInt(process.env.NUM_CANNONS, 10) : DEFAULT_NUM_CANNONS;
 const GRID_COLUMNS = process.env.GRID_COLUMNS ? parseInt(process.env.GRID_COLUMNS, 10) : DEFAULT_GRID_COLUMNS;
+const LIGHT_MAP_FILE = process.env.LIGHT_MAP_CONFIG || resolve(process.cwd(), '../../deploy/light-map.json');
 
 let shard: ShardConfig | undefined;
 if (process.env.SHARD_START !== undefined && process.env.SHARD_END !== undefined) {
@@ -45,15 +47,18 @@ const input = new WebSocketInput({ url: SIMULATOR_URL });
 // ─── Output adapter(s) ───
 const outputs: OutputAdapter[] = [new ConsoleOutput()];
 const outputLabels: string[] = ['Console'];
+const savedPhysicalMap = loadPhysicalLightMap(NUM_CANNONS);
 
 // ─── OSC output adapters (from @wavegrid/osc) ───
 if (process.env.ROUTING_CONFIG) {
   const raw = fs.readFileSync(process.env.ROUTING_CONFIG, 'utf8');
-  const routingConfig = JSON.parse(raw);
+  const routingConfig = savedPhysicalMap
+    ? applyPhysicalMapToRoutingConfig(JSON.parse(raw), savedPhysicalMap)
+    : JSON.parse(raw);
   const routed = createRoutedOutput(routingConfig);
   routed.connect();
   outputs.push(routed);
-  outputLabels.push(`Routed OSC → [${routed.targetNames.join(', ')}]`);
+  outputLabels.push(`Routed OSC → [${routed.targetNames.join(', ')}]${savedPhysicalMap ? ' (light-map)' : ''}`);
 }
 
 if (process.env.BEYOND_HOST) {
@@ -63,7 +68,9 @@ if (process.env.BEYOND_HOST) {
   const projectorMap: Record<number, number> = {};
   const rows = Math.ceil(NUM_CANNONS / GRID_COLUMNS);
   for (let i = 0; i < NUM_CANNONS; i++) {
-    if (gridOrder === 'column') {
+    if (savedPhysicalMap) {
+      projectorMap[i] = savedPhysicalMap[i];
+    } else if (gridOrder === 'column') {
       const r = Math.floor(i / GRID_COLUMNS);
       const c = i % GRID_COLUMNS;
       projectorMap[i] = c * rows + r;
@@ -74,7 +81,7 @@ if (process.env.BEYOND_HOST) {
   const beyond = new BeyondOscOutput({ host, port, projectorMap });
   beyond.connect();
   outputs.push(beyond);
-  outputLabels.push(`BEYOND OSC → ${host}:${port} (${gridOrder}-major, rgb)`);
+  outputLabels.push(`BEYOND OSC → ${host}:${port} (${savedPhysicalMap ? 'light-map' : `${gridOrder}-major`}, rgb)`);
 }
 
 if (process.env.FB4_HOST) {
@@ -138,3 +145,62 @@ process.on('SIGTERM', () => {
   receiver.stop();
   process.exit(0);
 });
+
+function loadPhysicalLightMap(numCannons: number): number[] | null {
+  if (!fs.existsSync(LIGHT_MAP_FILE)) return null;
+
+  try {
+    const raw = fs.readFileSync(LIGHT_MAP_FILE, 'utf8');
+    const config = JSON.parse(raw);
+    if (!Array.isArray(config.physicalLights)) return null;
+
+    const fallback = Array.from({ length: numCannons }, (_, index) => index);
+    const used = new Set<number>();
+    const physicalLights = config.physicalLights.slice(0, numCannons).map((value: unknown) => {
+      const n = Number(value);
+      if (!Number.isInteger(n) || n < 0 || n >= numCannons || used.has(n)) return -1;
+      used.add(n);
+      return n;
+    });
+
+    for (let index = 0; index < numCannons; index++) {
+      if (physicalLights[index] !== undefined && physicalLights[index] >= 0) continue;
+      const next = fallback.find(value => !used.has(value));
+      physicalLights[index] = next ?? index;
+      used.add(physicalLights[index]);
+    }
+
+    return physicalLights;
+  } catch (error) {
+    console.warn(`  ⚠ Could not read light map ${LIGHT_MAP_FILE}: ${(error as Error).message}`);
+    return null;
+  }
+}
+
+function applyPhysicalMapToRoutingConfig(config: any, physicalMap: number[]) {
+  if (!Array.isArray(config?.cannons)) return config;
+
+  const routeByPhysical = new Map<number, any>();
+  for (const cannon of config.cannons) {
+    if (typeof cannon.logical === 'number') {
+      routeByPhysical.set(cannon.logical, cannon);
+    }
+  }
+
+  const cannons = physicalMap
+    .map((physicalIndex, logicalIndex) => {
+      const route = routeByPhysical.get(physicalIndex);
+      if (!route) return null;
+      return {
+        ...route,
+        logical: logicalIndex,
+        label: route.label ? `${route.label} ← software ${logicalIndex}` : `software ${logicalIndex} → physical ${physicalIndex}`
+      };
+    })
+    .filter(Boolean);
+
+  return {
+    ...config,
+    cannons
+  };
+}

@@ -1,4 +1,6 @@
 import http from 'http';
+import * as fs from 'fs';
+import { resolve } from 'path';
 import { WebSocket,WebSocketServer } from 'ws';
 
 import { animations } from './animations';
@@ -11,6 +13,7 @@ const PORT = parseInt(process.env.PORT || '3000', 10);
 const TICK_MS = 1000 / 60; // 60fps interpolation
 const NUM_CANNONS = process.env.NUM_CANNONS ? parseInt(process.env.NUM_CANNONS, 10) : DEFAULT_NUM_CANNONS;
 const GRID_COLUMNS = process.env.GRID_COLUMNS ? parseInt(process.env.GRID_COLUMNS, 10) : DEFAULT_GRID_COLUMNS;
+const LIGHT_MAP_FILE = process.env.LIGHT_MAP_CONFIG || resolve(process.cwd(), '../../deploy/light-map.json');
 
 const grid = createGrid(NUM_CANNONS);
 let currentAlpha = DEFAULT_ALPHA;
@@ -19,6 +22,8 @@ let currentAnimation: string | null = null;
 let animationTick = 0;
 let audioLayer: CannonState[] | null = null;
 let audioBlend: BlendMode = 'replace';
+let calibrationMode = false;
+let previewPhysicalIndex: number | null = null;
 
 // constructive.io brand mark — served as the favicon
 const FAVICON_SVG = `<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -44,10 +49,48 @@ server.on('upgrade', (req, socket, head) => {
 });
 
 function broadcastState() {
-  const output = audioLayer
+  broadcastComposite(getBroadcastOutput());
+}
+
+function getBroadcastOutput(): CannonState[] {
+  if (calibrationMode) return getCalibrationOutput();
+  return audioLayer
     ? compositeLayer(grid, audioLayer, audioBlend)
     : grid.map(c => ({ h: c.h, s: c.s, b: c.b }));
-  broadcastComposite(output);
+}
+
+function getCalibrationOutput(): CannonState[] {
+  const output = Array.from({ length: NUM_CANNONS }, () => ({ h: 0, s: 0, b: 0 }));
+  if (previewPhysicalIndex === null) return output;
+
+  const map = loadPhysicalLightMap();
+  const logicalIndex = map.indexOf(previewPhysicalIndex);
+  const index = logicalIndex >= 0 ? logicalIndex : previewPhysicalIndex;
+  if (index >= 0 && index < output.length) {
+    output[index] = { h: 45, s: 0, b: 100 };
+  }
+  return output;
+}
+
+function loadPhysicalLightMap(): number[] {
+  const identity = Array.from({ length: NUM_CANNONS }, (_, index) => index);
+  try {
+    const raw = fs.readFileSync(LIGHT_MAP_FILE, 'utf8');
+    const config = JSON.parse(raw);
+    if (!Array.isArray(config.physicalLights)) return identity;
+    const used = new Set<number>();
+    return identity.map((fallback, index) => {
+      const value = Number(config.physicalLights[index]);
+      if (!Number.isInteger(value) || value < 0 || value >= NUM_CANNONS || used.has(value)) {
+        used.add(fallback);
+        return fallback;
+      }
+      used.add(value);
+      return value;
+    });
+  } catch {
+    return identity;
+  }
 }
 
 function broadcastComposite(output: CannonState[]) {
@@ -108,6 +151,22 @@ function handleMessage(msg: any) {
       currentAnimation = null;
     }
     break;
+  case 'calibration_mode':
+    calibrationMode = !!msg.enabled;
+    if (!calibrationMode) previewPhysicalIndex = null;
+    broadcastState();
+    break;
+  case 'physical_preview':
+    if (typeof msg.physicalIndex === 'number') {
+      calibrationMode = true;
+      previewPhysicalIndex = Math.max(0, Math.min(NUM_CANNONS - 1, Math.round(msg.physicalIndex)));
+      broadcastState();
+    }
+    break;
+  case 'physical_preview_clear':
+    previewPhysicalIndex = null;
+    if (calibrationMode) broadcastState();
+    break;
   case 'selection':
     if (Array.isArray(msg.indices)) {
       for (const idx of msg.indices) {
@@ -153,17 +212,14 @@ let framesSinceLastBroadcast = 0;
 const KEEPALIVE_FRAMES = 60; // ~1 second at 60fps
 
 setInterval(() => {
-  if (currentAnimation && animations[currentAnimation]) {
+  if (!calibrationMode && currentAnimation && animations[currentAnimation]) {
     animations[currentAnimation](grid, animationTick, currentAttack, GRID_COLUMNS);
     animationTick++;
   }
   const changed = tickGrid(grid, currentAlpha);
   framesSinceLastBroadcast++;
-  if (changed || audioLayer || framesSinceLastBroadcast >= KEEPALIVE_FRAMES) {
-    const output = audioLayer
-      ? compositeLayer(grid, audioLayer, audioBlend)
-      : grid.map(c => ({ h: c.h, s: c.s, b: c.b }));
-    broadcastComposite(output);
+  if (calibrationMode || changed || audioLayer || framesSinceLastBroadcast >= KEEPALIVE_FRAMES) {
+    broadcastComposite(getBroadcastOutput());
     framesSinceLastBroadcast = 0;
   }
 }, TICK_MS);

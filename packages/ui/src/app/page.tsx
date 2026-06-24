@@ -14,6 +14,7 @@ import { GridDisplay } from '@/components/grid-display';
 import { LoginScreen } from '@/components/login-screen';
 import { MotionControls, useMotion } from '@/components/motion-tab';
 import { AnimationPalette, ScenePalette } from '@/components/palette';
+import { SettingsTab } from '@/components/settings-tab';
 import { useAudio } from '@/lib/use-audio';
 import { useAuth } from '@/lib/use-auth';
 import { useIsPhone } from '@/lib/use-media-query';
@@ -35,7 +36,8 @@ const tabs: { key: GridMode; label: string }[] = [
   { key: 'animations', label: 'Anim' },
   { key: 'flags', label: 'Flags' },
   { key: 'brightness', label: 'Bright' },
-  { key: 'audio', label: 'Audio' }
+  { key: 'audio', label: 'Audio' },
+  { key: 'settings', label: 'Settings' }
 ];
 
 /* ---------- Tool content (no tabs, just the active tool) ---------- */
@@ -48,6 +50,7 @@ function ToolContent({
   energyValue, handleEnergyChange,
   motion, activeScene, handleScene,
   activeAnim, handleAnim, handleAnimStop,
+  send,
   flags, brightness, audio,
   isPhone
 }: {
@@ -66,6 +69,7 @@ function ToolContent({
   activeAnim: string | null;
   handleAnim: (name: string) => void;
   handleAnimStop: () => void;
+  send: (msg: Record<string, unknown>) => void;
   flags: ReturnType<typeof useFlagAnimation>;
   brightness: ReturnType<typeof useBrightnessAnimation>;
   audio: ReturnType<typeof useAudio>;
@@ -180,6 +184,14 @@ function ToolContent({
 
       {tab === 'audio' && (
         <AudioTab audio={audio} />
+      )}
+
+      {tab === 'settings' && (
+        <SettingsTab
+          numCannons={NUM_CANNONS}
+          gridColumns={GRID_COLUMNS}
+          send={send}
+        />
       )}
     </>
   );
@@ -478,11 +490,15 @@ export default function Home() {
   );
 
   const handleTabChange = useCallback((t: GridMode) => {
+    if (t !== 'settings' && tab === 'settings') {
+      send({ type: 'physical_preview_clear' });
+      send({ type: 'calibration_mode', enabled: false });
+    }
     setTab(t);
     if (isPhone && sheetSnap === 'peek') {
       setSheetSnap('half');
     }
-  }, [isPhone, sheetSnap]);
+  }, [isPhone, send, sheetSnap, tab]);
 
   const toolContentProps = {
     hue, sat, bright, brushSize, softEdge,
@@ -491,6 +507,7 @@ export default function Home() {
     energyValue, handleEnergyChange,
     motion, activeScene, handleScene,
     activeAnim, handleAnim, handleAnimStop,
+    send,
     flags, brightness, audio,
     isPhone
   };
@@ -690,7 +707,7 @@ export default function Home() {
         <div className={layout === 'right' ? 'shrink-0 h-full' : 'shrink-0'}>
           <ToolPanel
             tab={tab}
-            setTab={setTab}
+            setTab={handleTabChange}
             layout={layout}
             toolContentProps={toolContentProps}
           />
