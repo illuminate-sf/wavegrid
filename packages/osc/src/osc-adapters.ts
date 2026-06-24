@@ -7,7 +7,7 @@
  * the receiver core.
  *
  * OSC addressing follows Pangolin's documented schemas:
- *   BEYOND: /beyond/zone/{index-or-name}/livecontrol/{property}
+ *   BEYOND: /beyond/zone/{index}/livecontrol/{property}
  *   FB4:    /FB4-{serial}/{command}
  */
 
@@ -41,8 +41,6 @@ export interface OscMessage {
   value: number | number[];
 }
 
-export type BeyondZoneAddress = number | string;
-
 /** Send an OSC message with explicit float typing (single or multi-value). */
 function sendFloats(client: Client, address: string, value: number | number[]): void {
   const msg = new Message(address);
@@ -63,10 +61,10 @@ export interface BeyondOscConfig {
   /** UDP target port (BEYOND OSC receive port, configurable in BEYOND). */
   port: number;
   /**
-   * Map of logical grid index → BEYOND zone index or zone name.
+   * Map of logical grid index → BEYOND projector list index.
    * Only mapped cannons are sent; unmapped indices are skipped.
    */
-  projectorMap: Record<number, BeyondZoneAddress>;
+  projectorMap: Record<number, number>;
   /**
    * Send rate throttle — only send every N frames.
    * At 60fps tick rate, sendEveryNFrames=2 gives 30Hz output.
@@ -81,22 +79,22 @@ export interface BeyondOscConfig {
  *
  * BEYOND livecontrol uses zone-level addressing (case-sensitive).
  * Sends 5 messages per changed cannon:
- *   /beyond/zone/{zone}/livecontrol/alpha      (255 = full override)
- *   /beyond/zone/{zone}/livecontrol/red        (0–255 float)
- *   /beyond/zone/{zone}/livecontrol/green      (0–255 float)
- *   /beyond/zone/{zone}/livecontrol/blue       (0–255 float)
- *   /beyond/zone/{zone}/livecontrol/Brightness (0–100 float)
+ *   /beyond/zone/{n}/livecontrol/alpha      (255 = full override)
+ *   /beyond/zone/{n}/livecontrol/red        (0–255 float)
+ *   /beyond/zone/{n}/livecontrol/green      (0–255 float)
+ *   /beyond/zone/{n}/livecontrol/blue       (0–255 float)
+ *   /beyond/zone/{n}/livecontrol/Brightness (0–100 float)
  */
 export function encodeBeyondMessages(
   grid: CannonState[],
-  projectorMap: Record<number, BeyondZoneAddress>,
+  projectorMap: Record<number, number>,
   prevGrid?: CannonState[]
 ): OscMessage[] {
   const messages: OscMessage[] = [];
 
   for (let i = 0; i < grid.length; i++) {
-    const zoneAddress = projectorMap[i];
-    if (zoneAddress === undefined || zoneAddress === '') continue;
+    const projIndex = projectorMap[i];
+    if (projIndex === undefined) continue;
 
     const cannon = grid[i];
 
@@ -106,7 +104,7 @@ export function encodeBeyondMessages(
       if (cannon.h === prev.h && cannon.s === prev.s && cannon.b === prev.b) continue;
     }
 
-    const prefix = `/beyond/zone/${zoneAddress}/livecontrol`;
+    const prefix = `/beyond/zone/${projIndex}/livecontrol`;
 
     const rgb = hsbToRgb255(cannon.h, cannon.s, cannon.b);
     messages.push({ address: `${prefix}/alpha`, value: 255 });
@@ -301,9 +299,7 @@ export interface CannonRoute {
   col?: number;
   /** Human-readable label. */
   label?: string;
-  /** BEYOND projection zone name. Preferred for target type 'beyond'. */
-  zoneName?: string;
-  /** BEYOND projector list index. Legacy fallback for target type 'beyond'. */
+  /** BEYOND projector list index (required when target type is 'beyond'). */
   projectorIndex?: number;
   /** FB4 5-digit serial (required when target type is 'fb4'). */
   fb4Serial?: string;
@@ -339,7 +335,7 @@ export class RoutedOscOutput implements OutputAdapter {
     const flushHz = config.flushHz ?? 30;
     this.sendInterval = Math.max(1, Math.round(60 / flushHz));
 
-    const beyondMaps: Record<string, Record<number, BeyondZoneAddress>> = {};
+    const beyondMaps: Record<string, Record<number, number>> = {};
     const fb4Maps: Record<string, Record<number, string>> = {};
 
     for (const cannon of config.cannons) {
@@ -347,9 +343,9 @@ export class RoutedOscOutput implements OutputAdapter {
       const target = config.targets[cannon.target];
       if (!target) continue;
 
-      if (target.type === 'beyond' && (cannon.zoneName || cannon.projectorIndex !== undefined)) {
+      if (target.type === 'beyond' && cannon.projectorIndex !== undefined) {
         if (!beyondMaps[cannon.target]) beyondMaps[cannon.target] = {};
-        beyondMaps[cannon.target][cannon.logical] = cannon.zoneName || cannon.projectorIndex!;
+        beyondMaps[cannon.target][cannon.logical] = cannon.projectorIndex;
       } else if (target.type === 'fb4' && cannon.fb4Serial !== undefined) {
         if (!fb4Maps[cannon.target]) fb4Maps[cannon.target] = {};
         fb4Maps[cannon.target][cannon.logical] = cannon.fb4Serial;

@@ -79,12 +79,6 @@ function ask(rl, question, def) {
   });
 }
 
-function hardwareZoneName(index, columns) {
-  const row = Math.floor(index / columns);
-  const col = (index % columns) + 1;
-  return `${String.fromCharCode(65 + row)}${col}`;
-}
-
 // ── build the routing config object ───────────────────────────────────
 function buildRouting({ cloudIp, beyondA, beyondB, port, flushHz, cannons, columns }) {
   const targets = {
@@ -102,7 +96,7 @@ function buildRouting({ cloudIp, beyondA, beyondB, port, flushHz, cannons, colum
     const projectorIndex = onA ? logical : logical - splitA;
     const row = Math.floor(logical / columns);
     const col = logical % columns;
-    routes.push({ logical, target, zoneName: hardwareZoneName(logical, columns), projectorIndex, label: `${tag} row${row} col${col}` });
+    routes.push({ logical, target, projectorIndex, label: `${tag} row${row} col${col}` });
   }
   return {
     // Not consumed by the receiver — recorded for reference / regeneration.

@@ -43,16 +43,6 @@ describe('encodeBeyondMessages', () => {
     expect(messages[4].value).toBe(100);
   });
 
-  it('should address BEYOND zones by name when configured', () => {
-    const grid = makeSingleGrid(0, 0, 100, 100);
-    const messages = encodeBeyondMessages(grid, { 0: 'A1' });
-
-    expect(messages).toHaveLength(5);
-    expect(messages[0].address).toBe('/beyond/zone/A1/livecontrol/alpha');
-    expect(messages[1].address).toBe('/beyond/zone/A1/livecontrol/red');
-    expect(messages[4].address).toBe('/beyond/zone/A1/livecontrol/Brightness');
-  });
-
   it('should produce white (255,255,255) for s=0 b=100', () => {
     const grid = makeSingleGrid(0, 0, 0, 100); // white
     const messages = encodeBeyondMessages(grid, { 0: 0 });
@@ -254,31 +244,6 @@ describe('BeyondOscOutput (UDP integration)', () => {
     await mock.close();
   });
 
-  it('should send named zone OSC packets to UDP target', async () => {
-    const port = nextPort();
-    const mock = await createMockOscReceiver(port);
-
-    const adapter = new BeyondOscOutput({
-      host: '127.0.0.1',
-      port,
-      projectorMap: { 0: 'G7' },
-      sendEveryNFrames: 1
-    });
-    adapter.connect();
-
-    const grid = makeSingleGrid(0, 240, 100, 100);
-    adapter.send(grid);
-
-    await new Promise((r) => setTimeout(r, 200));
-
-    const bluePkt = mock.packets.find(p => p.address === '/beyond/zone/G7/livecontrol/blue');
-    expect(bluePkt).toBeDefined();
-    expect(bluePkt!.args[0]).toBeCloseTo(255, 0);
-
-    adapter.close();
-    await mock.close();
-  });
-
   it('should throttle sends based on sendEveryNFrames', async () => {
     const port = nextPort();
     const mock = await createMockOscReceiver(port);
@@ -361,7 +326,7 @@ describe('RoutedOscOutput', () => {
       },
       flushHz: 60,
       cannons: [
-        { logical: 0, target: 'beyond-a', zoneName: 'A1', projectorIndex: 3 },
+        { logical: 0, target: 'beyond-a', projectorIndex: 3 },
         { logical: 48, target: 'fb4-b', fb4Serial: '02356' }
       ]
     };
@@ -374,11 +339,11 @@ describe('RoutedOscOutput', () => {
 
     await new Promise((r) => setTimeout(r, 300));
 
-    const beyondAlpha = beyondMock.packets.find(p => p.address === '/beyond/zone/A1/livecontrol/alpha');
+    const beyondAlpha = beyondMock.packets.find(p => p.address === '/beyond/zone/3/livecontrol/alpha');
     expect(beyondAlpha).toBeDefined();
     expect(beyondAlpha!.args[0]).toBeCloseTo(255, 0);
 
-    const beyondRed = beyondMock.packets.find(p => p.address === '/beyond/zone/A1/livecontrol/red');
+    const beyondRed = beyondMock.packets.find(p => p.address === '/beyond/zone/3/livecontrol/red');
     expect(beyondRed).toBeDefined();
     expect(beyondRed!.args[0]).toBeCloseTo(255, 0); // hue 0 → red 255
 

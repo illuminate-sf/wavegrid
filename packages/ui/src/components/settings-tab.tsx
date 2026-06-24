@@ -26,12 +26,6 @@ function labelFor(index: number, columns: number): string {
   return `${row}.${col}`;
 }
 
-function hardwareZoneName(index: number, columns: number): string {
-  const row = Math.floor(index / columns);
-  const col = (index % columns) + 1;
-  return `${String.fromCharCode(65 + row)}${col}`;
-}
-
 function normalizeMap(values: number[], numCannons: number): number[] {
   const used = new Set<number>();
   const result = values.slice(0, numCannons).map(value => {
@@ -193,7 +187,7 @@ export function SettingsTab({ numCannons, gridColumns, send }: SettingsTabProps)
                 }}
               >
                 <span style={{ fontSize: 10, color: '#6f7280', lineHeight: 1 }}>{labelFor(logicalIndex, gridColumns)}</span>
-                <span style={{ fontSize: 12, fontWeight: 800, lineHeight: 1.1 }}>{hardwareZoneName(physicalIndex, gridColumns)}</span>
+                <span style={{ fontSize: 12, fontWeight: 800, lineHeight: 1.1 }}>P{physicalIndex + 1}</span>
               </button>
             );
           })}
@@ -242,7 +236,7 @@ export function SettingsTab({ numCannons, gridColumns, send }: SettingsTabProps)
                   Grid {labelFor(selectedIndex, gridColumns)}
                 </span>
                 <span style={{ fontSize: 13, color: '#9aa0b4' }}>
-                  Hardware {selectedPhysical === null ? '-' : hardwareZoneName(selectedPhysical, gridColumns)}
+                  Physical {selectedPhysical === null ? '-' : selectedPhysical + 1}
                 </span>
               </button>
 
@@ -275,7 +269,7 @@ export function SettingsTab({ numCannons, gridColumns, send }: SettingsTabProps)
                         fontWeight: 700
                       }}
                     >
-                      {hardwareZoneName(physicalIndex, gridColumns)}
+                      Light {physicalIndex + 1}
                     </button>
                   ))}
                 </div>
