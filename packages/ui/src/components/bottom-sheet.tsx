@@ -14,6 +14,10 @@ interface BottomSheetProps {
   onSnapChange: (s: SnapPoint) => void;
 }
 
+function getDvh(): number {
+  return window.visualViewport?.height ?? window.innerHeight;
+}
+
 function getSnapHeight(s: SnapPoint, vh: number): number {
   switch (s) {
   case 'peek': return PEEK_PX;
@@ -30,15 +34,19 @@ export function BottomSheet({ children, snap, onSnapChange }: BottomSheetProps) 
   const [height, setHeight] = useState(PEEK_PX);
 
   useEffect(() => {
-    setHeight(getSnapHeight(snap, window.innerHeight));
+    setHeight(getSnapHeight(snap, getDvh()));
   }, [snap]);
 
   useEffect(() => {
     const onResize = () => {
-      if (!isDragging.current) setHeight(getSnapHeight(snap, window.innerHeight));
+      if (!isDragging.current) setHeight(getSnapHeight(snap, getDvh()));
     };
     window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
+    window.visualViewport?.addEventListener('resize', onResize);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      window.visualViewport?.removeEventListener('resize', onResize);
+    };
   }, [snap]);
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
@@ -51,7 +59,7 @@ export function BottomSheet({ children, snap, onSnapChange }: BottomSheetProps) 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     if (!isDragging.current) return;
     const dy = startY.current - e.clientY;
-    const newH = Math.max(50, Math.min(window.innerHeight * 0.95, startH.current + dy));
+    const newH = Math.max(50, Math.min(getDvh() * 0.95, startH.current + dy));
     setHeight(newH);
   }, []);
 
@@ -59,7 +67,7 @@ export function BottomSheet({ children, snap, onSnapChange }: BottomSheetProps) 
     if (!isDragging.current) return;
     isDragging.current = false;
 
-    const vh = window.innerHeight;
+    const vh = getDvh();
     const peekH = PEEK_PX;
     const halfH = vh * HALF_FRAC;
     const fullH = vh * FULL_FRAC;
