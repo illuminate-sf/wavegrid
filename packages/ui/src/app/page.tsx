@@ -445,6 +445,10 @@ export default function Home() {
     send({ type: 'rotate', direction });
   }, [send]);
 
+  const handleMirror = useCallback((axis: 'horizontal' | 'vertical') => {
+    send({ type: 'mirror', axis });
+  }, [send]);
+
   const handleSmooth = useCallback(
     (pct: number) => {
       setSmoothness(pct);
@@ -629,6 +633,41 @@ export default function Home() {
                 ↻
               </button>
             </div>
+            <div className="flex items-center gap-2 px-4 pb-4">
+              <span className="text-sm font-medium" style={{ color: '#888898', minWidth: 56 }}>Mirror</span>
+              <button
+                onClick={() => handleMirror('horizontal')}
+                className="flex items-center justify-center transition-all"
+                title="Mirror horizontal"
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 8,
+                  background: '#12121a',
+                  border: '1px solid #1a1a25',
+                  color: '#888898',
+                  fontSize: 16
+                }}
+              >
+                ⇔
+              </button>
+              <button
+                onClick={() => handleMirror('vertical')}
+                className="flex items-center justify-center transition-all"
+                title="Mirror vertical"
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 8,
+                  background: '#12121a',
+                  border: '1px solid #1a1a25',
+                  color: '#888898',
+                  fontSize: 16
+                }}
+              >
+                ⇕
+              </button>
+            </div>
           </div>
         )}
 
@@ -742,6 +781,42 @@ export default function Home() {
               }}
             >
               ↻
+            </button>
+          </div>
+
+          {/* Mirror buttons */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => handleMirror('horizontal')}
+              className="flex items-center justify-center transition-all"
+              title="Mirror horizontal"
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 8,
+                background: '#12121a',
+                border: '1px solid #1a1a25',
+                color: '#888898',
+                fontSize: 16
+              }}
+            >
+              ⇔
+            </button>
+            <button
+              onClick={() => handleMirror('vertical')}
+              className="flex items-center justify-center transition-all"
+              title="Mirror vertical"
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 8,
+                background: '#12121a',
+                border: '1px solid #1a1a25',
+                color: '#888898',
+                fontSize: 16
+              }}
+            >
+              ⇕
             </button>
           </div>
 

@@ -124,6 +124,32 @@ export function rotateGrid(grid: CannonTarget[], columns: number, direction: 'cw
   }
 }
 
+/**
+ * Mirror the grid in-place (horizontal flips columns, vertical flips rows).
+ */
+export function mirrorGrid(grid: CannonTarget[], columns: number, axis: 'horizontal' | 'vertical'): void {
+  const rows = Math.ceil(grid.length / columns);
+  const snapshot = grid.map(c => ({ h: c.targetH, s: c.targetS, b: c.targetB }));
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < columns; c++) {
+      const oldIdx = r * columns + c;
+      if (oldIdx >= grid.length) continue;
+      const newIdx = axis === 'horizontal'
+        ? r * columns + (columns - 1 - c)
+        : (rows - 1 - r) * columns + c;
+      if (newIdx >= grid.length) continue;
+      const src = snapshot[oldIdx];
+      grid[newIdx].targetH = src.h;
+      grid[newIdx].targetS = src.s;
+      grid[newIdx].targetB = src.b;
+      grid[newIdx].h = src.h;
+      grid[newIdx].s = src.s;
+      grid[newIdx].b = src.b;
+    }
+  }
+}
+
 export type BlendMode = 'replace' | 'multiply' | 'additive';
 
 /**

@@ -5,7 +5,7 @@ import { WebSocket,WebSocketServer } from 'ws';
 
 import { animations } from './animations';
 import type { BlendMode, CannonState } from './grid';
-import {compositeLayer, createGrid, DEFAULT_ALPHA, DEFAULT_GRID_COLUMNS, DEFAULT_NUM_CANNONS, rotateGrid, setAllTargets, setCannonTarget, tickGrid } from './grid';
+import {compositeLayer, createGrid, DEFAULT_ALPHA, DEFAULT_GRID_COLUMNS, DEFAULT_NUM_CANNONS, mirrorGrid, rotateGrid, setAllTargets, setCannonTarget, tickGrid } from './grid';
 import { applyScene, scenes } from './scenes';
 import { getHTML } from './ui';
 
@@ -207,6 +207,9 @@ function handleMessage(msg: any) {
     break;
   case 'rotate':
     rotateGrid(grid, GRID_COLUMNS, msg.direction === 'ccw' ? 'ccw' : 'cw');
+    break;
+  case 'mirror':
+    mirrorGrid(grid, GRID_COLUMNS, msg.axis === 'vertical' ? 'vertical' : 'horizontal');
     break;
   }
 }
