@@ -2,7 +2,7 @@
 
 import { useCallback, useRef } from 'react';
 
-import type { AudioEngine } from '@/lib/use-audio';
+import { AUDIO_PALETTES, type AudioEngine, type AudioMode, type AudioPalette, type BlendMode } from '@/lib/use-audio';
 
 import { ControlGrid, ControlGroup } from './control-grid';
 
@@ -10,18 +10,26 @@ interface AudioTabProps {
   audio: AudioEngine;
 }
 
-const modes: { key: 'spectrum' | 'energy' | 'beat' | 'drops'; label: string }[] = [
+const modes: { key: AudioMode; label: string }[] = [
+  { key: 'plasma', label: 'Plasma' },
+  { key: 'galaxy', label: 'Galaxy' },
+  { key: 'fireworks', label: 'Fireworks' },
+  { key: 'confetti', label: 'Confetti' },
+  { key: 'rain', label: 'Rain' },
+  { key: 'matrix', label: 'Matrix' },
   { key: 'spectrum', label: 'Spectrum' },
   { key: 'energy', label: 'Energy' },
-  { key: 'beat', label: 'Beat' },
   { key: 'drops', label: 'Drops' }
 ];
 
-const blends: { key: 'replace' | 'multiply' | 'additive'; label: string; desc: string }[] = [
+const blends: { key: BlendMode; label: string; desc: string }[] = [
+  { key: 'brighten', label: 'Brightness', desc: 'Audio preserves existing colors and drives brightness' },
   { key: 'replace', label: 'Replace', desc: 'Audio controls colors directly' },
   { key: 'multiply', label: 'Multiply', desc: 'Audio modulates existing state' },
   { key: 'additive', label: 'Add', desc: 'Audio adds on top of current state' }
 ];
+
+const palettes = Object.entries(AUDIO_PALETTES) as Array<[AudioPalette, (typeof AUDIO_PALETTES)[AudioPalette]]>;
 
 function formatTime(s: number): string {
   const min = Math.floor(s / 60);
@@ -165,7 +173,7 @@ export function AudioTab({ audio }: AudioTabProps) {
       <ControlGroup label="Settings">
         <div>
           <p className="text-sm font-medium mb-2" style={{ color: '#888898', letterSpacing: '0.05em' }}>Mode</p>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             {modes.map((m) => (
               <button
                 key={m.key}
@@ -186,7 +194,7 @@ export function AudioTab({ audio }: AudioTabProps) {
         {/* Blend */}
         <div>
           <p className="text-sm font-medium mb-2" style={{ color: '#888898', letterSpacing: '0.05em' }}>Blend</p>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             {blends.map((b) => (
               <button
                 key={b.key}
@@ -205,6 +213,39 @@ export function AudioTab({ audio }: AudioTabProps) {
           <p className="text-sm mt-1" style={{ color: 'rgba(136,136,152,0.5)' }}>
             {blends.find((b) => b.key === audio.blend)?.desc}
           </p>
+        </div>
+
+        {/* Palette */}
+        <div>
+          <p className="text-sm font-medium mb-2" style={{ color: '#888898', letterSpacing: '0.05em' }}>Palette</p>
+          <div className="flex gap-2 flex-wrap">
+            {palettes.map(([key, palette]) => (
+              <button
+                key={key}
+                onClick={() => audio.setPalette(key)}
+                className="px-3 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2"
+                style={{
+                  background: audio.palette === key ? '#4a7cff' : '#12121a',
+                  color: audio.palette === key ? '#fff' : '#888898',
+                  border: `1px solid ${audio.palette === key ? '#4a7cff' : '#1a1a25'}`
+                }}
+              >
+                <span className="flex -space-x-1">
+                  {palette.stops.slice(0, 3).map((stop, index) => (
+                    <span
+                      key={`${key}-${index}`}
+                      className="w-4 h-4 rounded-full"
+                      style={{
+                        background: `hsl(${stop.h}, ${stop.s}%, 50%)`,
+                        border: '1px solid rgba(255,255,255,0.18)'
+                      }}
+                    />
+                  ))}
+                </span>
+                {palette.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Toggles */}

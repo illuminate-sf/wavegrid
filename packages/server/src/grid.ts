@@ -250,7 +250,7 @@ export function remapGridForUi<T>(grid: T[], columns: number, rows: number, orie
   return result;
 }
 
-export type BlendMode = 'replace' | 'multiply' | 'additive';
+export type BlendMode = 'replace' | 'multiply' | 'additive' | 'brighten';
 
 /**
  * Composite an audio overlay onto the base grid.
@@ -265,6 +265,12 @@ export function compositeLayer(
     const o = overlay[i];
     if (!o) return { h: c.h, s: c.s, b: c.b };
     switch (blend) {
+    case 'brighten':
+      return {
+        h: c.h,
+        s: c.s,
+        b: Math.min(100, Math.max(c.b * 0.18, c.b * 0.25 + o.b * 0.9))
+      };
     case 'multiply':
       return {
         h: (c.h + o.h * 0.3) % 360,

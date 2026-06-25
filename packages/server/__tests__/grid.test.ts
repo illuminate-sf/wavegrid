@@ -196,6 +196,25 @@ describe('compositeLayer', () => {
     expect(result[0].s).toBe(90);
   });
 
+  it('should preserve base color while driving brightness in brighten mode', () => {
+    const overlay = [
+      { h: 40, s: 100, b: 80 },
+      { h: 300, s: 100, b: 5 },
+      { h: 180, s: 100, b: 120 }
+    ];
+    const result = compositeLayer(base, overlay, 'brighten');
+
+    expect(result[0].h).toBe(base[0].h);
+    expect(result[0].s).toBe(base[0].s);
+    expect(result[0].b).toBeCloseTo(60 * 0.25 + 80 * 0.9, 0);
+
+    expect(result[1].h).toBe(base[1].h);
+    expect(result[1].s).toBe(base[1].s);
+    expect(result[1].b).toBeCloseTo(80 * 0.18, 0);
+
+    expect(result[2].b).toBe(100);
+  });
+
   it('should not mutate the base grid', () => {
     const baseCopy = base.map(c => ({ ...c }));
     const overlay = [

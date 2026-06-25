@@ -214,10 +214,14 @@ function handleMessage(msg: any) {
       }
       audioLayer = remapped;
       audioBlend = msg.blend || 'replace';
+      broadcastState();
+      framesSinceLastBroadcast = 0;
     }
     break;
   case 'audio_layer_clear':
     audioLayer = null;
+    broadcastState();
+    framesSinceLastBroadcast = 0;
     break;
   case 'smoothness':
     if (typeof msg.value === 'number') {

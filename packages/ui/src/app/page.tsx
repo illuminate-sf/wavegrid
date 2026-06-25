@@ -385,6 +385,20 @@ export default function Home() {
     });
   }, []);
 
+  useEffect(() => {
+    if (tab === 'debug') return;
+    send({ type: 'physical_preview_clear' });
+    send({ type: 'calibration_mode', enabled: false });
+  }, [send, tab]);
+
+  useEffect(() => {
+    const alpha = Math.pow(10, -2.7 * (smoothness / 100));
+    const attackValue = 0.05 + (attack / 100) * 0.95;
+    send({ type: 'smoothness', value: alpha });
+    send({ type: 'attack', value: attackValue });
+    send({ type: 'master_brightness', value: masterBright / 100 });
+  }, [send]);
+
   const hasOrientation = orientation.rotation !== 0 || orientation.flipH || orientation.flipV;
 
   const rafRef = useRef(0);
@@ -409,7 +423,7 @@ export default function Home() {
 
   const gridData = grid.length > 0 ? grid : Array.from({ length: NUM_CANNONS }, () => ({ h: 220, s: 90, b: 80 }));
 
-  const audio = useAudio(NUM_CANNONS, GRID_COLUMNS, gridData, send);
+  const audio = useAudio(NUM_CANNONS, GRID_COLUMNS, gridData, send, smoothness);
   const { addDrop } = useDrops(NUM_CANNONS, GRID_COLUMNS, dropsConfig, send);
   const motion = useMotion(hue, sat, bright, send);
   const gradient = useGradient();
@@ -515,7 +529,9 @@ export default function Home() {
     send({ type: 'shift', vx: 0, vy: 0 });
     flags.stop();
     brightness.setMode('off');
-  }, [send, flags, brightness]);
+    audio.stop();
+    audio.stopMic();
+  }, [send, flags, brightness, audio]);
 
   const handleClear = useCallback(() => {
     clearTrailFadeTimers();
@@ -634,11 +650,11 @@ export default function Home() {
             </span>
           </div>
           <div className="flex items-center gap-2">
-            {(activeAnim || activeScene || flags.activeFlag || brightness.config.mode !== 'off' || shiftActive) && (
+            {(activeAnim || activeScene || flags.activeFlag || brightness.config.mode !== 'off' || shiftActive || audio.state.playing || audio.state.micActive) && (
               <button
                 onClick={handleGlobalStop}
                 className="flex items-center justify-center transition-all"
-                title="Stop animation"
+                title="Stop"
                 style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255,80,80,0.12)', border: '1px solid rgba(255,80,80,0.4)', color: '#ff6b6b', fontSize: 16 }}
               >
                 ⏹
@@ -890,11 +906,11 @@ export default function Home() {
               {layout === 'bottom' ? '⊟' : '⊞'}
             </button>
             {/* Global stop animation */}
-            {(activeAnim || activeScene || flags.activeFlag || brightness.config.mode !== 'off' || shiftActive) && (
+            {(activeAnim || activeScene || flags.activeFlag || brightness.config.mode !== 'off' || shiftActive || audio.state.playing || audio.state.micActive) && (
               <button
                 onClick={handleGlobalStop}
                 className="flex items-center justify-center transition-all"
-                title={`Stop ${activeAnim ?? activeScene ?? flags.activeFlag ?? 'animation'}`}
+                title={`Stop ${activeAnim ?? activeScene ?? flags.activeFlag ?? (audio.state.micActive ? 'mic' : audio.state.playing ? 'audio' : 'animation')}`}
                 style={{ ...headerBtnStyle, background: 'rgba(255,80,80,0.12)', border: '1px solid rgba(255,80,80,0.4)', color: '#ff6b6b' }}
               >
                 ⏹
