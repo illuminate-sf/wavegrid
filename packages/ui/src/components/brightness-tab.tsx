@@ -238,71 +238,69 @@ export function BrightnessTab({
         ))}
       </div>
 
-      {config.mode !== 'off' && (
-        <div className="space-y-3">
-          <div className="flex items-center gap-3">
-            <span
-              className="text-sm font-medium"
-              style={{ color: '#888898', letterSpacing: '0.05em', minWidth: 56 }}
-            >
-              Speed
-            </span>
-            <input
-              type="range"
-              className="flex-1"
-              min={1}
-              max={10}
-              value={config.speed}
-              onChange={(e) => onSpeed(Number(e.target.value))}
-            />
-            <span
-              className="text-sm font-mono"
-              style={{ color: '#e8e8f0', minWidth: 28, textAlign: 'right' }}
-            >
-              {config.speed}
-            </span>
-          </div>
-          <div className="flex items-center gap-3">
-            <span
-              className="text-sm font-medium"
-              style={{ color: '#888898', letterSpacing: '0.05em', minWidth: 56 }}
-            >
-              Mix
-            </span>
-            <input
-              type="range"
-              className="flex-1"
-              min={0}
-              max={100}
-              value={config.intensity}
-              onChange={(e) => onIntensity(Number(e.target.value))}
-            />
-            <span
-              className="text-sm font-mono"
-              style={{ color: '#e8e8f0', minWidth: 36, textAlign: 'right' }}
-            >
-              {config.intensity}%
-            </span>
-          </div>
-          <button
-            onClick={onResnapshot}
-            className="px-4 py-2.5 rounded-lg text-sm font-medium transition-all"
-            style={{
-              background: '#12121a',
-              color: '#888898',
-              border: '1px solid #1a1a25'
-            }}
+      <div className="space-y-3">
+        <div className="flex items-center gap-3">
+          <span
+            className="text-sm font-medium"
+            style={{ color: '#888898', letterSpacing: '0.05em', minWidth: 56 }}
           >
-            Recapture colors
-          </button>
-          <p
-            className="text-xs"
-            style={{ color: 'rgba(136,136,152,0.5)' }}
+            Speed
+          </span>
+          <input
+            type="range"
+            className="flex-1"
+            min={1}
+            max={10}
+            value={config.speed}
+            onChange={(e) => onSpeed(Number(e.target.value))}
+          />
+          <span
+            className="text-sm font-mono"
+            style={{ color: '#e8e8f0', minWidth: 28, textAlign: 'right' }}
           >
-            Colors are captured when you pick a mode. Change the scene/flag first, then tap Recapture.
-          </p>
+            {config.speed}
+          </span>
         </div>
-      )}
+        <div className="flex items-center gap-3">
+          <span
+            className="text-sm font-medium"
+            style={{ color: '#888898', letterSpacing: '0.05em', minWidth: 56 }}
+          >
+            Mix
+          </span>
+          <input
+            type="range"
+            className="flex-1"
+            min={0}
+            max={100}
+            value={config.intensity}
+            onChange={(e) => onIntensity(Number(e.target.value))}
+          />
+          <span
+            className="text-sm font-mono"
+            style={{ color: '#e8e8f0', minWidth: 36, textAlign: 'right' }}
+          >
+            {config.intensity}%
+          </span>
+        </div>
+        <button
+          onClick={onResnapshot}
+          className="px-4 py-2.5 rounded-lg text-sm font-medium transition-all"
+          style={{
+            background: '#12121a',
+            color: '#888898',
+            border: '1px solid #1a1a25'
+          }}
+        >
+          Recapture colors
+        </button>
+        <p
+          className="text-xs"
+          style={{ color: 'rgba(136,136,152,0.5)' }}
+        >
+          Colors are captured when you pick a mode. Change the scene/flag first, then tap Recapture.
+        </p>
+      </div>
     </div>
   );
 }
