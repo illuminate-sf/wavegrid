@@ -19,12 +19,9 @@ import { SettingsTab } from '@/components/settings-tab';
 import { ShiftDial } from '@/components/shift-dial';
 import { useAudio } from '@/lib/use-audio';
 import { useAuth } from '@/lib/use-auth';
+import { useConfig } from '@/lib/use-config';
 import { useIsPhone } from '@/lib/use-media-query';
 import { useSocket } from '@/lib/use-socket';
-
-const NUM_CANNONS = parseInt(process.env.NEXT_PUBLIC_NUM_CANNONS || '49', 10);
-const GRID_COLUMNS = parseInt(process.env.NEXT_PUBLIC_GRID_COLUMNS || '7', 10);
-const SIMULATOR_URL = process.env.NEXT_PUBLIC_SIMULATOR_URL || 'ws://localhost:3000';
 
 type PanelLayout = 'bottom' | 'right';
 type TrailFadeEntry = {
@@ -59,7 +56,8 @@ function ToolContent({
   send,
   flags, brightness, audio,
   isPhone,
-  onShift
+  onShift,
+  numCannons, gridColumns
 }: {
   tab: GridMode;
   hue: number; sat: number; bright: number; brushSize: number; softEdge: boolean; trailFade: boolean;
@@ -79,6 +77,8 @@ function ToolContent({
   audio: ReturnType<typeof useAudio>;
   isPhone: boolean;
   onShift: (vx: number, vy: number) => void;
+  numCannons: number;
+  gridColumns: number;
 }) {
   return (
     <>
@@ -178,8 +178,8 @@ function ToolContent({
 
       {tab === 'debug' && (
         <SettingsTab
-          numCannons={NUM_CANNONS}
-          gridColumns={GRID_COLUMNS}
+          numCannons={numCannons}
+          gridColumns={gridColumns}
           send={send}
         />
       )}
@@ -349,9 +349,13 @@ function MasterSliders({
 /* ---------- Main page ---------- */
 
 export default function Home() {
+  const config = useConfig();
   const { user, checked, login, logout } = useAuth();
-  const { connected, grid, orientation, send } = useSocket(SIMULATOR_URL);
+  const { connected, grid, orientation, send } = useSocket(config?.simulatorUrl ?? 'ws://localhost:3000');
   const isPhone = useIsPhone();
+
+  const NUM_CANNONS = config?.numCannons ?? 49;
+  const GRID_COLUMNS = config?.gridColumns ?? 7;
 
   const [tab, setTab] = useState<GridMode>('paint');
   const [layout, setLayout] = useState<PanelLayout>('bottom');
@@ -611,11 +615,13 @@ export default function Home() {
     send,
     flags, brightness, audio,
     isPhone,
-    onShift: handleShift
+    onShift: handleShift,
+    numCannons: NUM_CANNONS,
+    gridColumns: GRID_COLUMNS
   };
 
-  /* ---------- Auth gate (after all hooks, to respect Rules of Hooks) ---------- */
-  if (!checked) {
+  /* ---------- Loading gates (after all hooks, to respect Rules of Hooks) ---------- */
+  if (!config || !checked) {
     return <div style={{ background: '#050508', height: '100dvh' }} />;
   }
 

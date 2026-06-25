@@ -34,7 +34,9 @@ export const scenes: Record<string, SceneGenerator> = {
     return { h: 10 + row * 5, s: 90, b: 85 - row * 5 };
   },
 
-  heart: (i, _total, cols) => {
+  heart: (i, total, cols) => {
+    const rows = Math.ceil(total / cols);
+    if (cols !== 7 || rows < 7) return { h: 350, s: 85, b: 2 };
     const row = Math.floor(i / cols);
     const col = i % cols;
     const bitmap = [
@@ -50,7 +52,9 @@ export const scenes: Record<string, SceneGenerator> = {
     return on ? { h: 350, s: 85, b: 80 } : { h: 0, s: 0, b: 2 };
   },
 
-  sf: (i, _total, cols) => {
+  sf: (i, total, cols) => {
+    const rows = Math.ceil(total / cols);
+    if (cols !== 7 || rows < 7) return { h: 220, s: 80, b: 8 };
     const row = Math.floor(i / cols);
     const col = i % cols;
     const bitmap = [
@@ -66,7 +70,9 @@ export const scenes: Record<string, SceneGenerator> = {
     return on ? { h: 45, s: 95, b: 85 } : { h: 220, s: 80, b: 8 };
   },
 
-  smiley: (i, _total, cols) => {
+  smiley: (i, total, cols) => {
+    const rows = Math.ceil(total / cols);
+    if (cols !== 7 || rows < 7) return { h: 0, s: 0, b: 2 };
     const row = Math.floor(i / cols);
     const col = i % cols;
     const bitmap = [
@@ -95,10 +101,12 @@ export const scenes: Record<string, SceneGenerator> = {
     return { h: 10 + invertedRow * 6, s: 95, b: 40 + invertedRow * 8 };
   },
 
-  night: (i, _total, cols) => {
+  night: (i, total, cols) => {
     const row = Math.floor(i / cols);
     const col = i % cols;
-    const starPositions = [2, 9, 14, 22, 30, 37, 44];
+    const starCount = Math.max(2, Math.floor(total / 7));
+    const step = total / starCount;
+    const starPositions = Array.from({ length: starCount }, (_, k) => Math.round(k * step));
     if (starPositions.includes(i)) {
       return { h: 200 + (row + col) * 10, s: 20, b: 90 };
     }
