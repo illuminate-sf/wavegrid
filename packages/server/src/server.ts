@@ -5,7 +5,7 @@ import { WebSocket,WebSocketServer } from 'ws';
 
 import { animations } from './animations';
 import type { BlendMode, CannonState, Orientation, Rotation } from './grid';
-import {compositeLayer, createGrid, DEFAULT_ALPHA, DEFAULT_GRID_COLUMNS, DEFAULT_NUM_CANNONS, defaultOrientation, mapUiToGrid, remapGridForUi, setAllTargets, setCannonTarget, tickGrid } from './grid';
+import {compositeLayer, createGrid, DEFAULT_ALPHA, DEFAULT_GRID_COLUMNS, DEFAULT_NUM_CANNONS, defaultOrientation, mapUiToGrid, remapGridForUi, setAllTargets, setCannonTarget, shiftGrid, tickGrid } from './grid';
 import { applyScene, scenes } from './scenes';
 import { getHTML } from './ui';
 
@@ -25,6 +25,10 @@ let audioBlend: BlendMode = 'replace';
 let calibrationMode = false;
 let previewPhysicalIndex: number | null = null;
 let orientation: Orientation = defaultOrientation();
+let shiftVx = 0;
+let shiftVy = 0;
+let shiftAccX = 0;
+let shiftAccY = 0;
 const GRID_ROWS = Math.ceil(NUM_CANNONS / GRID_COLUMNS);
 
 // constructive.io brand mark — served as the favicon
@@ -249,6 +253,14 @@ function handleMessage(msg: any) {
     broadcastOrientation();
     broadcastState();
     break;
+  case 'shift':
+    shiftVx = typeof msg.vx === 'number' ? msg.vx : 0;
+    shiftVy = typeof msg.vy === 'number' ? msg.vy : 0;
+    if (shiftVx === 0 && shiftVy === 0) {
+      shiftAccX = 0;
+      shiftAccY = 0;
+    }
+    break;
   }
 }
 
@@ -263,9 +275,20 @@ setInterval(() => {
     animations[currentAnimation](grid, animationTick, currentAttack, GRID_COLUMNS);
     animationTick++;
   }
+  if (shiftVx !== 0 || shiftVy !== 0) {
+    shiftAccX += shiftVx / 60;
+    shiftAccY += shiftVy / 60;
+    const stepsX = Math.trunc(shiftAccX);
+    const stepsY = Math.trunc(shiftAccY);
+    if (stepsX !== 0 || stepsY !== 0) {
+      shiftGrid(grid, GRID_COLUMNS, GRID_ROWS, stepsX, stepsY);
+      shiftAccX -= stepsX;
+      shiftAccY -= stepsY;
+    }
+  }
   const changed = tickGrid(grid, currentAlpha);
   framesSinceLastBroadcast++;
-  if (calibrationMode || changed || audioLayer || framesSinceLastBroadcast >= KEEPALIVE_FRAMES) {
+  if (calibrationMode || changed || audioLayer || shiftVx !== 0 || shiftVy !== 0 || framesSinceLastBroadcast >= KEEPALIVE_FRAMES) {
     broadcastComposite(getBroadcastOutput());
     framesSinceLastBroadcast = 0;
   }

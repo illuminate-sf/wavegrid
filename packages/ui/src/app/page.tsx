@@ -16,6 +16,7 @@ import { LoginScreen } from '@/components/login-screen';
 import { MotionControls, useMotion } from '@/components/motion-tab';
 import { AnimationPalette, ScenePalette } from '@/components/palette';
 import { SettingsTab } from '@/components/settings-tab';
+import { ShiftDial } from '@/components/shift-dial';
 import { useAudio } from '@/lib/use-audio';
 import { useAuth } from '@/lib/use-auth';
 import { useIsPhone } from '@/lib/use-media-query';
@@ -71,6 +72,8 @@ function ToolContent({
   brightness: ReturnType<typeof useBrightnessAnimation>;
   audio: ReturnType<typeof useAudio>;
   isPhone: boolean;
+  shiftActive: boolean;
+  onShift: (vx: number, vy: number) => void;
 }) {
   return (
     <>
@@ -130,7 +133,7 @@ function ToolContent({
       )}
 
       {tab === 'animations' && (
-        <ControlGrid minCellWidth={240}>
+        <ControlGrid minCellWidth={200}>
           <ControlGroup label="Animations">
             <AnimationPalette
               active={activeAnim}
@@ -145,6 +148,9 @@ function ToolContent({
               onIntensity={brightness.setIntensity}
               onResnapshot={brightness.resnapshot}
             />
+          </ControlGroup>
+          <ControlGroup label="Shift">
+            <ShiftDial onShift={onShift} />
           </ControlGroup>
         </ControlGrid>
       )}
@@ -382,6 +388,7 @@ export default function Home() {
 
   const [activeScene, setActiveScene] = useState<string | null>(null);
   const [activeAnim, setActiveAnim] = useState<string | null>(null);
+  const [shiftActive, setShiftActive] = useState(false);
   const [dropsConfig, setDropsConfig] = useState({
     spectrumStart: 0,
     spectrumEnd: 180,
@@ -424,10 +431,20 @@ export default function Home() {
     [send]
   );
 
+  const handleShift = useCallback(
+    (vx: number, vy: number) => {
+      setShiftActive(vx !== 0 || vy !== 0);
+      send({ type: 'shift', vx, vy });
+    },
+    [send]
+  );
+
   const handleGlobalStop = useCallback(() => {
     setActiveAnim(null);
     setActiveScene(null);
+    setShiftActive(false);
     send({ type: 'animation', name: 'stop' });
+    send({ type: 'shift', vx: 0, vy: 0 });
     flags.stop();
     brightness.setMode('off');
   }, [send, flags, brightness]);
@@ -512,7 +529,9 @@ export default function Home() {
     activeAnim, handleAnim,
     send,
     flags, brightness, audio,
-    isPhone
+    isPhone,
+    shiftActive,
+    onShift: handleShift
   };
 
   /* ---------- Auth gate (after all hooks, to respect Rules of Hooks) ---------- */
@@ -547,7 +566,7 @@ export default function Home() {
             </span>
           </div>
           <div className="flex items-center gap-2">
-            {(activeAnim || activeScene || flags.activeFlag || brightness.config.mode !== 'off') && (
+            {(activeAnim || activeScene || flags.activeFlag || brightness.config.mode !== 'off' || shiftActive) && (
               <button
                 onClick={handleGlobalStop}
                 className="flex items-center justify-center transition-all"
@@ -803,7 +822,7 @@ export default function Home() {
               {layout === 'bottom' ? '⊟' : '⊞'}
             </button>
             {/* Global stop animation */}
-            {(activeAnim || activeScene || flags.activeFlag || brightness.config.mode !== 'off') && (
+            {(activeAnim || activeScene || flags.activeFlag || brightness.config.mode !== 'off' || shiftActive) && (
               <button
                 onClick={handleGlobalStop}
                 className="flex items-center justify-center transition-all"

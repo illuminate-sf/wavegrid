@@ -98,6 +98,30 @@ export function setAllTargets(grid: CannonTarget[], h?: number, s?: number, b?: 
 }
 
 /**
+ * Shift the entire grid by (dx, dy) cells, wrapping around edges.
+ * Positive dx = shift right, positive dy = shift down.
+ */
+export function shiftGrid(grid: CannonTarget[], cols: number, rows: number, dx: number, dy: number): void {
+  const snapshot = grid.map(c => ({ h: c.targetH, s: c.targetS, b: c.targetB }));
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const srcR = ((r - dy) % rows + rows) % rows;
+      const srcC = ((c - dx) % cols + cols) % cols;
+      const srcIdx = srcR * cols + srcC;
+      const dstIdx = r * cols + c;
+      if (dstIdx >= grid.length || srcIdx >= grid.length) continue;
+      const src = snapshot[srcIdx];
+      grid[dstIdx].targetH = src.h;
+      grid[dstIdx].targetS = src.s;
+      grid[dstIdx].targetB = src.b;
+      grid[dstIdx].h = src.h;
+      grid[dstIdx].s = src.s;
+      grid[dstIdx].b = src.b;
+    }
+  }
+}
+
+/**
  * Rotate the grid 90° in-place (CW or CCW).
  * Only works correctly for square grids (rows === columns).
  */
