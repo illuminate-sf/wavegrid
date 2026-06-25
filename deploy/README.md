@@ -27,6 +27,17 @@ Processes: `wavegrid-server` (`pnpm dev:server`, binds `0.0.0.0:SIM_PORT`) and
 `wavegrid-ui` (`pnpm dev:ui`, serves `:3003`). Both auto-restart on crash. See
 `ecosystem.config.js`.
 
+### Quick deploy (after `git pull`)
+
+```bash
+pnpm build:ui   # auto-reads deploy/.env → bakes NEXT_PUBLIC_SIMULATOR_URL
+pm2 restart all
+```
+
+`build:ui` sources `deploy/load-env.sh` under the hood, so
+`NEXT_PUBLIC_SIMULATOR_URL` is derived from `CLOUD_IP` automatically. No need to
+pass it on the command line.
+
 ### Manual (mac/linux dev, two terminals)
 
 ```bash
