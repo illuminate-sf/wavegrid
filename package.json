@@ -15,7 +15,7 @@
     "access": "restricted"
   },
   "scripts": {
-    "build": "pnpm -r run build",
+    "build": "pnpm -r --filter '!@wavegrid/ui' run build && pnpm run build:ui",
     "clean": "pnpm -r run clean",
     "test": "pnpm -r run test",
     "lint": "pnpm -r run lint",
