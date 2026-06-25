@@ -6,6 +6,7 @@ import { AudioTab } from '@/components/audio-tab';
 import { BottomSheet, type SnapPoint } from '@/components/bottom-sheet';
 import { BrightnessTab, useBrightnessAnimation } from '@/components/brightness-tab';
 import { ColorWheel } from '@/components/color-wheel';
+import { ControlGrid, ControlGroup } from '@/components/control-grid';
 import { DropsControls, useDrops } from '@/components/drops-tab';
 import { FlagsTab, useFlagAnimation } from '@/components/flags-tab';
 import { GradientBar, useGradient } from '@/components/gradient-tab';
@@ -34,7 +35,6 @@ const tabs: { key: GridMode; label: string }[] = [
   { key: 'scenes', label: 'Scenes' },
   { key: 'animations', label: 'Anim' },
   { key: 'flags', label: 'Flags' },
-  { key: 'brightness', label: 'Bright' },
   { key: 'audio', label: 'Audio' },
   { key: 'debug', label: 'Debug' }
 ];
@@ -131,11 +131,24 @@ function ToolContent({
       )}
 
       {tab === 'animations' && (
-        <AnimationPalette
-          active={activeAnim}
-          onSelect={handleAnim}
-          onStop={handleAnimStop}
-        />
+        <ControlGrid minCellWidth={240}>
+          <ControlGroup label="Animations">
+            <AnimationPalette
+              active={activeAnim}
+              onSelect={handleAnim}
+              onStop={handleAnimStop}
+            />
+          </ControlGroup>
+          <ControlGroup label="Brightness Effects">
+            <BrightnessTab
+              config={brightness.config}
+              onMode={brightness.setMode}
+              onSpeed={brightness.setSpeed}
+              onIntensity={brightness.setIntensity}
+              onResnapshot={brightness.resnapshot}
+            />
+          </ControlGroup>
+        </ControlGrid>
       )}
 
       {tab === 'flags' && (
@@ -146,16 +159,6 @@ function ToolContent({
           onSelectFlag={flags.selectFlag}
           onEffect={flags.setEffect}
           onPurpleBlack={flags.setPurpleBlack}
-        />
-      )}
-
-      {tab === 'brightness' && (
-        <BrightnessTab
-          config={brightness.config}
-          onMode={brightness.setMode}
-          onSpeed={brightness.setSpeed}
-          onIntensity={brightness.setIntensity}
-          onResnapshot={brightness.resnapshot}
         />
       )}
 
