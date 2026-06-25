@@ -31,11 +31,11 @@ const tabs: { key: GridMode; label: string }[] = [
   { key: 'paint', label: 'Paint' },
   { key: 'gradient', label: 'Gradient' },
   { key: 'drops', label: 'Drops' },
-  { key: 'motion', label: 'Motion' },
   { key: 'scenes', label: 'Scenes' },
   { key: 'animations', label: 'Anim' },
   { key: 'flags', label: 'Flags' },
   { key: 'audio', label: 'Audio' },
+  { key: 'motion', label: 'Motion' },
   { key: 'debug', label: 'Debug' }
 ];
 
