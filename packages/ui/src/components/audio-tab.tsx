@@ -99,7 +99,7 @@ export function AudioTab({ audio }: AudioTabProps) {
 
         {/* Mic input */}
         <button
-          onClick={audio.state.micActive ? audio.stopMic : audio.startMic}
+          onClick={audio.state.micActive ? () => audio.stopMic() : audio.startMic}
           className="w-full px-4 py-3 rounded-lg text-sm font-medium transition-all"
           style={{
             background: audio.state.micActive ? 'rgba(221,68,68,0.2)' : 'rgba(74,124,255,0.1)',
