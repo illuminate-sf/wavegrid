@@ -669,28 +669,26 @@ export default function Home() {
                 ⇕
               </button>
             </div>
-            {hasOrientation && (
-              <div className="flex items-center gap-3 px-4 pb-4">
-                <span className="text-sm font-medium" style={{ color: '#888898', minWidth: 56 }}>View</span>
-                <button
-                  onClick={toggleViewFlip}
-                  className="flex items-center justify-center transition-all"
-                  title={viewFlip ? 'View: flipped (your perspective)' : 'View: sky perspective'}
-                  style={{
-                    height: 44,
-                    borderRadius: 10,
-                    paddingLeft: 14,
-                    paddingRight: 14,
-                    background: viewFlip ? 'rgba(74,124,255,0.15)' : '#12121a',
-                    border: `1px solid ${viewFlip ? '#4a7cff' : '#1a1a25'}`,
-                    color: viewFlip ? '#4a7cff' : '#888898',
-                    fontSize: 14
-                  }}
-                >
-                  {viewFlip ? 'My View' : 'Sky View'}
-                </button>
-              </div>
-            )}
+            <div className="flex items-center gap-3 px-4 pb-4">
+              <span className="text-sm font-medium" style={{ color: '#888898', minWidth: 56 }}>View</span>
+              <button
+                onClick={toggleViewFlip}
+                className="flex items-center justify-center transition-all"
+                title={viewFlip ? 'View: flipped (your perspective)' : 'View: sky perspective'}
+                style={{
+                  height: 44,
+                  borderRadius: 10,
+                  paddingLeft: 14,
+                  paddingRight: 14,
+                  background: viewFlip ? 'rgba(74,124,255,0.15)' : '#12121a',
+                  border: `1px solid ${viewFlip ? '#4a7cff' : '#1a1a25'}`,
+                  color: viewFlip ? '#4a7cff' : '#888898',
+                  fontSize: 14
+                }}
+              >
+                {viewFlip ? 'My View' : 'Sky View'}
+              </button>
+            </div>
           </div>
         )}
 
@@ -785,21 +783,19 @@ export default function Home() {
               <button onClick={() => handleRotate('cw')} className="flex items-center justify-center transition-all" title="Rotate 90° CW" style={headerBtnStyle}>↻</button>
               <button onClick={() => handleMirror('horizontal')} className="flex items-center justify-center transition-all" title="Mirror horizontal" style={headerBtnStyle}>⇔</button>
               <button onClick={() => handleMirror('vertical')} className="flex items-center justify-center transition-all" title="Mirror vertical" style={headerBtnStyle}>⇕</button>
-              {hasOrientation && (
-                <button
-                  onClick={toggleViewFlip}
-                  className="flex items-center justify-center transition-all"
-                  title={viewFlip ? 'View: flipped (your perspective)' : 'View: sky perspective'}
-                  style={{
-                    ...headerBtnStyle,
-                    background: viewFlip ? 'rgba(74,124,255,0.15)' : headerBtnStyle.background,
-                    border: viewFlip ? '1px solid #4a7cff' : headerBtnStyle.border,
-                    color: viewFlip ? '#4a7cff' : headerBtnStyle.color
-                  }}
-                >
-                  {viewFlip ? '⊙' : '◎'}
-                </button>
-              )}
+              <button
+                onClick={toggleViewFlip}
+                className="flex items-center justify-center transition-all"
+                title={viewFlip ? 'View: flipped (your perspective)' : 'View: sky perspective'}
+                style={{
+                  ...headerBtnStyle,
+                  background: viewFlip ? 'rgba(74,124,255,0.15)' : headerBtnStyle.background,
+                  border: viewFlip ? '1px solid #4a7cff' : headerBtnStyle.border,
+                  color: viewFlip ? '#4a7cff' : headerBtnStyle.color
+                }}
+              >
+                {viewFlip ? '⊙' : '◎'}
+              </button>
             </div>
             {/* Layout toggle */}
             <button
