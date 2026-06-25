@@ -223,8 +223,42 @@ export function ColorWheel({
         {previewBlock}
       </div>
 
-      {/* Cell 2: brush controls */}
+      {/* Cell 2: quick colors + brush controls */}
       <ControlGroup label="Brush">
+        {/* ROYGBIV quick-pick swatches */}
+        <div className="flex items-center gap-2 pb-1">
+          {[
+            { h: 0, s: 100, label: 'Red' },
+            { h: 30, s: 100, label: 'Orange' },
+            { h: 55, s: 100, label: 'Yellow' },
+            { h: 120, s: 100, label: 'Green' },
+            { h: 180, s: 100, label: 'Cyan' },
+            { h: 225, s: 100, label: 'Blue' },
+            { h: 280, s: 100, label: 'Purple' },
+            { h: 0, s: 0, label: 'White' }
+          ].map((c) => {
+            const [r, g, b] = hslRgb(c.h, c.s, 50);
+            const bg = c.s === 0 ? '#fff' : `rgb(${Math.round(r * 255)},${Math.round(g * 255)},${Math.round(b * 255)})`;
+            const isActive = Math.abs(hue - c.h) < 5 && Math.abs(saturation - c.s) < 5;
+            return (
+              <button
+                key={c.label}
+                onClick={() => { onHueChange(c.h); onSatChange(c.s); }}
+                title={c.label}
+                className="shrink-0 rounded-full transition-transform"
+                style={{
+                  width: 26,
+                  height: 26,
+                  background: bg,
+                  border: isActive ? '2.5px solid #fff' : '2px solid rgba(255,255,255,0.15)',
+                  boxShadow: isActive ? `0 0 8px ${bg}` : 'none',
+                  transform: isActive ? 'scale(1.15)' : 'scale(1)'
+                }}
+              />
+            );
+          })}
+        </div>
+
         <div className="flex items-center gap-3">
           <span className="text-sm font-medium shrink-0" style={{ color: '#888898', minWidth: 36 }}>Size</span>
           <input
