@@ -380,9 +380,10 @@ export default function Home() {
   const [showMasterSliders, setShowMasterSliders] = useState(false);
   const [viewFlip, setViewFlip] = useState(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('wavegrid-view-flip') === 'true';
+      const stored = localStorage.getItem('wavegrid-view-flip');
+      return stored === null ? true : stored === 'true';
     }
-    return false;
+    return true;
   });
 
   const toggleViewFlip = useCallback(() => {
