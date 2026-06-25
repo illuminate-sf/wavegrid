@@ -25,8 +25,8 @@ interface GridDisplayProps {
 
 function orientationToCss(o: Orientation): string {
   const parts: string[] = [];
-  // Counter-rotate: negate the server rotation
-  if (o.rotation !== 0) parts.push(`rotate(${-o.rotation}deg)`);
+  // Counter-rotate: remapGridForUi rotates data CCW by θ, so rotate CW by θ to undo
+  if (o.rotation !== 0) parts.push(`rotate(${o.rotation}deg)`);
   // Counter-flip
   if (o.flipH) parts.push('scaleX(-1)');
   if (o.flipV) parts.push('scaleY(-1)');
@@ -203,8 +203,8 @@ export function GridDisplay({
     let y = (clientY - rect.top) * (canvasW / rect.height);
 
     // If viewFlip is active, undo the CSS transform on the coordinates.
-    // CSS transform order (right-to-left): scaleY → scaleX → rotate(-θ)
-    // Inverse (applied left-to-right): rotate(+θ) → scaleX → scaleY
+    // CSS transform order (right-to-left): scaleY → scaleX → rotate(+θ)
+    // Inverse (applied left-to-right): rotate(-θ) → scaleX → scaleY
     if (viewFlip) {
       const half = canvasW / 2;
       // 1. Undo rotation: CSS applied rotate(-θ), so rotate by +θ
