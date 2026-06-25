@@ -53,7 +53,6 @@ function ToolContent({
   tab,
   hue, sat, bright, brushSize, softEdge, trailFade,
   setHue, setSat, setBright, setBrushSize, setSoftEdge, setTrailFade,
-  onClear,
   gradient, dropsConfig, setDropsConfig,
   motion, activeScene, handleScene,
   activeAnim, handleAnim,
@@ -66,7 +65,6 @@ function ToolContent({
   hue: number; sat: number; bright: number; brushSize: number; softEdge: boolean; trailFade: boolean;
   setHue: (v: number) => void; setSat: (v: number) => void; setBright: (v: number) => void;
   setBrushSize: (v: number) => void; setSoftEdge: (v: boolean) => void; setTrailFade: (v: boolean) => void;
-  onClear?: () => void;
   gradient: ReturnType<typeof useGradient>;
   dropsConfig: { spectrumStart: number; spectrumEnd: number; speed: number; decay: number; width: number };
   setDropsConfig: (c: typeof dropsConfig) => void;
@@ -98,7 +96,6 @@ function ToolContent({
           onBrushSizeChange={setBrushSize}
           onSoftEdgeChange={setSoftEdge}
           onTrailFadeChange={setTrailFade}
-          onClear={onClear}
           compact={isPhone}
         />
       )}
@@ -530,7 +527,7 @@ export default function Home() {
     flags.stop();
     brightness.setMode('off');
     audio.stop();
-    audio.stopMic();
+    audio.stopMic(false);
   }, [send, flags, brightness, audio]);
 
   const handleClear = useCallback(() => {
@@ -608,7 +605,6 @@ export default function Home() {
   const toolContentProps = {
     hue, sat, bright, brushSize, softEdge, trailFade,
     setHue, setSat, setBright, setBrushSize, setSoftEdge, setTrailFade,
-    onClear: handleClear,
     gradient, dropsConfig, setDropsConfig,
     motion, activeScene, handleScene,
     activeAnim, handleAnim,
@@ -650,16 +646,22 @@ export default function Home() {
             </span>
           </div>
           <div className="flex items-center gap-2">
-            {(activeAnim || activeScene || flags.activeFlag || brightness.config.mode !== 'off' || shiftActive || audio.state.playing || audio.state.micActive) && (
-              <button
-                onClick={handleGlobalStop}
-                className="flex items-center justify-center transition-all"
-                title="Stop"
-                style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255,80,80,0.12)', border: '1px solid rgba(255,80,80,0.4)', color: '#ff6b6b', fontSize: 16 }}
-              >
-                ⏹
-              </button>
-            )}
+            <button
+              onClick={handleClear}
+              className="flex items-center justify-center transition-all"
+              title="Clear"
+              style={{ height: 36, borderRadius: 10, paddingLeft: 12, paddingRight: 12, background: '#12121a', border: '1px solid #1a1a25', color: '#d44', fontSize: 13, fontWeight: 600 }}
+            >
+              Clear
+            </button>
+            <button
+              onClick={handleGlobalStop}
+              className="flex items-center justify-center transition-all"
+              title="Stop"
+              style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255,80,80,0.12)', border: '1px solid rgba(255,80,80,0.4)', color: '#ff6b6b', fontSize: 16 }}
+            >
+              ⏹
+            </button>
             <button
               onClick={logout}
               className="text-xs px-2 py-1 rounded"
@@ -905,17 +907,23 @@ export default function Home() {
             >
               {layout === 'bottom' ? '⊟' : '⊞'}
             </button>
+            <button
+              onClick={handleClear}
+              className="flex items-center justify-center transition-all"
+              title="Clear"
+              style={{ ...headerBtnStyle, width: 64, background: '#12121a', border: '1px solid #1a1a25', color: '#d44', fontSize: 13, fontWeight: 600 }}
+            >
+              Clear
+            </button>
             {/* Global stop animation */}
-            {(activeAnim || activeScene || flags.activeFlag || brightness.config.mode !== 'off' || shiftActive || audio.state.playing || audio.state.micActive) && (
-              <button
-                onClick={handleGlobalStop}
-                className="flex items-center justify-center transition-all"
-                title={`Stop ${activeAnim ?? activeScene ?? flags.activeFlag ?? (audio.state.micActive ? 'mic' : audio.state.playing ? 'audio' : 'animation')}`}
-                style={{ ...headerBtnStyle, background: 'rgba(255,80,80,0.12)', border: '1px solid rgba(255,80,80,0.4)', color: '#ff6b6b' }}
-              >
-                ⏹
-              </button>
-            )}
+            <button
+              onClick={handleGlobalStop}
+              className="flex items-center justify-center transition-all"
+              title={`Stop ${activeAnim ?? activeScene ?? flags.activeFlag ?? (audio.state.micActive ? 'mic' : audio.state.playing ? 'audio' : 'animation')}`}
+              style={{ ...headerBtnStyle, background: 'rgba(255,80,80,0.12)', border: '1px solid rgba(255,80,80,0.4)', color: '#ff6b6b' }}
+            >
+              ⏹
+            </button>
           </div>
         </div>
 

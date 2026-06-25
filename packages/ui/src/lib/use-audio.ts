@@ -95,7 +95,7 @@ export interface AudioEngine {
   stop: () => void;
   seek: (time: number) => void;
   startMic: () => void;
-  stopMic: () => void;
+  stopMic: (resumeAmbient?: boolean) => void;
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
 }
 
@@ -792,7 +792,7 @@ export function useAudio(
     return bpm;
   }, []);
 
-  const stopMic = useCallback(() => {
+  const stopMic = useCallback((resumeAmbient = true) => {
     if (micSourceRef.current) {
       micSourceRef.current.disconnect();
       micSourceRef.current = null;
@@ -809,7 +809,7 @@ export function useAudio(
     resetVisualState();
     sendRef.current({ type: 'audio_layer_clear' });
     setAudioState((s) => ({ ...s, micActive: false }));
-    startAmbientLoop();
+    if (resumeAmbient) startAmbientLoop();
   }, [resetVisualState, startAmbientLoop]);
 
   const startMic = useCallback(async () => {
