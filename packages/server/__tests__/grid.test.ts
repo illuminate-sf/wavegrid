@@ -210,7 +210,7 @@ describe('compositeLayer', () => {
 
     expect(result[1].h).toBe(base[1].h);
     expect(result[1].s).toBe(base[1].s);
-    expect(result[1].b).toBeCloseTo(80 * 0.18, 0);
+    expect(result[1].b).toBeCloseTo(80 * 0.25 + 5 * 0.9, 0);
 
     expect(result[2].b).toBe(100);
   });
