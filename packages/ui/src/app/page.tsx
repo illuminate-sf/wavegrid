@@ -29,7 +29,6 @@ type PanelLayout = 'bottom' | 'right';
 const tabs: { key: GridMode; label: string }[] = [
   { key: 'paint', label: 'Paint' },
   { key: 'gradient', label: 'Gradient' },
-  { key: 'energy', label: 'Energy' },
   { key: 'drops', label: 'Drops' },
   { key: 'motion', label: 'Motion' },
   { key: 'scenes', label: 'Scenes' },
@@ -37,7 +36,7 @@ const tabs: { key: GridMode; label: string }[] = [
   { key: 'flags', label: 'Flags' },
   { key: 'brightness', label: 'Bright' },
   { key: 'audio', label: 'Audio' },
-  { key: 'settings', label: 'Settings' }
+  { key: 'debug', label: 'Debug' }
 ];
 
 /* ---------- Tool content (no tabs, just the active tool) ---------- */
@@ -48,7 +47,6 @@ function ToolContent({
   setHue, setSat, setBright, setBrushSize, setSoftEdge,
   onClear,
   gradient, dropsConfig, setDropsConfig,
-  energyValue, handleEnergyChange,
   motion, activeScene, handleScene,
   activeAnim, handleAnim, handleAnimStop,
   send,
@@ -63,8 +61,6 @@ function ToolContent({
   gradient: ReturnType<typeof useGradient>;
   dropsConfig: { spectrumStart: number; spectrumEnd: number; speed: number; decay: number; width: number };
   setDropsConfig: (c: typeof dropsConfig) => void;
-  energyValue: number;
-  handleEnergyChange: (v: number) => void;
   motion: ReturnType<typeof useMotion>;
   activeScene: string | null;
   handleScene: (name: string) => void;
@@ -113,28 +109,6 @@ function ToolContent({
           >
             Reset
           </button>
-        </div>
-      )}
-
-      {tab === 'energy' && (
-        <div className="space-y-4">
-          <p className="text-sm font-medium" style={{ color: '#888898', letterSpacing: '0.05em' }}>ENERGY</p>
-          <div className="flex items-center gap-3">
-            <input
-              type="range"
-              className="flex-1"
-              min={0}
-              max={100}
-              value={energyValue}
-              onChange={(e) => handleEnergyChange(Number(e.target.value))}
-            />
-            <span className="text-base font-mono shrink-0" style={{ color: '#e8e8f0', minWidth: 44, textAlign: 'right' }}>
-              {energyValue}%
-            </span>
-          </div>
-          <p className="text-sm" style={{ color: 'rgba(136,136,152,0.5)' }}>
-            Master intensity — controls overall brightness
-          </p>
         </div>
       )}
 
@@ -189,7 +163,7 @@ function ToolContent({
         <AudioTab audio={audio} />
       )}
 
-      {tab === 'settings' && (
+      {tab === 'debug' && (
         <SettingsTab
           numCannons={NUM_CANNONS}
           gridColumns={GRID_COLUMNS}
@@ -407,7 +381,6 @@ export default function Home() {
 
   const [activeScene, setActiveScene] = useState<string | null>(null);
   const [activeAnim, setActiveAnim] = useState<string | null>(null);
-  const [energyValue, setEnergyValue] = useState(80);
   const [dropsConfig, setDropsConfig] = useState({
     spectrumStart: 0,
     spectrumEnd: 180,
@@ -501,13 +474,6 @@ export default function Home() {
     [send]
   );
 
-  const handleEnergyChange = useCallback(
-    (val: number) => {
-      setEnergyValue(val);
-      send({ type: 'master_brightness', value: val / 100 });
-    },
-    [send]
-  );
 
   const handleGradientDrag = useCallback(
     (startIdx: number, endIdx: number) => {
@@ -531,7 +497,7 @@ export default function Home() {
   );
 
   const handleTabChange = useCallback((t: GridMode) => {
-    if (t !== 'settings' && tab === 'settings') {
+    if (t !== 'debug' && tab === 'debug') {
       send({ type: 'physical_preview_clear' });
       send({ type: 'calibration_mode', enabled: false });
     }
@@ -546,7 +512,6 @@ export default function Home() {
     setHue, setSat, setBright, setBrushSize, setSoftEdge,
     onClear: handleClear,
     gradient, dropsConfig, setDropsConfig,
-    energyValue, handleEnergyChange,
     motion, activeScene, handleScene,
     activeAnim, handleAnim, handleAnimStop,
     send,
