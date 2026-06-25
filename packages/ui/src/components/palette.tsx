@@ -89,12 +89,10 @@ export function ScenePalette({
 
 export function AnimationPalette({
   active,
-  onSelect,
-  onStop
+  onSelect
 }: {
   active: string | null;
   onSelect: (name: string) => void;
-  onStop: () => void;
 }) {
   return (
     <div className="flex gap-2.5 flex-wrap">
@@ -107,19 +105,6 @@ export function AnimationPalette({
           onClick={() => onSelect(name)}
         />
       ))}
-      <button
-        onClick={onStop}
-        className="transition-transform active:scale-93 flex items-center justify-center"
-        style={{
-          width: TILE,
-          height: TILE,
-          borderRadius: TILE_RADIUS,
-          background: '#1a1a25',
-          border: '1px solid #333'
-        }}
-      >
-        <span style={{ fontSize: 12, color: '#d44', fontWeight: 600 }}>Stop</span>
-      </button>
     </div>
   );
 }

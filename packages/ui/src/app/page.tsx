@@ -48,7 +48,7 @@ function ToolContent({
   onClear,
   gradient, dropsConfig, setDropsConfig,
   motion, activeScene, handleScene,
-  activeAnim, handleAnim, handleAnimStop,
+  activeAnim, handleAnim,
   send,
   flags, brightness, audio,
   isPhone
@@ -66,7 +66,6 @@ function ToolContent({
   handleScene: (name: string) => void;
   activeAnim: string | null;
   handleAnim: (name: string) => void;
-  handleAnimStop: () => void;
   send: (msg: Record<string, unknown>) => void;
   flags: ReturnType<typeof useFlagAnimation>;
   brightness: ReturnType<typeof useBrightnessAnimation>;
@@ -136,7 +135,6 @@ function ToolContent({
             <AnimationPalette
               active={activeAnim}
               onSelect={handleAnim}
-              onStop={handleAnimStop}
             />
           </ControlGroup>
           <ControlGroup label="Brightness Effects">
@@ -426,11 +424,6 @@ export default function Home() {
     [send]
   );
 
-  const handleAnimStop = useCallback(() => {
-    setActiveAnim(null);
-    send({ type: 'animation', name: 'stop' });
-  }, [send]);
-
   const handleGlobalStop = useCallback(() => {
     setActiveAnim(null);
     setActiveScene(null);
@@ -516,7 +509,7 @@ export default function Home() {
     onClear: handleClear,
     gradient, dropsConfig, setDropsConfig,
     motion, activeScene, handleScene,
-    activeAnim, handleAnim, handleAnimStop,
+    activeAnim, handleAnim,
     send,
     flags, brightness, audio,
     isPhone
