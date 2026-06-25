@@ -455,6 +455,14 @@ export default function Home() {
     send({ type: 'animation', name: 'stop' });
   }, [send]);
 
+  const handleGlobalStop = useCallback(() => {
+    setActiveAnim(null);
+    setActiveScene(null);
+    send({ type: 'animation', name: 'stop' });
+    flags.stop();
+    brightness.setMode('off');
+  }, [send, flags, brightness]);
+
   const handleClear = useCallback(() => {
     send({ type: 'clear' });
   }, [send]);
@@ -578,6 +586,16 @@ export default function Home() {
             </span>
           </div>
           <div className="flex items-center gap-2">
+            {(activeAnim || activeScene || flags.activeFlag || brightness.config.mode !== 'off') && (
+              <button
+                onClick={handleGlobalStop}
+                className="flex items-center justify-center transition-all"
+                title="Stop animation"
+                style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255,80,80,0.12)', border: '1px solid rgba(255,80,80,0.4)', color: '#ff6b6b', fontSize: 16 }}
+              >
+                ⏹
+              </button>
+            )}
             <button
               onClick={logout}
               className="text-xs px-2 py-1 rounded"
@@ -794,27 +812,31 @@ export default function Home() {
             </button>
           </div>
 
-          {/* Orientation + layout buttons (always visible top-right) */}
-          <div className="flex items-center gap-2">
-            <button onClick={() => handleRotate('ccw')} className="flex items-center justify-center transition-all" title="Rotate 90° CCW" style={headerBtnStyle}>↺</button>
-            <button onClick={() => handleRotate('cw')} className="flex items-center justify-center transition-all" title="Rotate 90° CW" style={headerBtnStyle}>↻</button>
-            <button onClick={() => handleMirror('horizontal')} className="flex items-center justify-center transition-all" title="Mirror horizontal" style={headerBtnStyle}>⇔</button>
-            <button onClick={() => handleMirror('vertical')} className="flex items-center justify-center transition-all" title="Mirror vertical" style={headerBtnStyle}>⇕</button>
-            {hasOrientation && (
-              <button
-                onClick={toggleViewFlip}
-                className="flex items-center justify-center transition-all"
-                title={viewFlip ? 'View: flipped (your perspective)' : 'View: sky perspective'}
-                style={{
-                  ...headerBtnStyle,
-                  background: viewFlip ? 'rgba(74,124,255,0.15)' : headerBtnStyle.background,
-                  border: viewFlip ? '1px solid #4a7cff' : headerBtnStyle.border,
-                  color: viewFlip ? '#4a7cff' : headerBtnStyle.color
-                }}
-              >
-                {viewFlip ? '⊙' : '◎'}
-              </button>
-            )}
+          {/* Orientation + layout + stop buttons (always visible top-right) */}
+          <div className="flex items-center gap-3">
+            {/* Orientation group */}
+            <div className="flex items-center gap-1" style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: '2px 3px' }}>
+              <button onClick={() => handleRotate('ccw')} className="flex items-center justify-center transition-all" title="Rotate 90° CCW" style={headerBtnStyle}>↺</button>
+              <button onClick={() => handleRotate('cw')} className="flex items-center justify-center transition-all" title="Rotate 90° CW" style={headerBtnStyle}>↻</button>
+              <button onClick={() => handleMirror('horizontal')} className="flex items-center justify-center transition-all" title="Mirror horizontal" style={headerBtnStyle}>⇔</button>
+              <button onClick={() => handleMirror('vertical')} className="flex items-center justify-center transition-all" title="Mirror vertical" style={headerBtnStyle}>⇕</button>
+              {hasOrientation && (
+                <button
+                  onClick={toggleViewFlip}
+                  className="flex items-center justify-center transition-all"
+                  title={viewFlip ? 'View: flipped (your perspective)' : 'View: sky perspective'}
+                  style={{
+                    ...headerBtnStyle,
+                    background: viewFlip ? 'rgba(74,124,255,0.15)' : headerBtnStyle.background,
+                    border: viewFlip ? '1px solid #4a7cff' : headerBtnStyle.border,
+                    color: viewFlip ? '#4a7cff' : headerBtnStyle.color
+                  }}
+                >
+                  {viewFlip ? '⊙' : '◎'}
+                </button>
+              )}
+            </div>
+            {/* Layout toggle */}
             <button
               onClick={() => setLayout((l) => l === 'bottom' ? 'right' : 'bottom')}
               className="flex items-center justify-center transition-all"
@@ -823,6 +845,17 @@ export default function Home() {
             >
               {layout === 'bottom' ? '⊟' : '⊞'}
             </button>
+            {/* Global stop animation */}
+            {(activeAnim || activeScene || flags.activeFlag || brightness.config.mode !== 'off') && (
+              <button
+                onClick={handleGlobalStop}
+                className="flex items-center justify-center transition-all"
+                title={`Stop ${activeAnim ?? activeScene ?? flags.activeFlag ?? 'animation'}`}
+                style={{ ...headerBtnStyle, background: 'rgba(255,80,80,0.12)', border: '1px solid rgba(255,80,80,0.4)', color: '#ff6b6b' }}
+              >
+                ⏹
+              </button>
+            )}
           </div>
         </div>
 
