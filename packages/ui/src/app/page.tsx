@@ -30,10 +30,10 @@ type PanelLayout = 'bottom' | 'right';
 const tabs: { key: GridMode; label: string }[] = [
   { key: 'paint', label: 'Paint' },
   { key: 'gradient', label: 'Gradient' },
-  { key: 'drops', label: 'Drops' },
   { key: 'scenes', label: 'Scenes' },
   { key: 'animations', label: 'Anim' },
   { key: 'flags', label: 'Flags' },
+  { key: 'drops', label: 'Drops' },
   { key: 'audio', label: 'Audio' },
   { key: 'motion', label: 'Motion' },
   { key: 'debug', label: 'Debug' }
