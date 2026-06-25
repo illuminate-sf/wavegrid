@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { AudioTab } from '@/components/audio-tab';
 import { BottomSheet, type SnapPoint } from '@/components/bottom-sheet';
@@ -26,6 +26,13 @@ const GRID_COLUMNS = parseInt(process.env.NEXT_PUBLIC_GRID_COLUMNS || '7', 10);
 const SIMULATOR_URL = process.env.NEXT_PUBLIC_SIMULATOR_URL || 'ws://localhost:3000';
 
 type PanelLayout = 'bottom' | 'right';
+type TrailFadeEntry = {
+  h: number;
+  s: number;
+  startBright: number;
+  startTime: number;
+  duration: number;
+};
 
 const tabs: { key: GridMode; label: string }[] = [
   { key: 'paint', label: 'Paint' },
@@ -43,8 +50,8 @@ const tabs: { key: GridMode; label: string }[] = [
 
 function ToolContent({
   tab,
-  hue, sat, bright, brushSize, softEdge,
-  setHue, setSat, setBright, setBrushSize, setSoftEdge,
+  hue, sat, bright, brushSize, softEdge, trailFade,
+  setHue, setSat, setBright, setBrushSize, setSoftEdge, setTrailFade,
   onClear,
   gradient, dropsConfig, setDropsConfig,
   motion, activeScene, handleScene,
@@ -54,9 +61,9 @@ function ToolContent({
   isPhone
 }: {
   tab: GridMode;
-  hue: number; sat: number; bright: number; brushSize: number; softEdge: boolean;
+  hue: number; sat: number; bright: number; brushSize: number; softEdge: boolean; trailFade: boolean;
   setHue: (v: number) => void; setSat: (v: number) => void; setBright: (v: number) => void;
-  setBrushSize: (v: number) => void; setSoftEdge: (v: boolean) => void;
+  setBrushSize: (v: number) => void; setSoftEdge: (v: boolean) => void; setTrailFade: (v: boolean) => void;
   onClear?: () => void;
   gradient: ReturnType<typeof useGradient>;
   dropsConfig: { spectrumStart: number; spectrumEnd: number; speed: number; decay: number; width: number };
@@ -81,11 +88,13 @@ function ToolContent({
           brightness={bright}
           brushSize={brushSize}
           softEdge={softEdge}
+          trailFade={trailFade}
           onHueChange={setHue}
           onSatChange={setSat}
           onBrightChange={setBright}
           onBrushSizeChange={setBrushSize}
           onSoftEdgeChange={setSoftEdge}
+          onTrailFadeChange={setTrailFade}
           onClear={onClear}
           compact={isPhone}
         />
@@ -348,6 +357,7 @@ export default function Home() {
   const [bright, setBright] = useState(80);
   const [brushSize, setBrushSize] = useState(1);
   const [softEdge, setSoftEdge] = useState(false);
+  const [trailFade, setTrailFade] = useState(false);
   const [smoothness, setSmoothness] = useState(50);
   const [attack, setAttack] = useState(80);
   const [masterBright, setMasterBright] = useState(100);
@@ -396,12 +406,70 @@ export default function Home() {
   const { addDrop } = useDrops(NUM_CANNONS, GRID_COLUMNS, dropsConfig, send);
   const motion = useMotion(hue, sat, bright, send);
   const gradient = useGradient();
+  const trailFadeEntriesRef = useRef<Map<number, TrailFadeEntry>>(new Map());
+  const trailFadeIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const clearTrailFadeTimers = useCallback(() => {
+    if (trailFadeIntervalRef.current) {
+      clearInterval(trailFadeIntervalRef.current);
+      trailFadeIntervalRef.current = null;
+    }
+    trailFadeEntriesRef.current.clear();
+  }, []);
+
+  const scheduleTrailFade = useCallback((index: number, h: number, s: number, b: number) => {
+    trailFadeEntriesRef.current.set(index, {
+      h,
+      s,
+      startBright: b,
+      startTime: Date.now(),
+      duration: 3200
+    });
+
+    if (trailFadeIntervalRef.current) return;
+
+    trailFadeIntervalRef.current = setInterval(() => {
+      const now = Date.now();
+
+      for (const [fadeIndex, entry] of trailFadeEntriesRef.current.entries()) {
+        const elapsed = now - entry.startTime;
+        const progress = Math.min(1, elapsed / entry.duration);
+        const nextBright = Math.round(entry.startBright * (1 - progress) ** 2);
+
+        send({
+          type: 'cannon',
+          index: fadeIndex,
+          h: entry.h,
+          s: entry.s,
+          b: nextBright
+        });
+
+        if (progress >= 1 || nextBright <= 0) {
+          trailFadeEntriesRef.current.delete(fadeIndex);
+        }
+      }
+
+      if (trailFadeEntriesRef.current.size === 0 && trailFadeIntervalRef.current) {
+        clearInterval(trailFadeIntervalRef.current);
+        trailFadeIntervalRef.current = null;
+      }
+    }, 80);
+  }, [send]);
+
+  useEffect(() => clearTrailFadeTimers, [clearTrailFadeTimers]);
+
+  useEffect(() => {
+    if (!trailFade) clearTrailFadeTimers();
+  }, [clearTrailFadeTimers, trailFade]);
 
   const handleCannon = useCallback(
     (index: number, h: number, s: number, b: number) => {
       send({ type: 'cannon', index, h, s, b });
+      if (trailFade && b > 0) {
+        scheduleTrailFade(index, h, s, b);
+      }
     },
-    [send]
+    [scheduleTrailFade, send, trailFade]
   );
 
   const flags = useFlagAnimation(send);
@@ -433,8 +501,9 @@ export default function Home() {
   }, [send, flags, brightness]);
 
   const handleClear = useCallback(() => {
+    clearTrailFadeTimers();
     send({ type: 'clear' });
-  }, [send]);
+  }, [clearTrailFadeTimers, send]);
 
   const handleRotate = useCallback((direction: 'cw' | 'ccw') => {
     send({ type: 'rotate', direction });
@@ -504,8 +573,8 @@ export default function Home() {
   }, [isPhone, send, sheetSnap, tab]);
 
   const toolContentProps = {
-    hue, sat, bright, brushSize, softEdge,
-    setHue, setSat, setBright, setBrushSize, setSoftEdge,
+    hue, sat, bright, brushSize, softEdge, trailFade,
+    setHue, setSat, setBright, setBrushSize, setSoftEdge, setTrailFade,
     onClear: handleClear,
     gradient, dropsConfig, setDropsConfig,
     motion, activeScene, handleScene,

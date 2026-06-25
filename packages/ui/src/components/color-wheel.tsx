@@ -10,11 +10,13 @@ interface ColorWheelProps {
   brightness: number;
   brushSize: number;
   softEdge: boolean;
+  trailFade: boolean;
   onHueChange: (h: number) => void;
   onSatChange: (s: number) => void;
   onBrightChange: (b: number) => void;
   onBrushSizeChange: (s: number) => void;
   onSoftEdgeChange: (v: boolean) => void;
+  onTrailFadeChange: (v: boolean) => void;
   onClear?: () => void;
   compact?: boolean;
 }
@@ -35,11 +37,13 @@ export function ColorWheel({
   brightness,
   brushSize,
   softEdge,
+  trailFade,
   onHueChange,
   onSatChange,
   onBrightChange,
   onBrushSizeChange,
   onSoftEdgeChange,
+  onTrailFadeChange,
   onClear,
   compact = false
 }: ColorWheelProps) {
@@ -285,10 +289,24 @@ export function ColorWheel({
             Soft Edge
           </button>
 
+          <button
+            onClick={() => onTrailFadeChange(!trailFade)}
+            className="flex-1 py-3 rounded-xl text-sm font-medium transition-all"
+            style={{
+              background: trailFade ? 'rgba(74,124,255,0.15)' : '#12121a',
+              color: trailFade ? '#4a7cff' : '#888898',
+              border: `1px solid ${trailFade ? '#4a7cff' : '#1a1a25'}`
+            }}
+          >
+            Fade Trail
+          </button>
+        </div>
+
+        <div className="flex items-center gap-3">
           {onClear && (
             <button
               onClick={onClear}
-              className="flex-1 py-3 rounded-xl text-sm font-medium transition-all"
+              className="w-full py-3 rounded-xl text-sm font-medium transition-all"
               style={{
                 background: '#12121a',
                 color: '#d44',
