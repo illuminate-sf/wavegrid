@@ -355,6 +355,9 @@ setInterval(() => {
   }
   tickGrid(grid, currentAlpha);
 
+  // Send grid state to UI clients so the preview stays in sync
+  broadcastState();
+
   // Periodic keepalive so receivers don't enter fallback
   framesSinceLastCommand++;
   if (framesSinceLastCommand >= COMMAND_KEEPALIVE_FRAMES) {
