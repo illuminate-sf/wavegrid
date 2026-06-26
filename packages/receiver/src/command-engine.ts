@@ -38,10 +38,36 @@ export function handleCommand(state: AnimationState, cmd: CommandMessage): boole
 
   case 'stop':
     state.currentAnimation = null;
+    state.patternActive = false;
     state.shiftVx = 0;
     state.shiftVy = 0;
     state.shiftAccX = 0;
     state.shiftAccY = 0;
+    return true;
+
+  case 'clear':
+    state.currentAnimation = null;
+    state.currentScene = null;
+    state.patternActive = false;
+    state.shiftVx = 0;
+    state.shiftVy = 0;
+    state.shiftAccX = 0;
+    state.shiftAccY = 0;
+    return true;
+
+  case 'evalPattern':
+    // Handled by the receiver (async sandbox load)
+    state.currentAnimation = null;
+    state.currentScene = null;
+    state.patternActive = true;
+    return true;
+
+  case 'setPatternParam':
+    // Handled by the receiver directly
+    return true;
+
+  case 'stopPattern':
+    state.patternActive = false;
     return true;
 
   case 'setShift':
@@ -82,12 +108,14 @@ export function tickCommandMode(
   // Advance the animation tick
   state.tick += state.speed;
 
-  // Evaluate animation if one is active
-  if (state.currentAnimation) {
-    evaluateAnimation(grid, state.currentAnimation, state.tick, state.attack, gridColumns);
-  } else if (state.currentScene) {
-    // If no animation, apply the scene (static)
-    applyScene(grid, state.currentScene, gridColumns);
+  // Evaluate animation if one is active (skip if pattern is active)
+  if (!state.patternActive) {
+    if (state.currentAnimation) {
+      evaluateAnimation(grid, state.currentAnimation, state.tick, state.attack, gridColumns);
+    } else if (state.currentScene) {
+      // If no animation, apply the scene (static)
+      applyScene(grid, state.currentScene, gridColumns);
+    }
   }
 
   // Apply shift (wrap-around pixel remapping)

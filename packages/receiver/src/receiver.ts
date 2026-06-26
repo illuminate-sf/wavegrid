@@ -11,9 +11,11 @@
  * to any protocol or hardware without modifying the receiver core.
  */
 
+import { setTarget } from '@wavegrid/animations';
+
 import { ConsoleOutput, InputAdapter, OutputAdapter, WebSocketInput } from './adapters';
 import { AnimationState, applyPaint, createDefaultAnimationState, handleCommand, tickCommandMode } from './command-engine';
-import { CommandMessage } from './command-types';
+import { CommandMessage, EvalPatternCommand, SetPatternParamCommand } from './command-types';
 import { computeFallbackFrame, DEFAULT_FALLBACK_CONFIG, FallbackConfig } from './fallback';
 import {
   applyUpstreamState,
@@ -25,6 +27,7 @@ import {
   FilteredCannon,
   tickFilter
 } from './filter';
+import { createSandboxEngine, SandboxEngine } from './sandbox-engine';
 
 export interface ShardConfig {
   /** First cannon index (inclusive). */
@@ -94,6 +97,10 @@ export class Receiver {
   private _running = false;
   private _mode: ReceiverMode = 'stream';
   private _animState: AnimationState = createDefaultAnimationState();
+  private _sandbox: SandboxEngine | null = null;
+  private _sandboxReady: Promise<SandboxEngine> | null = null;
+  private _patternStartTime = 0;
+  private _patternFrame = 0;
 
   constructor(config: Partial<ReceiverConfig> = {}) {
     this.config = { ...DEFAULT_RECEIVER_CONFIG, ...config };
@@ -176,6 +183,17 @@ export class Receiver {
       // Handle paint commands directly (they write to grid)
       if (cmd.action === 'paint') {
         applyPaint(this.grid, cmd.cells, this._animState.attack);
+      } else if (cmd.action === 'evalPattern') {
+        handleCommand(this._animState, cmd);
+        this.handleEvalPattern(cmd);
+      } else if (cmd.action === 'setPatternParam') {
+        this.handleSetPatternParam(cmd);
+      } else if (cmd.action === 'stopPattern') {
+        handleCommand(this._animState, cmd);
+        this.disposeSandbox();
+      } else if (cmd.action === 'clear' || cmd.action === 'stop') {
+        handleCommand(this._animState, cmd);
+        this.disposeSandbox();
       } else {
         handleCommand(this._animState, cmd);
       }
@@ -206,7 +224,11 @@ export class Receiver {
       if (this._fallbackActive) {
         computeFallbackFrame(this.grid, this.tick, this.config.fallback, this.config.gridColumns);
       } else if (this._mode === 'command') {
-        // Command mode: evaluate animation locally
+        // Sandbox pattern rendering
+        if (this._animState.patternActive && this._sandbox?.loaded) {
+          this.tickPattern();
+        }
+        // Command mode: evaluate built-in animation locally
         tickCommandMode(this.grid, this._animState, this.config.gridColumns);
       }
       // Stream mode: targets already set by applyUpstreamState in 'state' handler
@@ -218,5 +240,77 @@ export class Receiver {
       // Send filtered output to the output adapter
       this.config.output.send(this.getOutputState());
     }, this.config.tickMs);
+  }
+
+  // ── QuickJS sandbox pattern methods ─────────────────────────
+
+  private async ensureSandbox(): Promise<SandboxEngine> {
+    if (this._sandbox) return this._sandbox;
+    if (this._sandboxReady) return this._sandboxReady;
+
+    const cols = this.config.gridColumns;
+    const rows = Math.ceil(this.config.numCannons / cols);
+
+    this._sandboxReady = createSandboxEngine(cols, rows, undefined, (msg) => {
+      console.log('  ◈ [pattern]', msg);
+    });
+
+    this._sandbox = await this._sandboxReady;
+    this._sandboxReady = null;
+    return this._sandbox;
+  }
+
+  private handleEvalPattern(cmd: EvalPatternCommand): void {
+    this.ensureSandbox()
+      .then((sb) => {
+        try {
+          const meta = sb.loadPattern(cmd.code, cmd.params);
+          this._patternStartTime = Date.now();
+          this._patternFrame = 0;
+          console.log('  ◈ Pattern loaded:', meta.name || '(anonymous)');
+        } catch (e: unknown) {
+          this._animState.patternActive = false;
+          console.error('  ◈ Pattern load error:', e instanceof Error ? e.message : String(e));
+        }
+      })
+      .catch((e: unknown) => {
+        this._animState.patternActive = false;
+        console.error('  ◈ Sandbox init error:', e instanceof Error ? e.message : String(e));
+      });
+  }
+
+  private handleSetPatternParam(cmd: SetPatternParamCommand): void {
+    if (this._sandbox?.loaded) {
+      try {
+        this._sandbox.setParam(cmd.name, cmd.value);
+      } catch (e: unknown) {
+        console.error('  ◈ setParam error:', e instanceof Error ? e.message : String(e));
+      }
+    }
+  }
+
+  private tickPattern(): void {
+    if (!this._sandbox?.loaded) return;
+
+    const now = Date.now();
+    const t = (now - this._patternStartTime) / 1000;
+    const dt = 1 / 60;
+    this._patternFrame++;
+
+    const frame = this._sandbox.renderFrame(t, dt, this._patternFrame);
+    if (!frame) return;
+
+    const attack = this._animState.attack;
+    for (let i = 0; i < frame.length && i < this.grid.length; i++) {
+      setTarget(this.grid, i, frame[i].h, frame[i].s, frame[i].b, attack);
+    }
+  }
+
+  private disposeSandbox(): void {
+    if (this._sandbox) {
+      this._sandbox.dispose();
+      this._sandbox = null;
+    }
+    this._sandboxReady = null;
   }
 }

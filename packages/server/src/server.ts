@@ -337,6 +337,30 @@ function handleMessage(msg: any) {
       }
     }
     break;
+  case 'evalPattern':
+    if (typeof msg.code === 'string' && BROADCAST_MODE === 'command') {
+      currentAnimation = null;
+      broadcastCommand({
+        action: 'evalPattern',
+        code: msg.code,
+        params: msg.params || {}
+      });
+    }
+    break;
+  case 'setPatternParam':
+    if (typeof msg.name === 'string' && BROADCAST_MODE === 'command') {
+      broadcastCommand({
+        action: 'setPatternParam',
+        name: msg.name,
+        value: msg.value
+      });
+    }
+    break;
+  case 'stopPattern':
+    if (BROADCAST_MODE === 'command') {
+      broadcastCommand({ action: 'stopPattern' });
+    }
+    break;
   }
 }
 
