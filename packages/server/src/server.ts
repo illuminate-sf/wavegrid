@@ -11,8 +11,24 @@ import { getHTML } from './ui';
 
 const PORT = parseInt(process.env.PORT || '3000', 10);
 const TICK_MS = 1000 / 60; // 60fps interpolation
-const NUM_CANNONS = process.env.NUM_CANNONS ? parseInt(process.env.NUM_CANNONS, 10) : DEFAULT_NUM_CANNONS;
-const GRID_COLUMNS = process.env.GRID_COLUMNS ? parseInt(process.env.GRID_COLUMNS, 10) : DEFAULT_GRID_COLUMNS;
+// Parse GRID=COLSxROWS shorthand (e.g. "7x2" → 7 cols, 2 rows, 14 cannons).
+function parseGrid(): { numCannons: number; gridColumns: number } {
+  const gridEnv = process.env.GRID;
+  if (gridEnv) {
+    const m = gridEnv.match(/^(\d+)x(\d+)$/i);
+    if (m) {
+      const cols = parseInt(m[1], 10);
+      const rows = parseInt(m[2], 10);
+      return { numCannons: cols * rows, gridColumns: cols };
+    }
+  }
+  return {
+    numCannons: process.env.NUM_CANNONS ? parseInt(process.env.NUM_CANNONS, 10) : DEFAULT_NUM_CANNONS,
+    gridColumns: process.env.GRID_COLUMNS ? parseInt(process.env.GRID_COLUMNS, 10) : DEFAULT_GRID_COLUMNS
+  };
+}
+
+const { numCannons: NUM_CANNONS, gridColumns: GRID_COLUMNS } = parseGrid();
 const LIGHT_MAP_FILE = process.env.LIGHT_MAP_CONFIG || resolve(process.cwd(), '../../deploy/light-map.json');
 
 const grid = createGrid(NUM_CANNONS);

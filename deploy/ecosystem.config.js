@@ -51,10 +51,9 @@ if (!fileEnv.NEXT_PUBLIC_SIMULATOR_URL && fileEnv.CLOUD_IP) {
 }
 
 // Pride instance settings (7×2 grid).
+const PRIDE_GRID = fileEnv.PRIDE_GRID || '7x2';
 const PRIDE_SIM_PORT = fileEnv.PRIDE_SIM_PORT || '3001';
 const PRIDE_UI_PORT = fileEnv.PRIDE_UI_PORT || '4001';
-const PRIDE_NUM_CANNONS = fileEnv.PRIDE_NUM_CANNONS || '14';
-const PRIDE_GRID_COLUMNS = fileEnv.PRIDE_GRID_COLUMNS || '7';
 const PRIDE_SIMULATOR_URL = fileEnv.CLOUD_IP
   ? `ws://${fileEnv.CLOUD_IP}:${PRIDE_SIM_PORT}`
   : `ws://localhost:${PRIDE_SIM_PORT}`;
@@ -97,8 +96,7 @@ module.exports = {
       env: {
         ...baseEnv,
         PORT: PRIDE_SIM_PORT,
-        NUM_CANNONS: PRIDE_NUM_CANNONS,
-        GRID_COLUMNS: PRIDE_GRID_COLUMNS,
+        GRID: PRIDE_GRID,
       },
     },
     {
@@ -108,8 +106,7 @@ module.exports = {
       env: {
         ...baseEnv,
         PORT: PRIDE_UI_PORT,
-        NUM_CANNONS: PRIDE_NUM_CANNONS,
-        GRID_COLUMNS: PRIDE_GRID_COLUMNS,
+        GRID: PRIDE_GRID,
         SIMULATOR_URL: PRIDE_SIMULATOR_URL,
         NEXT_PUBLIC_SIMULATOR_URL: PRIDE_SIMULATOR_URL,
       },
