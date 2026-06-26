@@ -86,7 +86,7 @@ export interface ReceiverState {
 
 export class Receiver {
   private config: ReceiverConfig;
-  private grid: FilteredCannon[];
+  private grid: FilteredCannon[] | null = null;
   private tickTimer: ReturnType<typeof setInterval> | null = null;
   private tick = 0;
   private lastDataAt = Date.now();
@@ -101,21 +101,29 @@ export class Receiver {
 
   constructor(config: Partial<ReceiverConfig> = {}) {
     this.config = { ...DEFAULT_RECEIVER_CONFIG, ...config };
-    this.grid = createFilteredGrid(this.config.numCannons);
   }
 
   get status(): ReceiverStatus { return this._status; }
   get fallbackActive(): boolean { return this._fallbackActive; }
   get animationState(): AnimationState { return this._animState; }
 
+  /** Lazily create the grid on first command. */
+  private ensureGrid(): FilteredCannon[] {
+    if (!this.grid) {
+      this.grid = createFilteredGrid(this.config.numCannons);
+    }
+    return this.grid;
+  }
+
   /** Get the current output state (after filtering, orientation remap, and sharding). */
   getOutputState(): CannonState[] {
-    const full = this.grid.map(c => ({
+    const g = this.ensureGrid();
+    const full = g.map(c => ({
       h: c.h,
       s: c.s,
       b: c.b
     }));
-    const rows = Math.ceil(this.grid.length / this.config.gridColumns);
+    const rows = Math.ceil(g.length / this.config.gridColumns);
     const remapped = remapGridForOutput(full, this.config.gridColumns, rows, this._animState);
     const shard = this.config.shard;
     if (!shard) return remapped;
@@ -159,10 +167,16 @@ export class Receiver {
         this._fallbackActive = false;
       }
 
+      // Keepalive is not a real command — don't create grid for it
+      if (cmd.action === 'keepalive') return;
+
+      // Lazily create grid on first real command
+      const grid = this.ensureGrid();
+
       // Handle paint commands directly (they write to grid)
       if (cmd.action === 'paint') {
         handleCommand(this._animState, cmd);
-        applyPaint(this.grid, cmd.cells, this._animState.attack);
+        applyPaint(grid, cmd.cells, this._animState.attack);
       } else if (cmd.action === 'setSmoothness') {
         this.config.alpha = Math.max(0.01, Math.min(1, cmd.value));
       } else if (cmd.action === 'evalPattern') {
@@ -177,8 +191,8 @@ export class Receiver {
         handleCommand(this._animState, cmd);
         this.disposeSandbox();
         if (cmd.action === 'clear') {
-          for (let i = 0; i < this.grid.length; i++) {
-            setTarget(this.grid, i, 0, 0, 0, 1.0);
+          for (let i = 0; i < grid.length; i++) {
+            setTarget(grid, i, 0, 0, 0, 1.0);
           }
         }
       } else {
@@ -197,6 +211,10 @@ export class Receiver {
   private startTickLoop() {
     this.tickTimer = setInterval(() => {
       this.tick++;
+
+      // No grid yet — receiver is idle, waiting for first command
+      if (!this.grid) return;
+
       const now = Date.now();
       const timeSinceData = now - this.lastDataAt;
 
