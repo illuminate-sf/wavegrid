@@ -119,6 +119,19 @@ describe('tickCommandMode', () => {
       tickCommandMode(grid, state, 2);
       expect(state.tick).toBe(6);
     });
+
+    it('evaluates rainbow at tick=0 on first call (not tick=1)', () => {
+      // Rainbow hue = (tick * 1.5 + (row + col) * 25) % 360
+      // At tick=0, cell 0 (row=0, col=0): hue = (0 * 1.5 + 0) % 360 = 0
+      // At tick=1, cell 0 (row=0, col=0): hue = (1 * 1.5 + 0) % 360 = 1.5
+      // If tick is incremented BEFORE eval (old bug), first eval sees tick=1 → hue=1.5
+      // If tick is incremented AFTER eval (fix), first eval sees tick=0 → hue=0
+      const grid = makeGrid(4);
+      const state = makeState({ currentAnimation: 'rainbow', tick: 0, speed: 1, attack: 1.0 });
+      tickCommandMode(grid, state, 2);
+      // Cell 0 should have hue=0 (evaluated at tick=0, not tick=1)
+      expect(grid[0].targetH).toBe(0);
+    });
   });
 
   describe('paint targets survive ticks without animation', () => {
