@@ -291,9 +291,9 @@ function MasterSliders({
   vertical?: boolean;
 }) {
   const sliders = [
-    { label: 'Bright', value: masterBright, handler: onMasterBright },
-    { label: 'Fade', value: smoothness, handler: onSmooth },
-    { label: 'Attack', value: attack, handler: onAttack }
+    { label: 'Bright', value: masterBright, handler: onMasterBright, flex: 1 },
+    { label: 'Fade', value: smoothness, handler: onSmooth, flex: 3 },
+    { label: 'Attack', value: attack, handler: onAttack, flex: 1 }
   ];
 
   if (vertical) {
@@ -324,14 +324,14 @@ function MasterSliders({
   return (
     <>
       {sliders.map((s) => (
-        <div key={s.label} className="flex items-center gap-2" style={{ minWidth: 0 }}>
+        <div key={s.label} className="flex items-center gap-2" style={{ minWidth: 0, flex: s.flex }}>
           <span className="text-xs font-medium shrink-0" style={{ color: '#888898', textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: 11 }}>
             {s.label}
           </span>
           <input
             type="range"
             className="flex-1"
-            style={{ minWidth: 80 }}
+            style={{ minWidth: 40 }}
             min={0}
             max={100}
             value={s.value}
