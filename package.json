@@ -15,20 +15,20 @@
     "access": "restricted"
   },
   "scripts": {
-    "build": "pnpm -r --filter '!@wavegrid/ui' run build && pnpm run build:ui",
+    "build": "node deploy/build-all.js",
     "clean": "pnpm -r run clean",
     "test": "pnpm -r run test",
     "lint": "pnpm -r run lint",
     "dev": "pnpm --filter @wavegrid/server run dev",
     "dev:server": "pnpm --filter @wavegrid/server run dev",
-    "dev:receiver": "pnpm --filter wavegrid run dev",
+    "dev:receiver": "pnpm --filter ./packages/receiver run dev",
     "dev:ui": "pnpm --filter @wavegrid/ui run dev",
     "dev:webgl": "pnpm --filter @wavegrid/webgl run dev",
     "dev:debug": "pnpm --filter @wavegrid/debug run dev",
     "gen:config": "node deploy/gen-config.js",
     "build:ui": "node deploy/build-ui.js",
     "start:ui": "pnpm --filter @wavegrid/ui start",
-    "build:receiver": "pnpm -r --filter @wavegrid/animations run build && pnpm -r --filter @wavegrid/receiver run build",
+    "build:receiver": "pnpm -r --filter @wavegrid/animations --filter @wavegrid/osc run build && pnpm -r --filter ./packages/receiver run build",
     "deps": "pnpm up -r -i -L"
   },
   "devDependencies": {
