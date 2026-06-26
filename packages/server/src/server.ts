@@ -32,6 +32,56 @@ function parseGrid(): { numCannons: number; gridColumns: number } {
 const { numCannons: NUM_CANNONS, gridColumns: GRID_COLUMNS } = parseGrid();
 const LIGHT_MAP_FILE = process.env.LIGHT_MAP_CONFIG || resolve(process.cwd(), '../../deploy/light-map.json');
 
+// ── State persistence ─────────────────────────────────────────────
+const STATE_DIR = resolve(process.cwd(), '.state');
+const STATE_FILE = resolve(STATE_DIR, `server-${PORT}.json`);
+
+interface PersistedState {
+  currentAnimation: string | null;
+  animSpeed: number;
+  currentAlpha: number;
+  currentAttack: number;
+  orientation: Orientation;
+  shiftVx: number;
+  shiftVy: number;
+  grid: Array<{ h: number; s: number; b: number }>;
+}
+
+function loadPersistedState(): PersistedState | null {
+  try {
+    const raw = fs.readFileSync(STATE_FILE, 'utf8');
+    return JSON.parse(raw) as PersistedState;
+  } catch {
+    return null;
+  }
+}
+
+let saveTimer: ReturnType<typeof setTimeout> | null = null;
+
+function scheduleSave() {
+  if (saveTimer) return;
+  saveTimer = setTimeout(() => {
+    saveTimer = null;
+    const state: PersistedState = {
+      currentAnimation,
+      animSpeed,
+      currentAlpha,
+      currentAttack,
+      orientation,
+      shiftVx,
+      shiftVy,
+      grid: grid.map(c => ({ h: c.targetH, s: c.targetS, b: c.targetB }))
+    };
+    try {
+      fs.mkdirSync(STATE_DIR, { recursive: true });
+      fs.writeFileSync(STATE_FILE, JSON.stringify(state), 'utf8');
+    } catch (e) {
+      console.error('  ◈ State save error:', e instanceof Error ? e.message : String(e));
+    }
+  }, 1000);
+}
+
+// ── Grid & state variables ────────────────────────────────────────
 const grid = createGrid(NUM_CANNONS);
 let currentAlpha = DEFAULT_ALPHA;
 let currentAttack = 1.0;
@@ -48,6 +98,30 @@ let shiftVy = 0;
 let shiftAccX = 0;
 let shiftAccY = 0;
 const GRID_ROWS = Math.ceil(NUM_CANNONS / GRID_COLUMNS);
+
+// Restore persisted state on boot
+const restored = loadPersistedState();
+if (restored) {
+  currentAnimation = restored.currentAnimation && animations[restored.currentAnimation] ? restored.currentAnimation : null;
+  animSpeed = restored.animSpeed ?? animSpeed;
+  currentAlpha = restored.currentAlpha ?? currentAlpha;
+  currentAttack = restored.currentAttack ?? currentAttack;
+  if (restored.orientation) orientation = { ...defaultOrientation(), ...restored.orientation };
+  shiftVx = restored.shiftVx ?? 0;
+  shiftVy = restored.shiftVy ?? 0;
+  if (Array.isArray(restored.grid)) {
+    for (let i = 0; i < Math.min(restored.grid.length, grid.length); i++) {
+      const c = restored.grid[i];
+      grid[i].targetH = c.h ?? 0;
+      grid[i].targetS = c.s ?? 0;
+      grid[i].targetB = c.b ?? 0;
+      grid[i].h = c.h ?? 0;
+      grid[i].s = c.s ?? 0;
+      grid[i].b = c.b ?? 0;
+    }
+  }
+  console.log(`  ◈ Restored state from ${STATE_FILE}`);
+}
 
 // constructive.io brand mark — served as the favicon
 const FAVICON_SVG = `<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -154,6 +228,14 @@ wss.on('connection', (ws) => {
   ws.send(JSON.stringify({ type: 'state', grid: initGrid }));
   ws.send(JSON.stringify({ type: 'orientation', ...orientation }));
   ws.send(JSON.stringify({ type: 'command', action: 'setOrientation', rotation: orientation.rotation, flipH: orientation.flipH, flipV: orientation.flipV }));
+  ws.send(JSON.stringify({ type: 'command', action: 'setSmoothness', value: currentAlpha }));
+  ws.send(JSON.stringify({ type: 'command', action: 'setAttack', value: currentAttack }));
+  if (currentAnimation) {
+    ws.send(JSON.stringify({ type: 'command', action: 'setAnimation', name: currentAnimation, speed: animSpeed }));
+  }
+  if (shiftVx !== 0 || shiftVy !== 0) {
+    ws.send(JSON.stringify({ type: 'command', action: 'setShift', vx: shiftVx, vy: shiftVy }));
+  }
 
   ws.on('message', (raw) => {
     try {
@@ -179,17 +261,20 @@ function handleMessage(msg: any) {
       currentAttack
     );
     broadcastCommand({ action: 'paint', cells: [{ idx: gi, h: msg.h ?? 0, s: msg.s ?? 0, b: msg.b ?? 0 }] });
+    scheduleSave();
     break;
   }
   case 'master_brightness':
     setAllTargets(grid, undefined, undefined, msg.value * 100, currentAttack);
     broadcastCommand({ action: 'setBrightness', value: msg.value * 100 });
+    scheduleSave();
     break;
   case 'scene':
     if (msg.name && scenes[msg.name]) {
       currentAnimation = null;
       applyScene(grid, msg.name, GRID_COLUMNS);
       broadcastCommand({ action: 'setScene', name: msg.name });
+      scheduleSave();
     }
     break;
   case 'animation':
@@ -197,9 +282,11 @@ function handleMessage(msg: any) {
       currentAnimation = msg.name;
       animationTick = 0;
       broadcastCommand({ action: 'setAnimation', name: msg.name, speed: animSpeed });
+      scheduleSave();
     } else if (msg.name === 'stop') {
       currentAnimation = null;
       broadcastCommand({ action: 'stop' });
+      scheduleSave();
     }
     break;
   case 'calibration_mode':
@@ -239,6 +326,7 @@ function handleMessage(msg: any) {
       if (cells.length > 0) {
         broadcastCommand({ action: 'paint', cells });
       }
+      scheduleSave();
     }
     break;
   case 'audio_layer':
@@ -262,12 +350,14 @@ function handleMessage(msg: any) {
     if (typeof msg.value === 'number') {
       currentAlpha = msg.value;
       broadcastCommand({ action: 'setSmoothness', value: msg.value });
+      scheduleSave();
     }
     break;
   case 'attack':
     if (typeof msg.value === 'number') {
       currentAttack = msg.value;
       broadcastCommand({ action: 'setAttack', value: msg.value });
+      scheduleSave();
     }
     break;
   case 'clear':
@@ -275,6 +365,7 @@ function handleMessage(msg: any) {
     setAllTargets(grid, 0, 0, 0, 1.0);
     broadcastCommand({ action: 'clear' });
     broadcastState();
+    scheduleSave();
     break;
   case 'rotate': {
     const delta = msg.direction === 'ccw' ? 270 : 90;
@@ -285,6 +376,7 @@ function handleMessage(msg: any) {
     broadcastOrientation();
     broadcastCommand({ action: 'setOrientation', rotation: orientation.rotation, flipH: orientation.flipH, flipV: orientation.flipV });
     broadcastState();
+    scheduleSave();
     break;
   }
   case 'mirror':
@@ -296,6 +388,7 @@ function handleMessage(msg: any) {
     broadcastOrientation();
     broadcastCommand({ action: 'setOrientation', rotation: orientation.rotation, flipH: orientation.flipH, flipV: orientation.flipV });
     broadcastState();
+    scheduleSave();
     break;
   case 'shift':
     shiftVx = typeof msg.vx === 'number' ? msg.vx : 0;
@@ -305,11 +398,13 @@ function handleMessage(msg: any) {
       shiftAccY = 0;
     }
     broadcastCommand({ action: 'setShift', vx: shiftVx, vy: shiftVy });
+    scheduleSave();
     break;
   case 'anim_speed':
     if (typeof msg.value === 'number') {
       animSpeed = Math.max(0.1, Math.min(5.0, msg.value));
       broadcastCommand({ action: 'setSpeed', value: animSpeed });
+      scheduleSave();
     }
     break;
   case 'evalPattern':

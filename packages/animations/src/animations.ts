@@ -78,6 +78,62 @@ export const animations: Record<string, AnimationFn> = {
     }
   },
 
+  'i-heart-sf': (grid, tick, attack, cols = DEFAULT_GRID_COLUMNS) => {
+    const rows = Math.ceil(grid.length / cols);
+    const bitmaps = [
+      // "I"
+      [
+        [0, 0, 1, 1, 1, 0, 0],
+        [0, 0, 0, 1, 0, 0, 0],
+        [0, 0, 0, 1, 0, 0, 0],
+        [0, 0, 0, 1, 0, 0, 0],
+        [0, 0, 0, 1, 0, 0, 0],
+        [0, 0, 0, 1, 0, 0, 0],
+        [0, 0, 1, 1, 1, 0, 0]
+      ],
+      // Heart
+      [
+        [0, 1, 0, 0, 0, 1, 0],
+        [1, 1, 1, 0, 1, 1, 1],
+        [1, 1, 1, 1, 1, 1, 1],
+        [0, 1, 1, 1, 1, 1, 0],
+        [0, 0, 1, 1, 1, 0, 0],
+        [0, 0, 0, 1, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0]
+      ],
+      // "SF"
+      [
+        [0, 1, 1, 0, 1, 1, 1],
+        [1, 0, 0, 0, 1, 0, 0],
+        [1, 0, 0, 0, 1, 0, 0],
+        [0, 1, 1, 0, 1, 1, 0],
+        [0, 0, 1, 0, 1, 0, 0],
+        [0, 0, 1, 0, 1, 0, 0],
+        [1, 1, 0, 0, 1, 0, 0]
+      ]
+    ];
+    // Colors: I = gold, heart = red, SF = gold
+    const colors = [
+      { h: 45, s: 95, b: 85 },
+      { h: 0, s: 100, b: 100 },
+      { h: 45, s: 95, b: 85 }
+    ];
+    const frameTicks = 90; // 1.5s per frame
+    const frame = Math.floor(tick / frameTicks) % 3;
+    const bitmap = bitmaps[frame];
+    const color = colors[frame];
+    for (let i = 0; i < grid.length; i++) {
+      const row = Math.floor(i / cols);
+      const col = i % cols;
+      const on = cols === 7 && rows >= 7 && bitmap[row]?.[col];
+      if (on) {
+        setTarget(grid, i, color.h, color.s, color.b, attack);
+      } else {
+        setTarget(grid, i, 220, 80, 8, attack);
+      }
+    }
+  },
+
   'heart-breathe': (grid, tick, attack, cols = DEFAULT_GRID_COLUMNS) => {
     const rows = Math.ceil(grid.length / cols);
     const bitmap = [
