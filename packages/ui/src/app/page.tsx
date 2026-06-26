@@ -151,13 +151,16 @@ function ToolContent({
               type="range"
               className="flex-1"
               style={{ minWidth: 120, height: 28 }}
-              min={10}
-              max={500}
-              value={Math.round(animSpeed * 100)}
-              onChange={(e) => onAnimSpeed(parseInt(e.target.value, 10) / 100)}
+              min={0}
+              max={1000}
+              value={Math.round(Math.log(animSpeed / 0.1) / Math.log(5.0 / 0.1) * 1000)}
+              onChange={(e) => {
+                const t = parseInt(e.target.value, 10) / 1000;
+                onAnimSpeed(0.1 * Math.pow(5.0 / 0.1, t));
+              }}
             />
             <span className="text-xs font-mono shrink-0" style={{ color: '#888898', minWidth: 36, textAlign: 'right' }}>
-              {animSpeed.toFixed(1)}x
+              {animSpeed < 1 ? animSpeed.toFixed(2) : animSpeed.toFixed(1)}x
             </span>
           </div>
           <ControlGrid minCellWidth={200}>
