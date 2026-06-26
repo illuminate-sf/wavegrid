@@ -220,7 +220,7 @@ export function getHTML(numCannons: number = 49, gridColumns: number = 7): strin
     <button class="preset-btn" data-preset="sunset-spiral">Sunset Spiral</button>
     <button class="preset-btn" data-preset="pride-rainbow">Pride Rainbow</button>
     <button class="preset-btn" data-preset="night-rain">Night Rain</button>
-    <button class="preset-btn" data-preset="heartbeat">Heartbeat</button>
+    <button class="preset-btn" data-preset="heart-breathe">Heart Breathe</button>
   </div>
   <div style="font-size:0.65rem;color:#555">Tap a preset → scene + animation + envelope are all set. Safe to walk away.</div>
 </div>
@@ -483,7 +483,7 @@ const PRESETS = {
   'sunset-spiral':  { scene: 'sunset',   anim: 'spiral',   smooth: 60, attack: 50 },
   'pride-rainbow':  { scene: 'pride',    anim: 'rainbow',  smooth: 55, attack: 60 },
   'night-rain':     { scene: 'ocean',    anim: 'rain',     smooth: 80, attack: 25 },
-  'heartbeat':      { scene: 'off',      anim: 'heartbeat', smooth: 40, attack: 80 },
+  'heart-breathe':  { scene: 'off',      anim: 'heart-breathe', smooth: 40, attack: 80 },
 };
 
 let activePreset = null;

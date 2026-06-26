@@ -100,20 +100,6 @@ export const animations: Record<string, AnimationFn> = {
         setTarget(grid, i, 0, 0, 2, attack);
       }
     }
-  },
-
-  heartbeat: (grid, tick, attack) => {
-    const phase = tick % 120;
-    let brightness: number;
-    if (phase < 10) brightness = 40 + phase * 5;
-    else if (phase < 20) brightness = 90 - (phase - 10) * 5;
-    else if (phase < 30) brightness = 40 + (phase - 20) * 4;
-    else if (phase < 40) brightness = 80 - (phase - 30) * 4;
-    else brightness = 40;
-
-    for (let i = 0; i < grid.length; i++) {
-      setTarget(grid, i, 0, 90, brightness, attack);
-    }
   }
 };
 
