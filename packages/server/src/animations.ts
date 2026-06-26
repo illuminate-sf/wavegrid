@@ -187,16 +187,6 @@ function roygbivAt(position: number): { h: number; s: number } {
   };
 }
 
-// Horizontal scroll — rainbow stripes flow left-to-right across columns
-animations['pride-scroll'] = (grid, tick, attack, cols = DEFAULT_GRID_COLUMNS) => {
-  const speed = tick * 0.015;
-  for (let i = 0; i < grid.length; i++) {
-    const col = i % cols;
-    const color = roygbivAt(col / cols + speed);
-    setCannonTarget(grid, i, color.h, color.s, 90, attack);
-  }
-};
-
 // Vertical flow — rainbow moves top to bottom
 animations['pride-flow'] = (grid, tick, attack, cols = DEFAULT_GRID_COLUMNS) => {
   const rows = Math.ceil(grid.length / cols);
@@ -204,19 +194,6 @@ animations['pride-flow'] = (grid, tick, attack, cols = DEFAULT_GRID_COLUMNS) => 
   for (let i = 0; i < grid.length; i++) {
     const row = Math.floor(i / cols);
     const color = roygbivAt(row / rows + speed);
-    setCannonTarget(grid, i, color.h, color.s, 90, attack);
-  }
-};
-
-// Diagonal sweep — rainbow moves at 45° angle
-animations['pride-diagonal'] = (grid, tick, attack, cols = DEFAULT_GRID_COLUMNS) => {
-  const rows = Math.ceil(grid.length / cols);
-  const speed = tick * 0.012;
-  for (let i = 0; i < grid.length; i++) {
-    const row = Math.floor(i / cols);
-    const col = i % cols;
-    const pos = (col / cols + row / rows) / 2;
-    const color = roygbivAt(pos + speed);
     setCannonTarget(grid, i, color.h, color.s, 90, attack);
   }
 };
@@ -245,7 +222,7 @@ animations['pride-rotate'] = (grid, tick, attack, cols = DEFAULT_GRID_COLUMNS) =
 // Ring — treat all cells as one continuous loop, rotating ROYGBIV around them
 animations['pride-ring'] = (grid, tick, attack) => {
   const n = grid.length;
-  const speed = tick * 0.06;
+  const speed = tick * 0.012;
   for (let i = 0; i < n; i++) {
     const color = roygbivAt(i / n + speed);
     setCannonTarget(grid, i, color.h, color.s, 90, attack);
