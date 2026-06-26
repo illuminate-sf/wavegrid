@@ -29,12 +29,12 @@ export const DEFAULT_RECEIVER_ALPHA = 0.06;
  */
 export function createFilteredGrid(numCannons: number = DEFAULT_NUM_CANNONS): FilteredCannon[] {
   return Array.from({ length: numCannons }, () => ({
-    h: 220,
-    s: 90,
-    b: 80,
-    targetH: 220,
-    targetS: 90,
-    targetB: 80
+    h: 0,
+    s: 0,
+    b: 0,
+    targetH: 0,
+    targetS: 0,
+    targetB: 0
   }));
 }
 
