@@ -4,19 +4,19 @@ describe('grid', () => {
   it('should create a grid of 49 cannons', () => {
     const grid = createGrid();
     expect(grid).toHaveLength(NUM_CANNONS);
-    expect(grid[0].h).toBe(220);
-    expect(grid[0].s).toBe(90);
-    expect(grid[0].b).toBe(80);
+    expect(grid[0].h).toBe(0);
+    expect(grid[0].s).toBe(0);
+    expect(grid[0].b).toBe(0);
   });
 
   it('should interpolate toward target on tick', () => {
     const grid = createGrid();
-    setCannonTarget(grid, 0, 0, 0, 0);
+    setCannonTarget(grid, 0, 120, 80, 60);
 
     // After one tick, should move toward target but not reach it
     tickGrid(grid, 0.1);
-    expect(grid[0].b).toBeLessThan(80);
     expect(grid[0].b).toBeGreaterThan(0);
+    expect(grid[0].b).toBeLessThan(60);
   });
 
   it('should converge to target after many ticks', () => {
@@ -66,7 +66,7 @@ describe('grid', () => {
 
   it('should report change when grid is moving toward target', () => {
     const grid = createGrid();
-    setCannonTarget(grid, 0, 0, 0, 0);
+    setCannonTarget(grid, 0, 120, 80, 60);
     const changed = tickGrid(grid);
     expect(changed).toBe(true);
   });

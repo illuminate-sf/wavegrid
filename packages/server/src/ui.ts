@@ -281,7 +281,7 @@ const ws = new WebSocket('ws://' + location.host);
 const status = document.getElementById('status');
 const selected = new Set();
 
-const display = Array.from({length: NUM}, () => ({ h: 220, s: 90, b: 80 }));
+const display = Array.from({length: NUM}, () => ({ h: 0, s: 0, b: 0 }));
 
 let currentAlpha = 0.08;
 let currentAttack = 1.0;

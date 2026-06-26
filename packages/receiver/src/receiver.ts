@@ -176,6 +176,11 @@ export class Receiver {
       } else if (cmd.action === 'clear' || cmd.action === 'stop') {
         handleCommand(this._animState, cmd);
         this.disposeSandbox();
+        if (cmd.action === 'clear') {
+          for (let i = 0; i < this.grid.length; i++) {
+            setTarget(this.grid, i, 0, 0, 0, 1.0);
+          }
+        }
       } else {
         handleCommand(this._animState, cmd);
       }
