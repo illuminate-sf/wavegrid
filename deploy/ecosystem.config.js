@@ -50,6 +50,14 @@ if (!fileEnv.NEXT_PUBLIC_SIMULATOR_URL && fileEnv.CLOUD_IP) {
   fileEnv.NEXT_PUBLIC_SIMULATOR_URL = `ws://${fileEnv.CLOUD_IP}:${SIM_PORT}`;
 }
 
+// Pride instance settings (7×2 grid).
+const PRIDE_GRID = fileEnv.PRIDE_GRID || '7x2';
+const PRIDE_SIM_PORT = fileEnv.PRIDE_SIM_PORT || '3001';
+const PRIDE_UI_PORT = fileEnv.PRIDE_UI_PORT || '4001';
+const PRIDE_SIMULATOR_URL = fileEnv.CLOUD_IP
+  ? `ws://${fileEnv.CLOUD_IP}:${PRIDE_SIM_PORT}`
+  : `ws://localhost:${PRIDE_SIM_PORT}`;
+
 // Resolve pnpm/node portably: the node running this config lives next to the
 // matching pnpm. The PM2 daemon may not share the user's PATH, so pin both.
 const NODE_BIN = path.dirname(process.execPath);
@@ -76,10 +84,32 @@ const common = {
 
 module.exports = {
   apps: [
-    // Server still runs via ts-node — no dev/prod distinction, no overlay.
+    // ── Main show (7×7, 49 cannons) ──────────────────────────────────
     { ...common, name: 'wavegrid-server', args: 'dev:server' },
-    // UI runs the PRODUCTION server (next start). Requires `pnpm build:ui`
-    // first — use `deploy/cloud.sh deploy` which builds then restarts.
     { ...common, name: 'wavegrid-ui', args: 'start:ui' },
+
+    // ── Pride show (7×2, 14 cannons) ─────────────────────────────────
+    {
+      ...common,
+      name: 'wavegrid-server-pride',
+      args: 'dev:server',
+      env: {
+        ...baseEnv,
+        PORT: PRIDE_SIM_PORT,
+        GRID: PRIDE_GRID,
+      },
+    },
+    {
+      ...common,
+      name: 'wavegrid-ui-pride',
+      args: 'start:ui',
+      env: {
+        ...baseEnv,
+        PORT: PRIDE_UI_PORT,
+        GRID: PRIDE_GRID,
+        SIMULATOR_URL: PRIDE_SIMULATOR_URL,
+        NEXT_PUBLIC_SIMULATOR_URL: PRIDE_SIMULATOR_URL,
+      },
+    },
   ],
 };
