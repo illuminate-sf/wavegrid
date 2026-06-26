@@ -8,7 +8,7 @@
 
 import { applyScene, evaluateAnimation, setTarget } from '@wavegrid/animations';
 
-import { AnimationState, CommandMessage, createDefaultAnimationState } from './command-types';
+import { AnimationState, CommandMessage, createDefaultAnimationState, Rotation } from './command-types';
 import { DEFAULT_GRID_COLUMNS, FilteredCannon } from './filter';
 
 /**
@@ -89,6 +89,12 @@ export function handleCommand(state: AnimationState, cmd: CommandMessage): boole
 
   case 'setSmoothness':
     // Smoothness is handled at the receiver level (alpha)
+    return true;
+
+  case 'setOrientation':
+    state.rotation = (cmd.rotation ?? 0) as Rotation;
+    state.flipH = !!cmd.flipH;
+    state.flipV = !!cmd.flipV;
     return true;
 
   case 'setAttack':
@@ -187,6 +193,37 @@ function shiftGridTargets(
       grid[dstIdx].targetB = src.b;
     }
   }
+}
+
+/**
+ * Remap a grid from logical (animation) order to physical (output) order
+ * based on the current orientation. This is the same transform the server
+ * uses in mapUiToGrid — mapping a logical index to a physical index.
+ */
+export function remapGridForOutput<T>(grid: T[], columns: number, rows: number, state: AnimationState): T[] {
+  if (state.rotation === 0 && !state.flipH && !state.flipV) return grid;
+  const result = new Array<T>(grid.length);
+  for (let li = 0; li < grid.length; li++) {
+    let r = Math.floor(li / columns);
+    let c = li % columns;
+
+    if (state.flipH) c = columns - 1 - c;
+    if (state.flipV) r = rows - 1 - r;
+
+    let gr: number, gc: number;
+    switch (state.rotation) {
+    case 90:  gr = c;               gc = rows - 1 - r;     break;
+    case 180: gr = rows - 1 - r;    gc = columns - 1 - c;  break;
+    case 270: gr = columns - 1 - c; gc = r;                break;
+    default:  gr = r;               gc = c;                break;
+    }
+
+    const pi = gr * columns + gc;
+    if (pi >= 0 && pi < grid.length) {
+      result[pi] = grid[li];
+    }
+  }
+  return result;
 }
 
 export { createDefaultAnimationState };

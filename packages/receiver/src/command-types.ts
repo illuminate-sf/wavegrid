@@ -90,6 +90,16 @@ export interface KeepaliveCommand {
   action: 'keepalive';
 }
 
+export type Rotation = 0 | 90 | 180 | 270;
+
+export interface SetOrientationCommand {
+  type: 'command';
+  action: 'setOrientation';
+  rotation: Rotation;
+  flipH: boolean;
+  flipV: boolean;
+}
+
 export type CommandMessage =
   | SetAnimationCommand
   | SetSceneCommand
@@ -104,7 +114,8 @@ export type CommandMessage =
   | EvalPatternCommand
   | SetPatternParamCommand
   | StopPatternCommand
-  | KeepaliveCommand;
+  | KeepaliveCommand
+  | SetOrientationCommand;
 
 /**
  * Local animation state tracked by the receiver in command mode.
@@ -122,6 +133,10 @@ export interface AnimationState {
   tick: number;
   /** Whether a QuickJS sandbox pattern is actively rendering. */
   patternActive: boolean;
+  /** Orientation transforms (rotation + flips). */
+  rotation: Rotation;
+  flipH: boolean;
+  flipV: boolean;
 }
 
 export function createDefaultAnimationState(): AnimationState {
@@ -136,6 +151,9 @@ export function createDefaultAnimationState(): AnimationState {
     shiftAccX: 0,
     shiftAccY: 0,
     tick: 0,
-    patternActive: false
+    patternActive: false,
+    rotation: 0,
+    flipH: false,
+    flipV: false
   };
 }

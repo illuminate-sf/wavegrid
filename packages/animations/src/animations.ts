@@ -78,6 +78,30 @@ export const animations: Record<string, AnimationFn> = {
     }
   },
 
+  'heart-breathe': (grid, tick, attack, cols = DEFAULT_GRID_COLUMNS) => {
+    const rows = Math.ceil(grid.length / cols);
+    const bitmap = [
+      [0, 1, 0, 0, 0, 1, 0],
+      [1, 1, 1, 0, 1, 1, 1],
+      [1, 1, 1, 1, 1, 1, 1],
+      [0, 1, 1, 1, 1, 1, 0],
+      [0, 0, 1, 1, 1, 0, 0],
+      [0, 0, 0, 1, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0]
+    ];
+    const brightness = 40 + Math.sin(tick * 0.03) * 35;
+    for (let i = 0; i < grid.length; i++) {
+      const row = Math.floor(i / cols);
+      const col = i % cols;
+      const on = cols === 7 && rows >= 7 && bitmap[row]?.[col];
+      if (on) {
+        setTarget(grid, i, 0, 100, brightness, attack);
+      } else {
+        setTarget(grid, i, 0, 0, 2, attack);
+      }
+    }
+  },
+
   heartbeat: (grid, tick, attack) => {
     const phase = tick % 120;
     let brightness: number;

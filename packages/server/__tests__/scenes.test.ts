@@ -38,4 +38,21 @@ describe('scenes', () => {
     const grid = createGrid();
     expect(() => applyScene(grid, 'nonexistent')).not.toThrow();
   });
+
+  it('heart scene uses pure bright red (h=0, s=100, b=100)', () => {
+    const grid = createGrid();
+    applyScene(grid, 'heart');
+
+    // Heart bitmap "on" pixels should be pure red
+    // Row 0: [0, 1, 0, 0, 0, 1, 0] — indices 1, 5 are on
+    expect(grid[1].targetH).toBe(0);
+    expect(grid[1].targetS).toBe(100);
+    expect(grid[1].targetB).toBe(100);
+    expect(grid[5].targetH).toBe(0);
+    expect(grid[5].targetS).toBe(100);
+    expect(grid[5].targetB).toBe(100);
+
+    // Off pixel (index 0) should be dark
+    expect(grid[0].targetB).toBe(2);
+  });
 });

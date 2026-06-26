@@ -1,4 +1,4 @@
-import { handleCommand, tickCommandMode, applyPaint, createDefaultAnimationState, AnimationState } from '../src/command-engine';
+import { handleCommand, tickCommandMode, applyPaint, createDefaultAnimationState, AnimationState, remapGridForOutput } from '../src/command-engine';
 import { createFilteredGrid, FilteredCannon } from '../src/filter';
 import { CommandMessage } from '../src/command-types';
 
@@ -202,5 +202,119 @@ describe('applyPaint', () => {
     for (let i = 0; i < grid.length; i++) {
       expect(grid[i].targetH).toBe(before[i].targetH);
     }
+  });
+});
+
+describe('heart-breathe animation', () => {
+  it('sets heart-shaped pixels to red with breathing brightness', () => {
+    const grid = makeGrid(49);
+    const state = makeState({ currentAnimation: 'heart-breathe', tick: 0, speed: 1, attack: 1.0 });
+    tickCommandMode(grid, state, 7);
+
+    // Heart bitmap on pixel: row 0, col 1 = index 1
+    expect(grid[1].targetH).toBe(0);
+    expect(grid[1].targetS).toBe(100);
+    // brightness = 40 + Math.sin(0) * 35 = 40 at tick=0
+    expect(grid[1].targetB).toBe(40);
+
+    // Off pixel: row 0, col 0 = index 0
+    expect(grid[0].targetH).toBe(0);
+    expect(grid[0].targetS).toBe(0);
+    expect(grid[0].targetB).toBe(2);
+  });
+
+  it('brightness oscillates with tick', () => {
+    const grid1 = makeGrid(49);
+    const state1 = makeState({ currentAnimation: 'heart-breathe', tick: 0, attack: 1.0 });
+    tickCommandMode(grid1, state1, 7);
+    const b0 = grid1[1].targetB;
+
+    // Advance to a tick where sin is positive (tick ~52 → sin(52*0.03) ≈ sin(1.56) ≈ 1)
+    const grid2 = makeGrid(49);
+    const state2 = makeState({ currentAnimation: 'heart-breathe', tick: 52, attack: 1.0 });
+    tickCommandMode(grid2, state2, 7);
+    const b52 = grid2[1].targetB;
+
+    expect(b52).toBeGreaterThan(b0);
+  });
+});
+
+describe('setOrientation command', () => {
+  it('stores rotation, flipH, flipV in state', () => {
+    const state = makeState();
+    handleCommand(state, { type: 'command', action: 'setOrientation', rotation: 90, flipH: true, flipV: false } as CommandMessage);
+    expect(state.rotation).toBe(90);
+    expect(state.flipH).toBe(true);
+    expect(state.flipV).toBe(false);
+  });
+
+  it('updates orientation when values change', () => {
+    const state = makeState({ rotation: 90, flipH: true, flipV: false });
+    handleCommand(state, { type: 'command', action: 'setOrientation', rotation: 180, flipH: false, flipV: true } as CommandMessage);
+    expect(state.rotation).toBe(180);
+    expect(state.flipH).toBe(false);
+    expect(state.flipV).toBe(true);
+  });
+
+  it('defaults to identity orientation', () => {
+    const state = createDefaultAnimationState();
+    expect(state.rotation).toBe(0);
+    expect(state.flipH).toBe(false);
+    expect(state.flipV).toBe(false);
+  });
+});
+
+describe('remapGridForOutput', () => {
+  it('returns input unchanged when orientation is identity', () => {
+    const grid = [{ h: 10 }, { h: 20 }, { h: 30 }, { h: 40 }];
+    const state = makeState();
+    const result = remapGridForOutput(grid, 2, 2, state);
+    expect(result).toBe(grid); // same reference — no copy needed
+  });
+
+  it('remaps a 2x2 grid with 90° rotation', () => {
+    // Logical layout:
+    //   [A, B]    indices: 0, 1
+    //   [C, D]    indices: 2, 3
+    //
+    // 90° CW rotation maps logical → physical:
+    //   mapUiToGrid(0) → 1 (A goes to physical 1)
+    //   mapUiToGrid(1) → 3 (B goes to physical 3)
+    //   mapUiToGrid(2) → 0 (C goes to physical 0)
+    //   mapUiToGrid(3) → 2 (D goes to physical 2)
+    //
+    // Physical layout should be:
+    //   [C, A]    indices: 0, 1
+    //   [D, B]    indices: 2, 3
+    const grid = [{ v: 'A' }, { v: 'B' }, { v: 'C' }, { v: 'D' }];
+    const state = makeState({ rotation: 90 });
+    const result = remapGridForOutput(grid, 2, 2, state);
+    expect(result[0]).toEqual({ v: 'C' });
+    expect(result[1]).toEqual({ v: 'A' });
+    expect(result[2]).toEqual({ v: 'D' });
+    expect(result[3]).toEqual({ v: 'B' });
+  });
+
+  it('remaps a 2x2 grid with flipH', () => {
+    // Logical: [A, B, C, D] → flipH mirrors columns
+    // row 0: col 0→col 1, col 1→col 0: [B, A]
+    // row 1: col 0→col 1, col 1→col 0: [D, C]
+    const grid = [{ v: 'A' }, { v: 'B' }, { v: 'C' }, { v: 'D' }];
+    const state = makeState({ flipH: true });
+    const result = remapGridForOutput(grid, 2, 2, state);
+    expect(result[0]).toEqual({ v: 'B' });
+    expect(result[1]).toEqual({ v: 'A' });
+    expect(result[2]).toEqual({ v: 'D' });
+    expect(result[3]).toEqual({ v: 'C' });
+  });
+
+  it('180° rotation reverses grid order', () => {
+    const grid = [{ v: 'A' }, { v: 'B' }, { v: 'C' }, { v: 'D' }];
+    const state = makeState({ rotation: 180 });
+    const result = remapGridForOutput(grid, 2, 2, state);
+    expect(result[0]).toEqual({ v: 'D' });
+    expect(result[1]).toEqual({ v: 'C' });
+    expect(result[2]).toEqual({ v: 'B' });
+    expect(result[3]).toEqual({ v: 'A' });
   });
 });

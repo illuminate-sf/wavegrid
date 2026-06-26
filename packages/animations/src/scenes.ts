@@ -29,7 +29,7 @@ export const scenes: Record<string, SceneGenerator> = {
 
   heart: (i, total, cols) => {
     const rows = Math.ceil(total / cols);
-    if (cols !== 7 || rows < 7) return { h: 350, s: 85, b: 2 };
+    if (cols !== 7 || rows < 7) return { h: 0, s: 100, b: 2 };
     const row = Math.floor(i / cols);
     const col = i % cols;
     const bitmap = [
@@ -42,7 +42,7 @@ export const scenes: Record<string, SceneGenerator> = {
       [0, 0, 0, 0, 0, 0, 0]
     ];
     const on = bitmap[row]?.[col];
-    return on ? { h: 350, s: 85, b: 80 } : { h: 0, s: 0, b: 2 };
+    return on ? { h: 0, s: 100, b: 100 } : { h: 0, s: 0, b: 2 };
   },
 
   sf: (i, total, cols) => {
