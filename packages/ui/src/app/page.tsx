@@ -53,6 +53,7 @@ function ToolContent({
   gradient, dropsConfig, setDropsConfig,
   motion, activeScene, handleScene,
   activeAnim, handleAnim,
+  animSpeed, onAnimSpeed,
   send,
   flags, brightness, audio,
   isPhone,
@@ -71,6 +72,8 @@ function ToolContent({
   handleScene: (name: string) => void;
   activeAnim: string | null;
   handleAnim: (name: string) => void;
+  animSpeed: number;
+  onAnimSpeed: (v: number) => void;
   send: (msg: Record<string, unknown>) => void;
   flags: ReturnType<typeof useFlagAnimation>;
   brightness: ReturnType<typeof useBrightnessAnimation>;
@@ -139,26 +142,45 @@ function ToolContent({
       )}
 
       {tab === 'animations' && (
-        <ControlGrid minCellWidth={200}>
-          <ControlGroup label="Animations">
-            <AnimationPalette
-              active={activeAnim}
-              onSelect={handleAnim}
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center gap-3 px-2">
+            <span className="text-xs font-medium shrink-0" style={{ color: '#888898', textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: 11 }}>
+              Speed
+            </span>
+            <input
+              type="range"
+              className="flex-1"
+              style={{ minWidth: 120, height: 28 }}
+              min={10}
+              max={500}
+              value={Math.round(animSpeed * 100)}
+              onChange={(e) => onAnimSpeed(parseInt(e.target.value, 10) / 100)}
             />
-          </ControlGroup>
-          <ControlGroup label="Brightness Effects">
-            <BrightnessTab
-              config={brightness.config}
-              onMode={brightness.setMode}
-              onSpeed={brightness.setSpeed}
-              onIntensity={brightness.setIntensity}
-              onResnapshot={brightness.resnapshot}
-            />
-          </ControlGroup>
-          <ControlGroup label="Shift">
-            <ShiftDial onShift={onShift} />
-          </ControlGroup>
-        </ControlGrid>
+            <span className="text-xs font-mono shrink-0" style={{ color: '#888898', minWidth: 36, textAlign: 'right' }}>
+              {animSpeed.toFixed(1)}x
+            </span>
+          </div>
+          <ControlGrid minCellWidth={200}>
+            <ControlGroup label="Animations">
+              <AnimationPalette
+                active={activeAnim}
+                onSelect={handleAnim}
+              />
+            </ControlGroup>
+            <ControlGroup label="Brightness Effects">
+              <BrightnessTab
+                config={brightness.config}
+                onMode={brightness.setMode}
+                onSpeed={brightness.setSpeed}
+                onIntensity={brightness.setIntensity}
+                onResnapshot={brightness.resnapshot}
+              />
+            </ControlGroup>
+            <ControlGroup label="Shift">
+              <ShiftDial onShift={onShift} />
+            </ControlGroup>
+          </ControlGrid>
+        </div>
       )}
 
       {tab === 'flags' && (
@@ -413,6 +435,7 @@ export default function Home() {
 
   const [activeScene, setActiveScene] = useState<string | null>(null);
   const [activeAnim, setActiveAnim] = useState<string | null>(null);
+  const [animSpeed, setAnimSpeed] = useState(1.0);
   const [shiftActive, setShiftActive] = useState(false);
   const [dropsConfig, setDropsConfig] = useState({
     spectrumStart: 0,
@@ -510,6 +533,14 @@ export default function Home() {
     (name: string) => {
       setActiveAnim(name);
       send({ type: 'animation', name });
+    },
+    [send]
+  );
+
+  const handleAnimSpeed = useCallback(
+    (v: number) => {
+      setAnimSpeed(v);
+      send({ type: 'anim_speed', value: v });
     },
     [send]
   );
@@ -612,6 +643,7 @@ export default function Home() {
     gradient, dropsConfig, setDropsConfig,
     motion, activeScene, handleScene,
     activeAnim, handleAnim,
+    animSpeed, onAnimSpeed: handleAnimSpeed,
     send,
     flags, brightness, audio,
     isPhone,
