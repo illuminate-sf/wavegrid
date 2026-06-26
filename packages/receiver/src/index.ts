@@ -10,6 +10,11 @@ export { angleDelta, applyUpstreamState, createFilteredGrid, DEFAULT_GRID_COLUMN
 export type { FallbackConfig } from './fallback';
 export { computeFallbackFrame, DEFAULT_FALLBACK_CONFIG } from './fallback';
 
+// Command mode
+export type { AnimationState } from './command-engine';
+export { createDefaultAnimationState, handleCommand, tickCommandMode } from './command-engine';
+export type { CommandMessage } from './command-types';
+
 // Receiver
-export type { ReceiverConfig, ReceiverState, ReceiverStatus, ShardConfig } from './receiver';
+export type { ReceiverConfig, ReceiverMode, ReceiverState, ReceiverStatus, ShardConfig } from './receiver';
 export { Receiver } from './receiver';

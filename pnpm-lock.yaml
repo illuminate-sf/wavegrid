@@ -57,6 +57,13 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
+  packages/animations:
+    devDependencies:
+      makage:
+        specifier: ^0.3.0
+        version: 0.3.1
+    publishDirectory: dist
+
   packages/debug:
     dependencies:
       ws:
@@ -84,6 +91,9 @@ importers:
 
   packages/receiver:
     dependencies:
+      '@wavegrid/animations':
+        specifier: workspace:*
+        version: link:../animations/dist
       '@wavegrid/osc':
         specifier: workspace:*
         version: link:../osc/dist
@@ -99,22 +109,11 @@ importers:
         version: 0.3.1
     publishDirectory: dist
 
-  packages/relay:
-    dependencies:
-      ws:
-        specifier: ^8.18.0
-        version: 8.21.0
-    devDependencies:
-      '@types/ws':
-        specifier: ^8.5.13
-        version: 8.18.1
-      makage:
-        specifier: ^0.3.0
-        version: 0.3.1
-    publishDirectory: dist
-
   packages/server:
     dependencies:
+      '@wavegrid/animations':
+        specifier: workspace:*
+        version: link:../animations/dist
       ws:
         specifier: ^8.18.0
         version: 8.21.0

@@ -1,8 +1,8 @@
 {
-  "name": "@wavegrid/server",
-  "version": "0.3.0",
+  "name": "@wavegrid/animations",
+  "version": "0.1.0",
   "author": "Dan Lynch <pyramation@gmail.com>",
-  "description": "7×7 RGB grid simulator with smooth transitions",
+  "description": "Shared animation and scene engine — used by both server and receiver",
   "main": "index.js",
   "module": "esm/index.js",
   "types": "index.d.ts",
@@ -26,23 +26,17 @@
     "build:dev": "makage build --dev",
     "lint": "ESLINT_USE_FLAT_CONFIG=false eslint src --fix",
     "test": "jest --passWithNoTests",
-    "test:watch": "jest --watch",
-    "dev": "ts-node src/server.ts"
+    "test:watch": "jest --watch"
   },
   "keywords": [
+    "wavegrid",
+    "animations",
+    "scenes",
     "laser",
-    "osc",
-    "lighting",
-    "simulator",
-    "7x7"
+    "shared"
   ],
-  "dependencies": {
-    "@wavegrid/animations": "workspace:*",
-    "ws": "^8.18.0"
-  },
+  "dependencies": {},
   "devDependencies": {
-    "@types/ws": "^8.5.13",
     "makage": "^0.3.0"
-  },
-  "gitHead": "5d71ea2c19cc1f48676f65a40aac29ecdd44bc20"
+  }
 }

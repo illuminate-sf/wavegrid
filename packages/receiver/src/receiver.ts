@@ -12,6 +12,8 @@
  */
 
 import { ConsoleOutput, InputAdapter, OutputAdapter, WebSocketInput } from './adapters';
+import { AnimationState, applyPaint, createDefaultAnimationState, handleCommand, tickCommandMode } from './command-engine';
+import { CommandMessage } from './command-types';
 import { computeFallbackFrame, DEFAULT_FALLBACK_CONFIG, FallbackConfig } from './fallback';
 import {
   applyUpstreamState,
@@ -68,14 +70,17 @@ export const DEFAULT_RECEIVER_CONFIG: ReceiverConfig = {
   gridColumns: DEFAULT_GRID_COLUMNS
 };
 
+export type ReceiverMode = 'stream' | 'command';
 export type ReceiverStatus = 'connected' | 'reconnecting' | 'fallback';
 
 export interface ReceiverState {
   status: ReceiverStatus;
+  mode: ReceiverMode;
   grid: FilteredCannon[];
   tick: number;
   lastDataAt: number;
   fallbackActive: boolean;
+  animationState: AnimationState;
 }
 
 export class Receiver {
@@ -87,6 +92,8 @@ export class Receiver {
   private _status: ReceiverStatus = 'reconnecting';
   private _fallbackActive = false;
   private _running = false;
+  private _mode: ReceiverMode = 'stream';
+  private _animState: AnimationState = createDefaultAnimationState();
 
   constructor(config: Partial<ReceiverConfig> = {}) {
     this.config = { ...DEFAULT_RECEIVER_CONFIG, ...config };
@@ -94,7 +101,9 @@ export class Receiver {
   }
 
   get status(): ReceiverStatus { return this._status; }
+  get mode(): ReceiverMode { return this._mode; }
   get fallbackActive(): boolean { return this._fallbackActive; }
+  get animationState(): AnimationState { return this._animState; }
 
   /** Get the current output state (after filtering and sharding). */
   getOutputState(): CannonState[] {
@@ -140,11 +149,35 @@ export class Receiver {
 
     input.on('state', (upstream: CannonState[]) => {
       this.lastDataAt = Date.now();
+      if (this._mode !== 'stream') {
+        this._mode = 'stream';
+        console.log('  \u25C8 Switched to stream mode');
+      }
       applyUpstreamState(this.grid, upstream);
 
       if (this._fallbackActive) {
         console.log('\n  \u25C8 Signal restored \u2014 blending back from fallback');
         this._fallbackActive = false;
+      }
+    });
+
+    input.on('command', (cmd: CommandMessage) => {
+      this.lastDataAt = Date.now();
+      if (this._mode !== 'command') {
+        this._mode = 'command';
+        console.log('  \u25C8 Switched to command mode');
+      }
+
+      if (this._fallbackActive) {
+        console.log('\n  \u25C8 Signal restored \u2014 exiting fallback');
+        this._fallbackActive = false;
+      }
+
+      // Handle paint commands directly (they write to grid)
+      if (cmd.action === 'paint') {
+        applyPaint(this.grid, cmd.cells, this._animState.attack);
+      } else {
+        handleCommand(this._animState, cmd);
       }
     });
 
@@ -172,7 +205,11 @@ export class Receiver {
       // If fallback is active, compute sine wave targets
       if (this._fallbackActive) {
         computeFallbackFrame(this.grid, this.tick, this.config.fallback, this.config.gridColumns);
+      } else if (this._mode === 'command') {
+        // Command mode: evaluate animation locally
+        tickCommandMode(this.grid, this._animState, this.config.gridColumns);
       }
+      // Stream mode: targets already set by applyUpstreamState in 'state' handler
 
       // Always tick the low-pass filter — this ensures smooth output
       // whether receiving data, transitioning to fallback, or in fallback
