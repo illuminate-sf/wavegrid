@@ -2,10 +2,11 @@
  * The Receiver — the brain of the Illuminate installation.
  *
  * A pure state engine that:
- *   1. Receives grid state from an InputAdapter (upstream source)
- *   2. Runs an independent low-pass filter (smooth, never jolts)
- *   3. Falls back to 3D sine waves on signal loss
- *   4. Sends filtered output to an OutputAdapter (hardware target)
+ *   1. Receives commands from an InputAdapter (upstream source)
+ *   2. Runs animations locally at 60fps
+ *   3. Applies a low-pass filter (smooth, never jolts)
+ *   4. Falls back to 3D sine waves on signal loss
+ *   5. Sends filtered output to an OutputAdapter (hardware target)
  *
  * Both input and output are pluggable adapters — swap them to connect
  * to any protocol or hardware without modifying the receiver core.
@@ -18,7 +19,6 @@ import { AnimationState, applyPaint, createDefaultAnimationState, handleCommand,
 import { CommandMessage, EvalPatternCommand, SetPatternParamCommand } from './command-types';
 import { computeFallbackFrame, DEFAULT_FALLBACK_CONFIG, FallbackConfig } from './fallback';
 import {
-  applyUpstreamState,
   CannonState,
   createFilteredGrid,
   DEFAULT_GRID_COLUMNS,
@@ -73,12 +73,10 @@ export const DEFAULT_RECEIVER_CONFIG: ReceiverConfig = {
   gridColumns: DEFAULT_GRID_COLUMNS
 };
 
-export type ReceiverMode = 'stream' | 'command';
 export type ReceiverStatus = 'connected' | 'reconnecting' | 'fallback';
 
 export interface ReceiverState {
   status: ReceiverStatus;
-  mode: ReceiverMode;
   grid: FilteredCannon[];
   tick: number;
   lastDataAt: number;
@@ -95,7 +93,6 @@ export class Receiver {
   private _status: ReceiverStatus = 'reconnecting';
   private _fallbackActive = false;
   private _running = false;
-  private _mode: ReceiverMode = 'stream';
   private _animState: AnimationState = createDefaultAnimationState();
   private _sandbox: SandboxEngine | null = null;
   private _sandboxReady: Promise<SandboxEngine> | null = null;
@@ -108,7 +105,6 @@ export class Receiver {
   }
 
   get status(): ReceiverStatus { return this._status; }
-  get mode(): ReceiverMode { return this._mode; }
   get fallbackActive(): boolean { return this._fallbackActive; }
   get animationState(): AnimationState { return this._animState; }
 
@@ -154,27 +150,8 @@ export class Receiver {
       console.log('  \u25C8 Input connected');
     });
 
-    input.on('state', (upstream: CannonState[]) => {
-      this.lastDataAt = Date.now();
-      if (this._mode !== 'stream') {
-        this._mode = 'stream';
-        console.log('  \u25C8 Switched to stream mode');
-      }
-      applyUpstreamState(this.grid, upstream);
-
-      if (this._fallbackActive) {
-        console.log('\n  \u25C8 Signal restored \u2014 blending back from fallback');
-        this._fallbackActive = false;
-      }
-    });
-
     input.on('command', (cmd: CommandMessage) => {
       this.lastDataAt = Date.now();
-      if (this._mode !== 'command') {
-        this._mode = 'command';
-        console.log('  \u25C8 Switched to command mode');
-      }
-
       if (this._fallbackActive) {
         console.log('\n  \u25C8 Signal restored \u2014 exiting fallback');
         this._fallbackActive = false;
@@ -220,18 +197,14 @@ export class Receiver {
         console.log('\n  \u25C8 Signal lost \u2014 entering sine wave fallback');
       }
 
-      // If fallback is active, compute sine wave targets
       if (this._fallbackActive) {
         computeFallbackFrame(this.grid, this.tick, this.config.fallback, this.config.gridColumns);
-      } else if (this._mode === 'command') {
-        // Sandbox pattern rendering
+      } else {
         if (this._animState.patternActive && this._sandbox?.loaded) {
           this.tickPattern();
         }
-        // Command mode: evaluate built-in animation locally
         tickCommandMode(this.grid, this._animState, this.config.gridColumns);
       }
-      // Stream mode: targets already set by applyUpstreamState in 'state' handler
 
       // Always tick the low-pass filter — this ensures smooth output
       // whether receiving data, transitioning to fallback, or in fallback

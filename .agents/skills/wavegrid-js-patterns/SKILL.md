@@ -7,7 +7,7 @@ description: How to write and send dynamic JavaScript patterns to wavegrid recei
 
 ## Overview
 
-Wavegrid receivers running in **command mode** (`BROADCAST_MODE=command`) can evaluate dynamic JavaScript patterns in a sandboxed QuickJS VM. This is the "escape hatch" for custom animations that aren't built in. Patterns run locally on the receiver at 60fps — the server only relays the initial code.
+Wavegrid receivers evaluate dynamic JavaScript patterns in a sandboxed QuickJS VM. This is the "escape hatch" for custom animations that aren't built in. Patterns run locally on the receiver at 60fps — the server only relays the initial code.
 
 ## Wire Format
 
@@ -258,4 +258,3 @@ Patterns auto-adapt to the grid via `ctx.cols`, `ctx.rows`, and `ctx.count`. Alw
 2. **Using `export`** — The sandbox strips `export` keywords automatically, but avoid them for clarity.
 3. **Exceeding CPU budget** — Complex noise or nested loops on large grids can exceed 6ms. Profile with `ctx.log(Date.now())`.
 4. **Assuming Node.js APIs** — No `require`, `setTimeout`, `fetch`, `Buffer`, `process`, etc. Only ES5/ES6 core language + `Math` object.
-5. **Sending in stream mode** — `evalPattern` only works when the server is in `BROADCAST_MODE=command`. Stream-mode servers ignore it.

@@ -49,12 +49,11 @@ export interface MappedOutputConfig {
 
 /**
  * Generic input adapter interface.
- * Implement this to receive grid state from any source:
+ * Implement this to receive commands from any source:
  * WebSocket, MQTT, HTTP polling, serial, etc.
  *
  * Emits:
- *   'state' (grid: CannonState[]) — new state snapshot received (stream mode)
- *   'command' (cmd: CommandMessage) — command received (command mode)
+ *   'command' (cmd: CommandMessage) — command received
  *   'connected' — upstream connection established
  *   'disconnected' — upstream connection lost
  */

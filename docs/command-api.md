@@ -1,11 +1,6 @@
 # Command Mode API Reference
 
-The wavegrid server supports two broadcast modes, configured via `BROADCAST_MODE`:
-
-- **`stream`** (default) — Server computes animation frames at 60fps and sends full grid state to receivers.
-- **`command`** — Server relays lightweight commands; receivers run animations locally.
-
-In command mode, clients send JSON messages over WebSocket to the server, which relays them to receivers as `{type: "command", action: "...", ...}` packets.
+The wavegrid server operates as a lightweight command relay. Clients send JSON messages over WebSocket to the server, which relays them to receivers as `{type: "command", action: "...", ...}` packets. Receivers run animations locally at 60fps — the server never computes or streams full grid state.
 
 ---
 
@@ -93,7 +88,7 @@ Wrap-around shift velocity. `vx`/`vy` in cells per second.
 
 Dynamic JavaScript patterns can be sent to receivers for local evaluation in a sandboxed QuickJS VM. This is the "escape hatch" for custom animations that aren't built in.
 
-**Requires command mode** (`BROADCAST_MODE=command`).
+Pattern evaluation is always available — the server relays `evalPattern` commands to receivers.
 
 ### Send a Pattern
 

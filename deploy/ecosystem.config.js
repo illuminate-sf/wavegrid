@@ -92,7 +92,7 @@ module.exports = {
       ...common,
       name: 'wavegrid-server',
       args: 'dev:server',
-      env: { ...baseEnv, BROADCAST_MODE: 'stream' },
+      env: baseEnv,
     },
     {
       ...common,
@@ -110,7 +110,6 @@ module.exports = {
         ...baseEnv,
         PORT: PRIDE_SIM_PORT,
         GRID: PRIDE_GRID,
-        BROADCAST_MODE: 'command',
       },
     },
     {
