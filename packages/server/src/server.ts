@@ -12,11 +12,6 @@ import { getHTML } from './ui';
 const PORT = parseInt(process.env.PORT || '3000', 10);
 const TICK_MS = 1000 / 60; // 60fps interpolation
 
-// Broadcast mode: 'stream' (default) sends full grid state at 60fps.
-// 'command' sends lightweight command messages — receiver evaluates locally.
-type BroadcastMode = 'stream' | 'command';
-const BROADCAST_MODE: BroadcastMode =
-  (process.env.BROADCAST_MODE === 'command') ? 'command' : 'stream';
 // Parse GRID=COLSxROWS shorthand (e.g. "7x2" → 7 cols, 2 rows, 14 cannons).
 function parseGrid(): { numCannons: number; gridColumns: number } {
   const gridEnv = process.env.GRID;
@@ -77,16 +72,25 @@ server.on('upgrade', (req, socket, head) => {
   });
 });
 
+// Broadcast the current grid snapshot to all UI clients.
+// Used for calibration, orientation changes, and paint/clear — so the
+// browser UI preview stays up-to-date.  Receivers ignore these messages
+// (they only act on {type:"command"} packets).
 function broadcastState() {
-  broadcastComposite(getBroadcastOutput());
-}
-
-function getBroadcastOutput(): CannonState[] {
-  if (calibrationMode) return getCalibrationOutput();
-  const base = audioLayer
-    ? compositeLayer(grid, audioLayer, audioBlend)
-    : grid.map(c => ({ h: c.h, s: c.s, b: c.b }));
-  return remapGridForUi(base, GRID_COLUMNS, GRID_ROWS, orientation);
+  const output = calibrationMode
+    ? getCalibrationOutput()
+    : remapGridForUi(
+      audioLayer
+        ? compositeLayer(grid, audioLayer, audioBlend)
+        : grid.map(c => ({ h: c.h, s: c.s, b: c.b })),
+      GRID_COLUMNS, GRID_ROWS, orientation
+    );
+  const payload = JSON.stringify({ type: 'state', grid: output });
+  wss.clients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(payload);
+    }
+  });
 }
 
 function getCalibrationOutput(): CannonState[] {
@@ -125,18 +129,6 @@ function loadPhysicalLightMap(): number[] {
 
 function broadcastOrientation() {
   const payload = JSON.stringify({ type: 'orientation', ...orientation });
-  wss.clients.forEach(client => {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(payload);
-    }
-  });
-}
-
-function broadcastComposite(output: CannonState[]) {
-  const payload = JSON.stringify({
-    type: 'state',
-    grid: output
-  });
   wss.clients.forEach(client => {
     if (client.readyState === WebSocket.OPEN) {
       client.send(payload);
@@ -184,38 +176,28 @@ function handleMessage(msg: any) {
       msg.b ?? undefined,
       currentAttack
     );
-    if (BROADCAST_MODE === 'command') {
-      broadcastCommand({ action: 'paint', cells: [{ idx: gi, h: msg.h ?? 0, s: msg.s ?? 0, b: msg.b ?? 0 }] });
-    }
+    broadcastCommand({ action: 'paint', cells: [{ idx: gi, h: msg.h ?? 0, s: msg.s ?? 0, b: msg.b ?? 0 }] });
     break;
   }
   case 'master_brightness':
     setAllTargets(grid, undefined, undefined, msg.value * 100, currentAttack);
-    if (BROADCAST_MODE === 'command') {
-      broadcastCommand({ action: 'setBrightness', value: msg.value * 100 });
-    }
+    broadcastCommand({ action: 'setBrightness', value: msg.value * 100 });
     break;
   case 'scene':
     if (msg.name && scenes[msg.name]) {
       currentAnimation = null;
       applyScene(grid, msg.name, GRID_COLUMNS);
-      if (BROADCAST_MODE === 'command') {
-        broadcastCommand({ action: 'setScene', name: msg.name });
-      }
+      broadcastCommand({ action: 'setScene', name: msg.name });
     }
     break;
   case 'animation':
     if (msg.name && animations[msg.name]) {
       currentAnimation = msg.name;
       animationTick = 0;
-      if (BROADCAST_MODE === 'command') {
-        broadcastCommand({ action: 'setAnimation', name: msg.name, speed: animSpeed });
-      }
+      broadcastCommand({ action: 'setAnimation', name: msg.name, speed: animSpeed });
     } else if (msg.name === 'stop') {
       currentAnimation = null;
-      if (BROADCAST_MODE === 'command') {
-        broadcastCommand({ action: 'stop' });
-      }
+      broadcastCommand({ action: 'stop' });
     }
     break;
   case 'calibration_mode':
@@ -251,7 +233,7 @@ function handleMessage(msg: any) {
           cells.push({ idx: gi, h: msg.h ?? 0, s: msg.s ?? 0, b: msg.b ?? 0 });
         }
       }
-      if (BROADCAST_MODE === 'command' && cells.length > 0) {
+      if (cells.length > 0) {
         broadcastCommand({ action: 'paint', cells });
       }
     }
@@ -267,36 +249,28 @@ function handleMessage(msg: any) {
       audioLayer = remapped;
       audioBlend = msg.blend || 'replace';
       broadcastState();
-      framesSinceLastBroadcast = 0;
     }
     break;
   case 'audio_layer_clear':
     audioLayer = null;
     broadcastState();
-    framesSinceLastBroadcast = 0;
     break;
   case 'smoothness':
     if (typeof msg.value === 'number') {
       currentAlpha = msg.value;
-      if (BROADCAST_MODE === 'command') {
-        broadcastCommand({ action: 'setSmoothness', value: msg.value });
-      }
+      broadcastCommand({ action: 'setSmoothness', value: msg.value });
     }
     break;
   case 'attack':
     if (typeof msg.value === 'number') {
       currentAttack = msg.value;
-      if (BROADCAST_MODE === 'command') {
-        broadcastCommand({ action: 'setAttack', value: msg.value });
-      }
+      broadcastCommand({ action: 'setAttack', value: msg.value });
     }
     break;
   case 'clear':
     currentAnimation = null;
     setAllTargets(grid, 0, 0, 0, 1.0);
-    if (BROADCAST_MODE === 'command') {
-      broadcastCommand({ action: 'stop' });
-    }
+    broadcastCommand({ action: 'stop' });
     broadcastState();
     break;
   case 'rotate': {
@@ -325,20 +299,16 @@ function handleMessage(msg: any) {
       shiftAccX = 0;
       shiftAccY = 0;
     }
-    if (BROADCAST_MODE === 'command') {
-      broadcastCommand({ action: 'setShift', vx: shiftVx, vy: shiftVy });
-    }
+    broadcastCommand({ action: 'setShift', vx: shiftVx, vy: shiftVy });
     break;
   case 'anim_speed':
     if (typeof msg.value === 'number') {
       animSpeed = Math.max(0.1, Math.min(5.0, msg.value));
-      if (BROADCAST_MODE === 'command') {
-        broadcastCommand({ action: 'setSpeed', value: animSpeed });
-      }
+      broadcastCommand({ action: 'setSpeed', value: animSpeed });
     }
     break;
   case 'evalPattern':
-    if (typeof msg.code === 'string' && BROADCAST_MODE === 'command') {
+    if (typeof msg.code === 'string') {
       currentAnimation = null;
       broadcastCommand({
         action: 'evalPattern',
@@ -348,7 +318,7 @@ function handleMessage(msg: any) {
     }
     break;
   case 'setPatternParam':
-    if (typeof msg.name === 'string' && BROADCAST_MODE === 'command') {
+    if (typeof msg.name === 'string') {
       broadcastCommand({
         action: 'setPatternParam',
         name: msg.name,
@@ -357,20 +327,13 @@ function handleMessage(msg: any) {
     }
     break;
   case 'stopPattern':
-    if (BROADCAST_MODE === 'command') {
-      broadcastCommand({ action: 'stopPattern' });
-    }
+    broadcastCommand({ action: 'stopPattern' });
     break;
   }
 }
 
-// Animation loop: tick interpolation and broadcast
-// Keepalive: broadcast at least once per second even when grid is static,
-// so downstream receivers don't mistake silence for signal loss.
-let framesSinceLastBroadcast = 0;
-const KEEPALIVE_FRAMES = 60; // ~1 second at 60fps
-// In command mode, send a periodic keepalive command so the receiver
-// knows the connection is alive (resets its fallback timer).
+// Animation loop: tick the local grid interpolation (for UI preview)
+// and send periodic keepalive commands so receivers don't fallback.
 const COMMAND_KEEPALIVE_FRAMES = 120; // ~2 seconds at 60fps
 let framesSinceLastCommand = 0;
 
@@ -390,30 +353,19 @@ setInterval(() => {
       shiftAccY -= stepsY;
     }
   }
-  const changed = tickGrid(grid, currentAlpha);
-  framesSinceLastBroadcast++;
+  tickGrid(grid, currentAlpha);
 
-  if (BROADCAST_MODE === 'command') {
-    // In command mode, don't broadcast full state at 60fps.
-    // Only send periodic keepalive commands to prevent receiver fallback.
-    framesSinceLastCommand++;
-    if (framesSinceLastCommand >= COMMAND_KEEPALIVE_FRAMES) {
-      // Re-send current state as commands so receiver stays alive
-      if (currentAnimation) {
-        broadcastCommand({ action: 'setAnimation', name: currentAnimation, speed: animSpeed });
-      } else if (shiftVx !== 0 || shiftVy !== 0) {
-        broadcastCommand({ action: 'setShift', vx: shiftVx, vy: shiftVy });
-      } else {
-        broadcastCommand({ action: 'setSpeed', value: animSpeed });
-      }
-      framesSinceLastCommand = 0;
+  // Periodic keepalive so receivers don't enter fallback
+  framesSinceLastCommand++;
+  if (framesSinceLastCommand >= COMMAND_KEEPALIVE_FRAMES) {
+    if (currentAnimation) {
+      broadcastCommand({ action: 'setAnimation', name: currentAnimation, speed: animSpeed });
+    } else if (shiftVx !== 0 || shiftVy !== 0) {
+      broadcastCommand({ action: 'setShift', vx: shiftVx, vy: shiftVy });
+    } else {
+      broadcastCommand({ action: 'setSpeed', value: animSpeed });
     }
-  } else {
-    // Stream mode: broadcast full grid state
-    if (calibrationMode || changed || audioLayer || shiftVx !== 0 || shiftVy !== 0 || framesSinceLastBroadcast >= KEEPALIVE_FRAMES) {
-      broadcastComposite(getBroadcastOutput());
-      framesSinceLastBroadcast = 0;
-    }
+    framesSinceLastCommand = 0;
   }
 }, TICK_MS);
 
@@ -426,7 +378,7 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log('');
   console.log(`  → http://localhost:${PORT}`);
   console.log(`  → Grid: ${NUM_CANNONS} cannons (${GRID_COLUMNS} columns)`);
-  console.log(`  → Broadcast: ${BROADCAST_MODE} mode`);
+  console.log('  → Mode: command relay');
   console.log('');
 });
 

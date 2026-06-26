@@ -21,5 +21,5 @@ export { createSandboxEngine } from './sandbox-engine';
 export { buildPrelude } from './sandbox-prelude';
 
 // Receiver
-export type { ReceiverConfig, ReceiverMode, ReceiverState, ReceiverStatus, ShardConfig } from './receiver';
+export type { ReceiverConfig, ReceiverState, ReceiverStatus, ShardConfig } from './receiver';
 export { Receiver } from './receiver';
