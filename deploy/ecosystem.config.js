@@ -88,7 +88,12 @@ const common = {
 module.exports = {
   apps: [
     // ── Main show (7×7, 49 cannons) ──────────────────────────────────
-    { ...common, name: 'wavegrid-server', args: 'dev:server' },
+    {
+      ...common,
+      name: 'wavegrid-server',
+      args: 'dev:server',
+      env: { ...baseEnv, BROADCAST_MODE: 'stream' },
+    },
     {
       ...common,
       name: 'wavegrid-ui',
