@@ -85,6 +85,11 @@ export interface StopPatternCommand {
   action: 'stopPattern';
 }
 
+export interface KeepaliveCommand {
+  type: 'command';
+  action: 'keepalive';
+}
+
 export type CommandMessage =
   | SetAnimationCommand
   | SetSceneCommand
@@ -98,7 +103,8 @@ export type CommandMessage =
   | ClearCommand
   | EvalPatternCommand
   | SetPatternParamCommand
-  | StopPatternCommand;
+  | StopPatternCommand
+  | KeepaliveCommand;
 
 /**
  * Local animation state tracked by the receiver in command mode.

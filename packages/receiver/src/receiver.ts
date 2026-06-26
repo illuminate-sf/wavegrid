@@ -159,7 +159,10 @@ export class Receiver {
 
       // Handle paint commands directly (they write to grid)
       if (cmd.action === 'paint') {
+        handleCommand(this._animState, cmd);
         applyPaint(this.grid, cmd.cells, this._animState.attack);
+      } else if (cmd.action === 'setSmoothness') {
+        this.config.alpha = Math.max(0.01, Math.min(1, cmd.value));
       } else if (cmd.action === 'evalPattern') {
         handleCommand(this._animState, cmd);
         this.handleEvalPattern(cmd);
