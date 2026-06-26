@@ -53,7 +53,8 @@ export interface MappedOutputConfig {
  * WebSocket, MQTT, HTTP polling, serial, etc.
  *
  * Emits:
- *   'state' (grid: CannonState[]) — new state snapshot received
+ *   'state' (grid: CannonState[]) — new state snapshot received (stream mode)
+ *   'command' (cmd: CommandMessage) — command received (command mode)
  *   'connected' — upstream connection established
  *   'disconnected' — upstream connection lost
  */
@@ -64,6 +65,7 @@ export interface InputAdapter {
   disconnect(): void;
   /** Register event listener. */
   on(event: 'state', listener: (grid: CannonState[]) => void): this;
+  on(event: 'command', listener: (cmd: any) => void): this;
   on(event: 'connected', listener: () => void): this;
   on(event: 'disconnected', listener: () => void): this;
   /** Remove event listener. */
@@ -212,6 +214,8 @@ export class WebSocketInput extends EventEmitter implements InputAdapter {
           const msg = JSON.parse(raw.toString());
           if (msg.type === 'state' && Array.isArray(msg.grid)) {
             this.emit('state', msg.grid as CannonState[]);
+          } else if (msg.type === 'command' && msg.action) {
+            this.emit('command', msg);
           }
         } catch (_e) {
           // ignore malformed messages
