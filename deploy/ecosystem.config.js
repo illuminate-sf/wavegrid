@@ -105,6 +105,7 @@ module.exports = {
         ...baseEnv,
         PORT: PRIDE_SIM_PORT,
         GRID: PRIDE_GRID,
+        BROADCAST_MODE: 'command',
       },
     },
     {
