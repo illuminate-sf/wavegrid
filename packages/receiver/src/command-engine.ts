@@ -18,8 +18,11 @@ import { DEFAULT_GRID_COLUMNS, FilteredCannon } from './filter';
 export function handleCommand(state: AnimationState, cmd: CommandMessage): boolean {
   switch (cmd.action) {
   case 'setAnimation':
+    if (state.currentAnimation !== cmd.name) {
+      state.tick = 0;
+    }
     state.currentAnimation = cmd.name;
-    state.tick = 0;
+    state.currentScene = null;
     if (cmd.speed !== undefined) state.speed = cmd.speed;
     return true;
 
@@ -29,7 +32,12 @@ export function handleCommand(state: AnimationState, cmd: CommandMessage): boole
     return true;
 
   case 'paint':
-    // Paint is handled directly in tickCommandMode
+    state.currentAnimation = null;
+    state.currentScene = null;
+    state.patternActive = false;
+    return true;
+
+  case 'keepalive':
     return true;
 
   case 'setBrightness':
@@ -105,18 +113,17 @@ export function tickCommandMode(
   state: AnimationState,
   gridColumns: number = DEFAULT_GRID_COLUMNS
 ): void {
-  // Advance the animation tick
-  state.tick += state.speed;
-
   // Evaluate animation if one is active (skip if pattern is active)
   if (!state.patternActive) {
     if (state.currentAnimation) {
       evaluateAnimation(grid, state.currentAnimation, state.tick, state.attack, gridColumns);
     } else if (state.currentScene) {
-      // If no animation, apply the scene (static)
       applyScene(grid, state.currentScene, gridColumns);
     }
   }
+
+  // Advance the animation tick (after evaluation, matching server order)
+  state.tick += state.speed;
 
   // Apply shift (wrap-around pixel remapping)
   if (state.shiftVx !== 0 || state.shiftVy !== 0) {

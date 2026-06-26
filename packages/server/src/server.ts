@@ -167,6 +167,7 @@ wss.on('connection', (ws) => {
 function handleMessage(msg: any) {
   switch (msg.type) {
   case 'cannon': {
+    currentAnimation = null;
     const gi = mapUiToGrid(msg.index, GRID_COLUMNS, GRID_ROWS, orientation);
     setCannonTarget(
       grid,
@@ -218,6 +219,7 @@ function handleMessage(msg: any) {
     break;
   case 'selection':
     if (Array.isArray(msg.indices)) {
+      currentAnimation = null;
       const cells: Array<{ idx: number; h: number; s: number; b: number }> = [];
       for (const uiIdx of msg.indices) {
         const gi = mapUiToGrid(uiIdx, GRID_COLUMNS, GRID_ROWS, orientation);
@@ -270,7 +272,7 @@ function handleMessage(msg: any) {
   case 'clear':
     currentAnimation = null;
     setAllTargets(grid, 0, 0, 0, 1.0);
-    broadcastCommand({ action: 'stop' });
+    broadcastCommand({ action: 'clear' });
     broadcastState();
     break;
   case 'rotate': {
@@ -361,13 +363,7 @@ setInterval(() => {
   // Periodic keepalive so receivers don't enter fallback
   framesSinceLastCommand++;
   if (framesSinceLastCommand >= COMMAND_KEEPALIVE_FRAMES) {
-    if (currentAnimation) {
-      broadcastCommand({ action: 'setAnimation', name: currentAnimation, speed: animSpeed });
-    } else if (shiftVx !== 0 || shiftVy !== 0) {
-      broadcastCommand({ action: 'setShift', vx: shiftVx, vy: shiftVy });
-    } else {
-      broadcastCommand({ action: 'setSpeed', value: animSpeed });
-    }
+    broadcastCommand({ action: 'keepalive' });
     framesSinceLastCommand = 0;
   }
 }, TICK_MS);
