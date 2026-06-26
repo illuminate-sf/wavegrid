@@ -158,6 +158,90 @@ export const animations: Record<string, AnimationFn> = {
   }
 };
 
+// ── ROYGBIV Pride animations (optimized for 7×2 but work on any grid) ────
+
+const ROYGBIV: Array<{ h: number; s: number }> = [
+  { h: 0, s: 100 },     // Red
+  { h: 30, s: 100 },    // Orange
+  { h: 55, s: 100 },    // Yellow
+  { h: 120, s: 100 },   // Green
+  { h: 210, s: 100 },   // Blue
+  { h: 260, s: 100 },   // Indigo
+  { h: 290, s: 100 }   // Violet
+];
+
+function roygbivAt(position: number): { h: number; s: number } {
+  const p = ((position % 1) + 1) % 1;
+  const scaled = p * ROYGBIV.length;
+  const idx = Math.floor(scaled);
+  const mix = scaled - idx;
+  const a = ROYGBIV[idx % ROYGBIV.length];
+  const b = ROYGBIV[(idx + 1) % ROYGBIV.length];
+  // Shortest-path hue interpolation
+  let dh = b.h - a.h;
+  if (dh > 180) dh -= 360;
+  if (dh < -180) dh += 360;
+  return {
+    h: ((a.h + dh * mix) + 360) % 360,
+    s: a.s + (b.s - a.s) * mix
+  };
+}
+
+// Horizontal scroll — rainbow stripes flow left-to-right across columns
+animations['pride-scroll'] = (grid, tick, attack, cols = DEFAULT_GRID_COLUMNS) => {
+  const speed = tick * 0.015;
+  for (let i = 0; i < grid.length; i++) {
+    const col = i % cols;
+    const color = roygbivAt(col / cols + speed);
+    setCannonTarget(grid, i, color.h, color.s, 90, attack);
+  }
+};
+
+// Vertical flow — rainbow moves top to bottom
+animations['pride-flow'] = (grid, tick, attack, cols = DEFAULT_GRID_COLUMNS) => {
+  const rows = Math.ceil(grid.length / cols);
+  const speed = tick * 0.012;
+  for (let i = 0; i < grid.length; i++) {
+    const row = Math.floor(i / cols);
+    const color = roygbivAt(row / rows + speed);
+    setCannonTarget(grid, i, color.h, color.s, 90, attack);
+  }
+};
+
+// Diagonal sweep — rainbow moves at 45° angle
+animations['pride-diagonal'] = (grid, tick, attack, cols = DEFAULT_GRID_COLUMNS) => {
+  const rows = Math.ceil(grid.length / cols);
+  const speed = tick * 0.012;
+  for (let i = 0; i < grid.length; i++) {
+    const row = Math.floor(i / cols);
+    const col = i % cols;
+    const pos = (col / cols + row / rows) / 2;
+    const color = roygbivAt(pos + speed);
+    setCannonTarget(grid, i, color.h, color.s, 90, attack);
+  }
+};
+
+// Breathe — all cannons same ROYGBIV color, cycling through the spectrum
+animations['pride-breathe'] = (grid, tick, attack) => {
+  const speed = tick * 0.008;
+  const brightness = 70 + Math.sin(tick * 0.04) * 20;
+  const color = roygbivAt(speed);
+  for (let i = 0; i < grid.length; i++) {
+    setCannonTarget(grid, i, color.h, color.s, brightness, attack);
+  }
+};
+
+// Rotate — each column is a fixed ROYGBIV stripe, the assignment rotates over time
+animations['pride-rotate'] = (grid, tick, attack, cols = DEFAULT_GRID_COLUMNS) => {
+  const offset = Math.floor(tick * 0.08);
+  for (let i = 0; i < grid.length; i++) {
+    const col = i % cols;
+    const idx = ((col + offset) % ROYGBIV.length + ROYGBIV.length) % ROYGBIV.length;
+    const color = ROYGBIV[idx];
+    setCannonTarget(grid, i, color.h, color.s, 90, attack);
+  }
+};
+
 function getPerimeterIndices(numCannons: number, cols: number): number[] {
   const rows = Math.ceil(numCannons / cols);
   const indices: number[] = [];
