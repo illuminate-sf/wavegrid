@@ -13,7 +13,12 @@ export { computeFallbackFrame, DEFAULT_FALLBACK_CONFIG } from './fallback';
 // Command mode
 export type { AnimationState } from './command-engine';
 export { createDefaultAnimationState, handleCommand, tickCommandMode } from './command-engine';
-export type { CommandMessage } from './command-types';
+export type { CommandMessage, EvalPatternCommand, SetPatternParamCommand, StopPatternCommand } from './command-types';
+
+// Sandbox
+export type { PatternMeta, SandboxConfig, SandboxEngine, SandboxFrame } from './sandbox-engine';
+export { createSandboxEngine } from './sandbox-engine';
+export { buildPrelude } from './sandbox-prelude';
 
 // Receiver
 export type { ReceiverConfig, ReceiverMode, ReceiverState, ReceiverStatus, ShardConfig } from './receiver';

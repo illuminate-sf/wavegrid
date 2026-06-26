@@ -61,6 +61,30 @@ export interface SetSpeedCommand {
   value: number;
 }
 
+export interface ClearCommand {
+  type: 'command';
+  action: 'clear';
+}
+
+export interface EvalPatternCommand {
+  type: 'command';
+  action: 'evalPattern';
+  code: string;
+  params?: Record<string, unknown>;
+}
+
+export interface SetPatternParamCommand {
+  type: 'command';
+  action: 'setPatternParam';
+  name: string;
+  value: unknown;
+}
+
+export interface StopPatternCommand {
+  type: 'command';
+  action: 'stopPattern';
+}
+
 export type CommandMessage =
   | SetAnimationCommand
   | SetSceneCommand
@@ -70,7 +94,11 @@ export type CommandMessage =
   | SetShiftCommand
   | SetSmoothnessCommand
   | SetAttackCommand
-  | SetSpeedCommand;
+  | SetSpeedCommand
+  | ClearCommand
+  | EvalPatternCommand
+  | SetPatternParamCommand
+  | StopPatternCommand;
 
 /**
  * Local animation state tracked by the receiver in command mode.
@@ -86,6 +114,8 @@ export interface AnimationState {
   shiftAccX: number;
   shiftAccY: number;
   tick: number;
+  /** Whether a QuickJS sandbox pattern is actively rendering. */
+  patternActive: boolean;
 }
 
 export function createDefaultAnimationState(): AnimationState {
@@ -99,6 +129,7 @@ export function createDefaultAnimationState(): AnimationState {
     shiftVy: 0,
     shiftAccX: 0,
     shiftAccY: 0,
-    tick: 0
+    tick: 0,
+    patternActive: false
   };
 }
