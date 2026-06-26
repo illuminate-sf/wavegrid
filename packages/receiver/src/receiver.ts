@@ -167,35 +167,44 @@ export class Receiver {
         this._fallbackActive = false;
       }
 
-      // Keepalive is not a real command — don't create grid for it
+      // Config-only commands: update state but do NOT create the grid.
+      // The receiver must produce zero output until a visual command arrives.
       if (cmd.action === 'keepalive') return;
+      if (cmd.action === 'setSmoothness') {
+        this.config.alpha = Math.max(0.01, Math.min(1, cmd.value));
+        return;
+      }
+      if (cmd.action === 'setAttack' || cmd.action === 'setOrientation' || cmd.action === 'setShift') {
+        handleCommand(this._animState, cmd);
+        return;
+      }
+      if (cmd.action === 'setPatternParam') {
+        this.handleSetPatternParam(cmd);
+        return;
+      }
+      if (cmd.action === 'stop' || cmd.action === 'stopPattern') {
+        handleCommand(this._animState, cmd);
+        this.disposeSandbox();
+        return;
+      }
 
-      // Lazily create grid on first real command
+      // Visual commands: create the grid (if needed) and start output
       const grid = this.ensureGrid();
 
-      // Handle paint commands directly (they write to grid)
       if (cmd.action === 'paint') {
         handleCommand(this._animState, cmd);
         applyPaint(grid, cmd.cells, this._animState.attack);
-      } else if (cmd.action === 'setSmoothness') {
-        this.config.alpha = Math.max(0.01, Math.min(1, cmd.value));
       } else if (cmd.action === 'evalPattern') {
         handleCommand(this._animState, cmd);
         this.handleEvalPattern(cmd);
-      } else if (cmd.action === 'setPatternParam') {
-        this.handleSetPatternParam(cmd);
-      } else if (cmd.action === 'stopPattern') {
+      } else if (cmd.action === 'clear') {
         handleCommand(this._animState, cmd);
         this.disposeSandbox();
-      } else if (cmd.action === 'clear' || cmd.action === 'stop') {
-        handleCommand(this._animState, cmd);
-        this.disposeSandbox();
-        if (cmd.action === 'clear') {
-          for (let i = 0; i < grid.length; i++) {
-            setTarget(grid, i, 0, 0, 0, 1.0);
-          }
+        for (let i = 0; i < grid.length; i++) {
+          setTarget(grid, i, 0, 0, 0, 1.0);
         }
       } else {
+        // setAnimation, setScene, etc.
         handleCommand(this._animState, cmd);
       }
     });
