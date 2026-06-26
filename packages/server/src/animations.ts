@@ -242,6 +242,16 @@ animations['pride-rotate'] = (grid, tick, attack, cols = DEFAULT_GRID_COLUMNS) =
   }
 };
 
+// Ring — treat all cells as one continuous loop, rotating ROYGBIV around them
+animations['pride-ring'] = (grid, tick, attack) => {
+  const n = grid.length;
+  const speed = tick * 0.06;
+  for (let i = 0; i < n; i++) {
+    const color = roygbivAt(i / n + speed);
+    setCannonTarget(grid, i, color.h, color.s, 90, attack);
+  }
+};
+
 function getPerimeterIndices(numCannons: number, cols: number): number[] {
   const rows = Math.ceil(numCannons / cols);
   const indices: number[] = [];

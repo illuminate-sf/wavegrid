@@ -36,6 +36,7 @@ let currentAlpha = DEFAULT_ALPHA;
 let currentAttack = 1.0;
 let currentAnimation: string | null = null;
 let animationTick = 0;
+let animSpeed = 1.0;
 let audioLayer: CannonState[] | null = null;
 let audioBlend: BlendMode = 'replace';
 let calibrationMode = false;
@@ -281,6 +282,11 @@ function handleMessage(msg: any) {
       shiftAccY = 0;
     }
     break;
+  case 'anim_speed':
+    if (typeof msg.value === 'number') {
+      animSpeed = Math.max(0.1, Math.min(5.0, msg.value));
+    }
+    break;
   }
 }
 
@@ -293,7 +299,7 @@ const KEEPALIVE_FRAMES = 60; // ~1 second at 60fps
 setInterval(() => {
   if (!calibrationMode && currentAnimation && animations[currentAnimation]) {
     animations[currentAnimation](grid, animationTick, currentAttack, GRID_COLUMNS);
-    animationTick++;
+    animationTick += animSpeed;
   }
   if (shiftVx !== 0 || shiftVy !== 0) {
     shiftAccX += shiftVx / 60;
