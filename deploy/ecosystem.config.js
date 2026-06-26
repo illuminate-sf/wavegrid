@@ -50,10 +50,13 @@ if (!fileEnv.NEXT_PUBLIC_SIMULATOR_URL && fileEnv.CLOUD_IP) {
   fileEnv.NEXT_PUBLIC_SIMULATOR_URL = `ws://${fileEnv.CLOUD_IP}:${SIM_PORT}`;
 }
 
+// Main UI port (same series as server ports for firewall simplicity).
+const UI_PORT = fileEnv.UI_PORT || '3003';
+
 // Pride instance settings (7×2 grid).
 const PRIDE_GRID = fileEnv.PRIDE_GRID || '7x2';
 const PRIDE_SIM_PORT = fileEnv.PRIDE_SIM_PORT || '3001';
-const PRIDE_UI_PORT = fileEnv.PRIDE_UI_PORT || '4001';
+const PRIDE_UI_PORT = fileEnv.PRIDE_UI_PORT || '3004';
 const PRIDE_SIMULATOR_URL = fileEnv.CLOUD_IP
   ? `ws://${fileEnv.CLOUD_IP}:${PRIDE_SIM_PORT}`
   : `ws://localhost:${PRIDE_SIM_PORT}`;
@@ -86,7 +89,12 @@ module.exports = {
   apps: [
     // ── Main show (7×7, 49 cannons) ──────────────────────────────────
     { ...common, name: 'wavegrid-server', args: 'dev:server' },
-    { ...common, name: 'wavegrid-ui', args: 'start:ui' },
+    {
+      ...common,
+      name: 'wavegrid-ui',
+      args: 'start:ui',
+      env: { ...baseEnv, PORT: UI_PORT },
+    },
 
     // ── Pride show (7×2, 14 cannons) ─────────────────────────────────
     {
