@@ -153,6 +153,7 @@ wss.on('connection', (ws) => {
   );
   ws.send(JSON.stringify({ type: 'state', grid: initGrid }));
   ws.send(JSON.stringify({ type: 'orientation', ...orientation }));
+  ws.send(JSON.stringify({ type: 'command', action: 'setOrientation', rotation: orientation.rotation, flipH: orientation.flipH, flipV: orientation.flipV }));
 
   ws.on('message', (raw) => {
     try {
@@ -282,6 +283,7 @@ function handleMessage(msg: any) {
       rotation: ((orientation.rotation + delta) % 360) as Rotation
     };
     broadcastOrientation();
+    broadcastCommand({ action: 'setOrientation', rotation: orientation.rotation, flipH: orientation.flipH, flipV: orientation.flipV });
     broadcastState();
     break;
   }
@@ -292,6 +294,7 @@ function handleMessage(msg: any) {
       orientation = { ...orientation, flipH: !orientation.flipH };
     }
     broadcastOrientation();
+    broadcastCommand({ action: 'setOrientation', rotation: orientation.rotation, flipH: orientation.flipH, flipV: orientation.flipV });
     broadcastState();
     break;
   case 'shift':

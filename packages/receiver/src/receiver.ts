@@ -15,7 +15,7 @@
 import { setTarget } from '@wavegrid/animations';
 
 import { ConsoleOutput, InputAdapter, OutputAdapter, WebSocketInput } from './adapters';
-import { AnimationState, applyPaint, createDefaultAnimationState, handleCommand, tickCommandMode } from './command-engine';
+import { AnimationState, applyPaint, createDefaultAnimationState, handleCommand, remapGridForOutput, tickCommandMode } from './command-engine';
 import { CommandMessage, EvalPatternCommand, SetPatternParamCommand } from './command-types';
 import { computeFallbackFrame, DEFAULT_FALLBACK_CONFIG, FallbackConfig } from './fallback';
 import {
@@ -108,16 +108,18 @@ export class Receiver {
   get fallbackActive(): boolean { return this._fallbackActive; }
   get animationState(): AnimationState { return this._animState; }
 
-  /** Get the current output state (after filtering and sharding). */
+  /** Get the current output state (after filtering, orientation remap, and sharding). */
   getOutputState(): CannonState[] {
     const full = this.grid.map(c => ({
       h: c.h,
       s: c.s,
       b: c.b
     }));
+    const rows = Math.ceil(this.grid.length / this.config.gridColumns);
+    const remapped = remapGridForOutput(full, this.config.gridColumns, rows, this._animState);
     const shard = this.config.shard;
-    if (!shard) return full;
-    return full.slice(shard.start, shard.end + 1);
+    if (!shard) return remapped;
+    return remapped.slice(shard.start, shard.end + 1);
   }
 
   /** Start the receiver — connects input and begins the tick loop. */
