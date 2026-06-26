@@ -31,10 +31,37 @@ jobs:
         run: pnpm install
 
       - name: Build
-        run: pnpm -r build
+        run: pnpm build
 
       - name: Lint
         run: pnpm -r --if-present run lint
 
       - name: Test
         run: pnpm -r --if-present run test
+
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install
+        run: pnpm install
+
+      - name: Build receiver
+        run: pnpm run build:receiver
+
+      - name: Full build
+        run: pnpm build
