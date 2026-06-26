@@ -214,8 +214,8 @@ describe('heart-breathe animation', () => {
     // Heart bitmap on pixel: row 0, col 1 = index 1
     expect(grid[1].targetH).toBe(0);
     expect(grid[1].targetS).toBe(100);
-    // brightness = 40 + Math.sin(0) * 35 = 40 at tick=0
-    expect(grid[1].targetB).toBe(40);
+    // t = (sin(0)+1)/2 = 0.5, brightness = 5 + 0.5^0.4 * 95 ≈ 77
+    expect(grid[1].targetB).toBeCloseTo(5 + Math.pow(0.5, 0.4) * 95, 1);
 
     // Off pixel: row 0, col 0 = index 0
     expect(grid[0].targetH).toBe(0);

@@ -89,7 +89,8 @@ export const animations: Record<string, AnimationFn> = {
       [0, 0, 0, 1, 0, 0, 0],
       [0, 0, 0, 0, 0, 0, 0]
     ];
-    const brightness = 40 + Math.sin(tick * 0.03) * 35;
+    const t = (Math.sin(tick * 0.03) + 1) / 2;
+    const brightness = 5 + Math.pow(t, 0.4) * 95;
     for (let i = 0; i < grid.length; i++) {
       const row = Math.floor(i / cols);
       const col = i % cols;
