@@ -155,84 +155,97 @@ export function SequencesTab({
 
   return (
     <ControlGrid minCellWidth={280}>
-      {/* Transport controls — only show when a sequence is active */}
-      {playlistState?.active && (
-        <ControlGroup label="Now Playing">
-          <div style={{ padding: '8px 0' }}>
-            <div className="flex items-center gap-3" style={{ marginBottom: 12 }}>
-              <button
-                onClick={() => handleSkip('back')}
-                style={{
-                  width: 40, height: 40, borderRadius: 10,
-                  background: '#1a1a25', border: '1px solid #2a2a35',
-                  color: '#fff', fontSize: 18, cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center'
-                }}
-              >
-                ⏮
-              </button>
-              <button
-                onClick={handleStop}
-                style={{
-                  width: 40, height: 40, borderRadius: 10,
-                  background: '#3a1515', border: '1px solid #5a2525',
-                  color: '#ff6666', fontSize: 18, cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center'
-                }}
-              >
-                ⏹
-              </button>
-              <button
-                onClick={() => handleSkip('next')}
-                style={{
-                  width: 40, height: 40, borderRadius: 10,
-                  background: '#1a1a25', border: '1px solid #2a2a35',
-                  color: '#fff', fontSize: 18, cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center'
-                }}
-              >
-                ⏭
-              </button>
-              <div style={{ marginLeft: 8 }}>
-                <div style={{ fontSize: 13, color: '#ddd', fontWeight: 600 }}>
-                  {activeSequenceName ?? 'Sequence'}
-                </div>
-                <div style={{ fontSize: 11, color: '#888' }}>
-                  Step {(playlistState.currentStep ?? 0) + 1} of {playlistState.playlist?.steps.length ?? '?'}
-                  {playlistState.playlist?.steps[playlistState.currentStep] && (
-                    <> &middot; {stepLabel(playlistState.playlist.steps[playlistState.currentStep] as PlaylistStep)}</>
-                  )}
-                </div>
-              </div>
+      {/* Transport controls — always visible */}
+      <ControlGroup label="Now Playing">
+        <div style={{ padding: '4px 0' }}>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handleSkip('back')}
+              disabled={!playlistState?.active}
+              style={{
+                width: 32, height: 32, borderRadius: 8,
+                background: '#1a1a25', border: '1px solid #2a2a35',
+                color: playlistState?.active ? '#fff' : '#444', fontSize: 14, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                opacity: playlistState?.active ? 1 : 0.5
+              }}
+            >
+              ⏮
+            </button>
+            <button
+              onClick={handleStop}
+              disabled={!playlistState?.active}
+              style={{
+                width: 32, height: 32, borderRadius: 8,
+                background: playlistState?.active ? '#3a1515' : '#1a1a25',
+                border: '1px solid ' + (playlistState?.active ? '#5a2525' : '#2a2a35'),
+                color: playlistState?.active ? '#ff6666' : '#444', fontSize: 14, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                opacity: playlistState?.active ? 1 : 0.5
+              }}
+            >
+              ⏹
+            </button>
+            <button
+              onClick={() => handleSkip('next')}
+              disabled={!playlistState?.active}
+              style={{
+                width: 32, height: 32, borderRadius: 8,
+                background: '#1a1a25', border: '1px solid #2a2a35',
+                color: playlistState?.active ? '#fff' : '#444', fontSize: 14, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                opacity: playlistState?.active ? 1 : 0.5
+              }}
+            >
+              ⏭
+            </button>
+            <div style={{ marginLeft: 6, flex: 1, minWidth: 0 }}>
+              {playlistState?.active ? (
+                <>
+                  <div style={{ fontSize: 12, color: '#ddd', fontWeight: 600 }}>
+                    {activeSequenceName ?? 'Sequence'}
+                  </div>
+                  <div style={{ fontSize: 10, color: '#888' }}>
+                    Step {(playlistState.currentStep ?? 0) + 1}/{playlistState.playlist?.steps.length ?? '?'}
+                    {playlistState.playlist?.steps[playlistState.currentStep] && (
+                      <> &middot; {stepLabel(playlistState.playlist.steps[playlistState.currentStep] as PlaylistStep)}</>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div style={{ fontSize: 11, color: '#555' }}>No sequence playing</div>
+              )}
             </div>
+          </div>
 
-            {/* Step list with current highlighted */}
-            <div style={{ maxHeight: 160, overflowY: 'auto', borderRadius: 8, background: '#0a0a10', padding: 6 }}>
-              {playlistState.playlist?.steps.map((step, idx) => (
+          {/* Step list — compact, scrollable */}
+          {playlistState?.active && playlistState.playlist?.steps && (
+            <div style={{ maxHeight: 100, overflowY: 'auto', borderRadius: 6, background: '#0a0a10', padding: 4, marginTop: 6 }}>
+              {playlistState.playlist.steps.map((step, idx) => (
                 <div
                   key={idx}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-1"
                   style={{
-                    padding: '4px 8px',
-                    borderRadius: 6,
-                    fontSize: 11,
+                    padding: '2px 6px',
+                    borderRadius: 4,
+                    fontSize: 10,
                     background: idx === playlistState.currentStep ? '#1a2a3a' : 'transparent',
-                    color: idx === playlistState.currentStep ? '#8cf' : '#777'
+                    color: idx === playlistState.currentStep ? '#8cf' : '#666'
                   }}
                 >
-                  <span style={{ minWidth: 16 }}>{idx + 1}.</span>
+                  <span style={{ minWidth: 14 }}>{idx + 1}.</span>
                   <span style={{ flex: 1 }}>{stepLabel(step as PlaylistStep)}</span>
-                  <span style={{ color: '#555' }}>{formatDuration(step.duration)}</span>
+                  <span style={{ color: '#444' }}>{formatDuration(step.duration)}</span>
                 </div>
               ))}
             </div>
-          </div>
-        </ControlGroup>
-      )}
+          )}
+        </div>
+      </ControlGroup>
 
-      {/* Sequence presets */}
+      {/* Sequence presets — compact cards */}
       <ControlGroup label="Sequences">
-        <div className="flex flex-col gap-2.5">
+        <div className="flex flex-col gap-1.5" style={{ maxHeight: 320, overflowY: 'auto' }}>
           {SEQUENCES.map((seq) => (
             <SequenceCard
               key={seq.name}
@@ -264,8 +277,8 @@ function SequenceCard({
       onClick={onPlay}
       className="text-left transition-transform active:scale-97"
       style={{
-        padding: '12px 14px',
-        borderRadius: 14,
+        padding: '8px 10px',
+        borderRadius: 10,
         background: active
           ? 'linear-gradient(135deg, #1a2a3a, #0a1a2a)'
           : '#0a0a10',
@@ -274,27 +287,27 @@ function SequenceCard({
         width: '100%'
       }}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         <div
           style={{
-            width: 40, height: 40, borderRadius: 10,
+            width: 28, height: 28, borderRadius: 7,
             background: sequence.gradient,
             flexShrink: 0
           }}
         />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, color: '#eee', fontWeight: 600 }}>
+          <div style={{ fontSize: 12, color: '#eee', fontWeight: 600 }}>
             {sequence.name}
+            <span style={{ fontSize: 10, color: '#666', fontWeight: 400, marginLeft: 6 }}>
+              {sequence.steps.length} steps &middot; ~{mins}m
+            </span>
           </div>
-          <div style={{ fontSize: 10, color: '#888', marginTop: 2 }}>
+          <div style={{ fontSize: 10, color: '#777', marginTop: 1 }}>
             {sequence.description}
-          </div>
-          <div style={{ fontSize: 10, color: '#666', marginTop: 2 }}>
-            {sequence.steps.length} steps &middot; ~{mins} min loop &middot; {sequence.transition}
           </div>
         </div>
         {active && (
-          <div style={{ fontSize: 10, color: '#4488cc', fontWeight: 600 }}>
+          <div style={{ fontSize: 9, color: '#4488cc', fontWeight: 600 }}>
             PLAYING
           </div>
         )}

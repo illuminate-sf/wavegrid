@@ -34,12 +34,16 @@ function orientationToCss(o: Orientation): string {
 }
 
 function hslStr(h: number, s: number, l: number): string {
-  return `hsl(${h}, ${s}%, ${l}%)`;
+  const hh = Number.isFinite(h) ? h : 0;
+  const ss = Number.isFinite(s) ? s : 0;
+  const ll = Number.isFinite(l) ? l : 0;
+  return `hsl(${hh}, ${ss}%, ${ll}%)`;
 }
 
 function hslRgb(h: number, s: number, l: number): [number, number, number] {
-  s /= 100;
-  l /= 100;
+  h = Number.isFinite(h) ? h : 0;
+  s = (Number.isFinite(s) ? s : 0) / 100;
+  l = (Number.isFinite(l) ? l : 0) / 100;
   const a = s * Math.min(l, 1 - l);
   const f = (n: number) => {
     const k = (n + h / 30) % 12;

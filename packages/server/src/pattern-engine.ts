@@ -20,6 +20,7 @@ interface PatternObj {
 
 interface PatternCtx {
   t: number;
+  frame: number;
   count: number;
   cols: number;
   rows: number;
@@ -48,13 +49,9 @@ export class ServerPatternEngine {
    */
   load(code: string): boolean {
     try {
-      // Evaluate the pattern code — supports both expression and IIFE formats
-      // eslint-disable-next-line no-new-func
-      const factory = new Function(`"use strict"; return (${code});`);
-      const result = factory();
-
-      if (result && typeof result === 'object' && typeof result.render === 'function') {
-        this.pattern = result as PatternObj;
+      const result = this.evaluate(code);
+      if (result && typeof result === 'object' && typeof (result as Record<string, unknown>).render === 'function') {
+        this.pattern = result as unknown as PatternObj;
         this.startTime = Date.now();
         if (this.pattern.init) {
           const ctx = this.makeCtx(new Array(this.gridSize).fill(null).map(() => ({ h: 0, s: 0, b: 0 })));
@@ -67,6 +64,113 @@ export class ServerPatternEngine {
       this.pattern = null;
       return false;
     }
+  }
+
+  /**
+   * Evaluate pattern code, handling multiple formats:
+   * 1. Standard expression: ({ render(ctx){...} })
+   * 2. IIFE: (function(){ ... return { render... }; })()
+   * 3. Mixed (Pride patterns): ({ var COLORS...; function foo(){}; render: function(ctx){...} })
+   *    — var/function decls inside object literal (invalid JS, valid in QuickJS)
+   */
+  private evaluate(code: string): unknown {
+    // First, try direct evaluation (handles formats 1 and 2)
+    try {
+      // eslint-disable-next-line no-new-func
+      const factory = new Function(`return (${code});`);
+      return factory();
+    } catch {
+      // Fall through to transformation
+    }
+
+    // Transform mixed format: extract var/function declarations from inside ({ ... })
+    // and wrap as an IIFE: (function() { <declarations>; return { <remaining> }; })()
+    const transformed = this.transformMixedFormat(code);
+    if (transformed) {
+      try {
+        // eslint-disable-next-line no-new-func
+        const factory = new Function(`return (${transformed});`);
+        return factory();
+      } catch {
+        // Fall through
+      }
+    }
+
+    // Last resort: try evaluating as statements and grab render from scope
+    try {
+      // eslint-disable-next-line no-new-func
+      const factory = new Function(`${code}; return { render: typeof render !== 'undefined' ? render : null, meta: typeof meta !== 'undefined' ? meta : {} };`);
+      return factory();
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Transform patterns that have var/function declarations inside an object literal.
+   * Input:  ({ var X = [...]; function foo(){} render: function(ctx){...}, meta: {...} })
+   * Output: (function(){ var X = [...]; function foo(){} return { render: function(ctx){...}, meta: {...} }; })()
+   *
+   * Strategy: find the first object property (word followed by colon + space/function)
+   * that ISN'T inside a var/function declaration. Everything before is declarations,
+   * everything from that point on is the object body.
+   */
+  private transformMixedFormat(code: string): string | null {
+    const trimmed = code.trim();
+    if (!trimmed.startsWith('({') || !trimmed.endsWith('})')) return null;
+
+    // Extract the inner content (between ({ and }))
+    const inner = trimmed.slice(2, -2);
+
+    // Find where the object properties start by scanning for the first line
+    // that looks like an object property key (e.g. "render:" or "meta:")
+    // while skipping lines that are part of var/function declarations
+    const lines = inner.split('\n');
+    let splitIdx = -1;
+    let inDecl = false;
+    let bracketDepth = 0;
+    let braceDepth = 0;
+
+    for (let i = 0; i < lines.length; i++) {
+      const trimLine = lines[i].trim();
+
+      if (inDecl) {
+        bracketDepth += (lines[i].match(/\[/g) || []).length;
+        bracketDepth -= (lines[i].match(/\]/g) || []).length;
+        braceDepth += (lines[i].match(/\{/g) || []).length;
+        braceDepth -= (lines[i].match(/\}/g) || []).length;
+        if (bracketDepth <= 0 && braceDepth <= 0) {
+          inDecl = false;
+        }
+        continue;
+      }
+
+      if (!trimLine || trimLine.startsWith('//')) continue;
+
+      if (trimLine.startsWith('var ') || trimLine.startsWith('let ') ||
+          trimLine.startsWith('const ') || trimLine.startsWith('function ')) {
+        // Start of a declaration — track depth
+        bracketDepth = (lines[i].match(/\[/g) || []).length - (lines[i].match(/\]/g) || []).length;
+        braceDepth = (lines[i].match(/\{/g) || []).length - (lines[i].match(/\}/g) || []).length;
+        if (bracketDepth > 0 || braceDepth > 0) {
+          inDecl = true;
+        }
+        continue;
+      }
+
+      // This line is not a declaration start and not inside one — it's the first property
+      // Verify it looks like an object property (word: or word()  pattern)
+      if (/^[a-zA-Z_$]/.test(trimLine)) {
+        splitIdx = i;
+        break;
+      }
+    }
+
+    if (splitIdx <= 0) return null;
+
+    const declCode = lines.slice(0, splitIdx).join('\n');
+    const propCode = lines.slice(splitIdx).join('\n');
+    return `(function(){\n${declCode}\nreturn {${propCode}};\n})()`;
   }
 
   /**
@@ -109,12 +213,16 @@ export class ServerPatternEngine {
 
     return {
       t: elapsed,
+      frame: Math.floor(elapsed * 60),
       count,
       cols,
       rows,
       set(idx: number, h: number, s: number, b: number) {
         if (idx >= 0 && idx < count) {
-          grid[idx] = { h: ((h % 360) + 360) % 360, s: Math.max(0, Math.min(100, s)), b: Math.max(0, Math.min(100, b)) };
+          const hh = Number.isFinite(h) ? ((h % 360) + 360) % 360 : 0;
+          const ss = Number.isFinite(s) ? Math.max(0, Math.min(100, s)) : 0;
+          const bb = Number.isFinite(b) ? Math.max(0, Math.min(100, b)) : 0;
+          grid[idx] = { h: hh, s: ss, b: bb };
         }
       },
       get(idx: number): [number, number, number] {
@@ -125,8 +233,11 @@ export class ServerPatternEngine {
         return [0, 0, 0];
       },
       fill(h: number, s: number, b: number) {
+        const hh = Number.isFinite(h) ? ((h % 360) + 360) % 360 : 0;
+        const ss = Number.isFinite(s) ? Math.max(0, Math.min(100, s)) : 0;
+        const bb = Number.isFinite(b) ? Math.max(0, Math.min(100, b)) : 0;
         for (let i = 0; i < count; i++) {
-          grid[i] = { h: ((h % 360) + 360) % 360, s: Math.max(0, Math.min(100, s)), b: Math.max(0, Math.min(100, b)) };
+          grid[i] = { h: hh, s: ss, b: bb };
         }
       },
       uv(idx: number): [number, number] {
