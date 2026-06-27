@@ -70,7 +70,7 @@ function makeRotatePattern(colorsCode: string): string {
 }
 
 function makeRingPattern(colorsCode: string): string {
-  return `({\n${colorsCode}\n${lerpColorCode()}\nrender: function(ctx) {\n  var speed = ctx.t * 0.012;\n  for (var i = 0; i < ctx.count; i++) {\n    var c = colorAt(i / ctx.count + speed);\n    ctx.set(i, c[0], c[1], 100);\n  }\n},\nmeta: { name: 'ring' }\n})`;
+  return `({\n${colorsCode}\n${lerpColorCode()}\nrender: function(ctx) {\n  var speed = ctx.t * 0.15;\n  for (var i = 0; i < ctx.count; i++) {\n    var polar = ctx.polar(i);\n    var c = colorAt(polar[1] / (Math.PI * 2) + speed);\n    ctx.set(i, c[0], c[1], 100);\n  }\n},\nmeta: { name: 'ring' }\n})`;
 }
 
 function makeWavePattern(colorsCode: string): string {

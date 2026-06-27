@@ -286,7 +286,7 @@ export function SequencesTab({
 
       {/* Sequence presets — compact cards */}
       <ControlGroup label="Sequences">
-        <div className="flex flex-col gap-1.5" style={{ maxHeight: 320, overflowY: 'auto' }}>
+        <div className="flex flex-col gap-1.5" style={{ overflowY: 'auto', flex: 1 }}>
           {SEQUENCES.map((seq) => (
             <SequenceCard
               key={seq.name}
