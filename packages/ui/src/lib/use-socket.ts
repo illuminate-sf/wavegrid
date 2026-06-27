@@ -14,11 +14,22 @@ export interface Orientation {
   flipV: boolean;
 }
 
+export interface PlaylistState {
+  active: boolean;
+  playlist: {
+    steps: Array<{ type: string; name?: string; code?: string; duration: number }>;
+    loop: boolean;
+    transition: 'cut' | 'fade';
+    transitionDuration: number;
+  } | null;
+}
+
 export function useSocket(url: string) {
   const wsRef = useRef<WebSocket | null>(null);
   const [connected, setConnected] = useState(false);
   const [grid, setGrid] = useState<CannonColor[]>([]);
   const [orientation, setOrientation] = useState<Orientation>({ rotation: 0, flipH: false, flipV: false });
+  const [playlistState, setPlaylistState] = useState<PlaylistState | null>(null);
 
   useEffect(() => {
     const ws = new WebSocket(url);
@@ -41,6 +52,8 @@ export function useSocket(url: string) {
           setGrid(msg.grid);
         } else if (msg.type === 'orientation') {
           setOrientation({ rotation: msg.rotation ?? 0, flipH: !!msg.flipH, flipV: !!msg.flipV });
+        } else if (msg.type === 'playlist_state') {
+          setPlaylistState({ active: !!msg.active, playlist: msg.playlist ?? null });
         }
       } catch {
         // ignore
@@ -59,5 +72,5 @@ export function useSocket(url: string) {
     }
   }, []);
 
-  return { connected, grid, orientation, send };
+  return { connected, grid, orientation, playlistState, send };
 }

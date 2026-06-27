@@ -6,6 +6,7 @@ import { WebSocket,WebSocketServer } from 'ws';
 import { animations } from './animations';
 import type { BlendMode, CannonState, Orientation, Rotation } from './grid';
 import {compositeLayer, createGrid, DEFAULT_ALPHA, DEFAULT_GRID_COLUMNS, DEFAULT_NUM_CANNONS, defaultOrientation, mapUiToGrid, remapGridForUi, setAllTargets, setCannonTarget, shiftGrid, tickGrid } from './grid';
+import { compilePlaylist, type PlaylistDef, type PlaylistStep } from './playlist-compiler';
 import { applyScene, scenes } from './scenes';
 import { getHTML } from './ui';
 
@@ -45,6 +46,7 @@ interface PersistedState {
   shiftVx: number;
   shiftVy: number;
   grid: Array<{ h: number; s: number; b: number }>;
+  playlist: PlaylistDef | null;
 }
 
 function loadPersistedState(): PersistedState | null {
@@ -70,7 +72,8 @@ function scheduleSave() {
       orientation,
       shiftVx,
       shiftVy,
-      grid: grid.map(c => ({ h: c.targetH, s: c.targetS, b: c.targetB }))
+      grid: grid.map(c => ({ h: c.targetH, s: c.targetS, b: c.targetB })),
+      playlist: activePlaylist
     };
     try {
       fs.mkdirSync(STATE_DIR, { recursive: true });
@@ -98,6 +101,7 @@ let shiftVy = 0;
 let shiftAccX = 0;
 let shiftAccY = 0;
 const GRID_ROWS = Math.ceil(NUM_CANNONS / GRID_COLUMNS);
+let activePlaylist: PlaylistDef | null = null;
 
 // Restore persisted state on boot
 const restored = loadPersistedState();
@@ -120,6 +124,7 @@ if (restored) {
       grid[i].b = c.b ?? 0;
     }
   }
+  activePlaylist = restored.playlist ?? null;
   console.log(`  ◈ Restored state from ${STATE_FILE}`);
 }
 
@@ -219,6 +224,28 @@ function broadcastCommand(cmd: Record<string, unknown>) {
   });
 }
 
+function broadcastPlaylistState() {
+  const payload = JSON.stringify({
+    type: 'playlist_state',
+    active: activePlaylist !== null,
+    playlist: activePlaylist
+  });
+  wss.clients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(payload);
+    }
+  });
+}
+
+/** Cancel any active playlist when another visual command arrives. */
+function cancelPlaylistIfActive() {
+  if (activePlaylist) {
+    activePlaylist = null;
+    broadcastPlaylistState();
+    scheduleSave();
+  }
+}
+
 wss.on('connection', (ws) => {
   // Send initial state + orientation
   const initGrid = remapGridForUi(
@@ -232,6 +259,12 @@ wss.on('connection', (ws) => {
   ws.send(JSON.stringify({ type: 'command', action: 'setAttack', value: currentAttack }));
   if (currentAnimation) {
     ws.send(JSON.stringify({ type: 'command', action: 'setAnimation', name: currentAnimation, speed: animSpeed }));
+  }
+  if (activePlaylist) {
+    ws.send(JSON.stringify({ type: 'playlist_state', active: true, playlist: activePlaylist }));
+    // Re-send compiled playlist to receiver on reconnect
+    const compiled = compilePlaylist(activePlaylist);
+    ws.send(JSON.stringify({ type: 'command', action: 'evalPattern', code: compiled, params: {} }));
   }
   if (shiftVx !== 0 || shiftVy !== 0) {
     ws.send(JSON.stringify({ type: 'command', action: 'setShift', vx: shiftVx, vy: shiftVy }));
@@ -272,6 +305,7 @@ function handleMessage(msg: any) {
   case 'scene':
     if (msg.name && scenes[msg.name]) {
       currentAnimation = null;
+      cancelPlaylistIfActive();
       applyScene(grid, msg.name, GRID_COLUMNS);
       broadcastCommand({ action: 'setScene', name: msg.name });
       scheduleSave();
@@ -281,10 +315,12 @@ function handleMessage(msg: any) {
     if (msg.name && animations[msg.name]) {
       currentAnimation = msg.name;
       animationTick = 0;
+      cancelPlaylistIfActive();
       broadcastCommand({ action: 'setAnimation', name: msg.name, speed: animSpeed });
       scheduleSave();
     } else if (msg.name === 'stop') {
       currentAnimation = null;
+      cancelPlaylistIfActive();
       broadcastCommand({ action: 'stop' });
       scheduleSave();
     }
@@ -308,6 +344,7 @@ function handleMessage(msg: any) {
   case 'selection':
     if (Array.isArray(msg.indices)) {
       currentAnimation = null;
+      cancelPlaylistIfActive();
       const cells: Array<{ idx: number; h: number; s: number; b: number }> = [];
       for (const uiIdx of msg.indices) {
         const gi = mapUiToGrid(uiIdx, GRID_COLUMNS, GRID_ROWS, orientation);
@@ -362,6 +399,7 @@ function handleMessage(msg: any) {
     break;
   case 'clear':
     currentAnimation = null;
+    cancelPlaylistIfActive();
     setAllTargets(grid, 0, 0, 0, 1.0);
     broadcastCommand({ action: 'clear' });
     broadcastState();
@@ -410,6 +448,7 @@ function handleMessage(msg: any) {
   case 'evalPattern':
     if (typeof msg.code === 'string') {
       currentAnimation = null;
+      cancelPlaylistIfActive();
       broadcastCommand({
         action: 'evalPattern',
         code: msg.code,
@@ -428,6 +467,32 @@ function handleMessage(msg: any) {
     break;
   case 'stopPattern':
     broadcastCommand({ action: 'stopPattern' });
+    break;
+  case 'playlist':
+    if (Array.isArray(msg.steps) && msg.steps.length > 0) {
+      const playlistDef: PlaylistDef = {
+        steps: msg.steps as PlaylistStep[],
+        loop: msg.loop !== false,
+        transition: msg.transition === 'fade' ? 'fade' : 'cut',
+        transitionDuration: typeof msg.transitionDuration === 'number' ? msg.transitionDuration : 2
+      };
+      activePlaylist = playlistDef;
+      currentAnimation = null;
+      const compiled = compilePlaylist(playlistDef);
+      broadcastCommand({ action: 'evalPattern', code: compiled, params: {} });
+      // Broadcast playlist state to UI clients
+      broadcastPlaylistState();
+      scheduleSave();
+    }
+    break;
+  case 'playlist_stop':
+    activePlaylist = null;
+    broadcastCommand({ action: 'stopPattern' });
+    broadcastPlaylistState();
+    scheduleSave();
+    break;
+  case 'playlist_get':
+    // Respond with current playlist state (handled per-client below)
     break;
   }
 }

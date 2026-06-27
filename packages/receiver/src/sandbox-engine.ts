@@ -152,14 +152,24 @@ export async function createSandboxEngine(
     // Run the prelude (defines __ctx, __buf, helpers, etc.)
     evalVoid(prelude, cfg.loadBudgetMs);
 
-    // Wrap the user code so it populates __pattern
-    const wrapped = stripExports(code) +
-      '\n;__pattern = {' +
-      'meta: (typeof meta !== "undefined" ? meta : {}),' +
-      'render: (typeof render !== "undefined" ? render : null),' +
-      'init: (typeof init !== "undefined" ? init : null),' +
-      'onParam: (typeof onParam !== "undefined" ? onParam : null)' +
-      '};';
+    // Wrap the user code so it populates __pattern.
+    // Support two formats:
+    //   1) Expression: ({ render(ctx){...}, meta:{...} }) — result is assigned directly
+    //   2) Declaration: function render(ctx){...} — picked up from global scope
+    const stripped = stripExports(code);
+    const wrapped =
+      'var __expr = (function(){ try { return ' + stripped + '; } catch(e) { return null; } })();\n' +
+      'if (__expr && typeof __expr === "object" && typeof __expr.render === "function") {\n' +
+      '  __pattern = __expr;\n' +
+      '} else {\n' +
+      '  ' + stripped + ';\n' +
+      '  __pattern = {' +
+      '    meta: (typeof meta !== "undefined" ? meta : {}),' +
+      '    render: (typeof render !== "undefined" ? render : null),' +
+      '    init: (typeof init !== "undefined" ? init : null),' +
+      '    onParam: (typeof onParam !== "undefined" ? onParam : null)' +
+      '  };\n' +
+      '}';
     evalVoid(wrapped, cfg.loadBudgetMs);
 
     // Read metadata
