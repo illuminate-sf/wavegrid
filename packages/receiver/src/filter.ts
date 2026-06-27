@@ -75,6 +75,23 @@ export function tickFilter(
 }
 
 /**
+ * Hard-reset the entire grid — snaps BOTH current and target to black
+ * instantly, bypassing the low-pass filter. Use when switching visual
+ * modes to prevent old state from bleeding through.
+ */
+export function resetFilteredGrid(grid: FilteredCannon[], h: number = 0, s: number = 0, b: number = 0) {
+  for (let i = 0; i < grid.length; i++) {
+    const c = grid[i];
+    c.h = h;
+    c.s = s;
+    c.b = b;
+    c.targetH = h;
+    c.targetS = s;
+    c.targetB = b;
+  }
+}
+
+/**
  * Set the target state for all cannons from an upstream state snapshot.
  * The filter will smoothly converge to these values.
  */
