@@ -217,38 +217,51 @@ export class Receiver {
     input.connect();
   }
 
+  private _tickErrors = 0;
+
   private startTickLoop() {
     this.tickTimer = setInterval(() => {
-      this.tick++;
+      try {
+        this.tick++;
 
-      // No grid yet — receiver is idle, waiting for first command
-      if (!this.grid) return;
+        // No grid yet — receiver is idle, waiting for first command
+        if (!this.grid) return;
 
-      const now = Date.now();
-      const timeSinceData = now - this.lastDataAt;
+        const now = Date.now();
+        const timeSinceData = now - this.lastDataAt;
 
-      // Check if we should switch to fallback
-      if (timeSinceData > this.config.fallbackDelay && !this._fallbackActive) {
-        this._fallbackActive = true;
-        this._status = 'fallback';
-        console.log('\n  \u25C8 Signal lost \u2014 entering sine wave fallback');
-      }
-
-      if (this._fallbackActive) {
-        computeFallbackFrame(this.grid, this.tick, this.config.fallback, this.config.gridColumns);
-      } else {
-        if (this._animState.patternActive && this._sandbox?.loaded) {
-          this.tickPattern();
+        // Check if we should switch to fallback
+        if (timeSinceData > this.config.fallbackDelay && !this._fallbackActive) {
+          this._fallbackActive = true;
+          this._status = 'fallback';
+          console.log('\n  \u25C8 Signal lost \u2014 entering sine wave fallback');
         }
-        tickCommandMode(this.grid, this._animState, this.config.gridColumns);
+
+        if (this._fallbackActive) {
+          computeFallbackFrame(this.grid, this.tick, this.config.fallback, this.config.gridColumns);
+        } else {
+          if (this._animState.patternActive && this._sandbox?.loaded) {
+            this.tickPattern();
+          }
+          tickCommandMode(this.grid, this._animState, this.config.gridColumns);
+        }
+
+        // Always tick the low-pass filter — this ensures smooth output
+        // whether receiving data, transitioning to fallback, or in fallback
+        tickFilter(this.grid, this.config.alpha);
+
+        // Send filtered output to the output adapter
+        this.config.output.send(this.getOutputState());
+        this._tickErrors = 0;
+      } catch (err) {
+        this._tickErrors++;
+        if (this._tickErrors <= 3) {
+          console.error(`  ✖ Tick error (${this._tickErrors}):`, err instanceof Error ? err.message : String(err));
+        }
+        if (this._tickErrors === 3) {
+          console.error('  ✖ Suppressing further tick errors (still running)');
+        }
       }
-
-      // Always tick the low-pass filter — this ensures smooth output
-      // whether receiving data, transitioning to fallback, or in fallback
-      tickFilter(this.grid, this.config.alpha);
-
-      // Send filtered output to the output adapter
-      this.config.output.send(this.getOutputState());
     }, this.config.tickMs);
   }
 

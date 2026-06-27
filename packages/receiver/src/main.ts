@@ -137,13 +137,42 @@ console.log('');
 
 receiver.start();
 
+// ─── Crash logging ───
+const LOG_FILE = process.env.RECEIVER_LOG || resolve(process.cwd(), 'wavegrid-receiver.log');
+
+function logToFile(level: string, msg: string) {
+  const ts = new Date().toISOString();
+  const line = `[${ts}] ${level}: ${msg}\n`;
+  try { fs.appendFileSync(LOG_FILE, line); } catch { /* best effort */ }
+}
+
+process.on('uncaughtException', (err) => {
+  const msg = `Uncaught exception: ${err.stack || err.message || String(err)}`;
+  console.error(`\n  ✖ ${msg}`);
+  logToFile('FATAL', msg);
+  receiver.stop();
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason) => {
+  const msg = `Unhandled rejection: ${reason instanceof Error ? (reason.stack || reason.message) : String(reason)}`;
+  console.error(`\n  ✖ ${msg}`);
+  logToFile('ERROR', msg);
+});
+
+// Log startup
+logToFile('INFO', `Receiver started — ${SIMULATOR_URL}, ${NUM_CANNONS} cannons (${GRID_COLUMNS} cols)`);
+console.log(`  → Log file: ${LOG_FILE}`);
+
 // Graceful shutdown
 process.on('SIGINT', () => {
   console.log('\n\n  Shutting down...');
+  logToFile('INFO', 'Receiver stopped (SIGINT)');
   receiver.stop();
   process.exit(0);
 });
 process.on('SIGTERM', () => {
+  logToFile('INFO', 'Receiver stopped (SIGTERM)');
   receiver.stop();
   process.exit(0);
 });
