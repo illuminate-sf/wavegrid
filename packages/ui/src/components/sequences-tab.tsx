@@ -4,7 +4,7 @@ import { useCallback } from 'react';
 
 import type { PlaylistState } from '@/lib/use-socket';
 
-import { ControlGrid, ControlGroup } from './control-grid';
+
 
 interface PlaylistStep {
   type: 'animation' | 'scene' | 'evalPattern';
@@ -195,109 +195,121 @@ export function SequencesTab({
   }, [send]);
 
   return (
-    <ControlGrid minCellWidth={280}>
-      {/* Transport controls — always visible */}
-      <ControlGroup label="Now Playing">
-        <div style={{ padding: '4px 0' }}>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => handleSkip('back')}
-              disabled={!playlistState?.active}
-              style={{
-                width: 32, height: 32, borderRadius: 8,
-                background: '#1a1a25', border: '1px solid #2a2a35',
-                color: playlistState?.active ? '#fff' : '#444', fontSize: 14, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                opacity: playlistState?.active ? 1 : 0.5
-              }}
-            >
-              ⏮
-            </button>
-            <button
-              onClick={handleStop}
-              disabled={!playlistState?.active}
-              style={{
-                width: 32, height: 32, borderRadius: 8,
-                background: playlistState?.active ? '#3a1515' : '#1a1a25',
-                border: '1px solid ' + (playlistState?.active ? '#5a2525' : '#2a2a35'),
-                color: playlistState?.active ? '#ff6666' : '#444', fontSize: 14, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                opacity: playlistState?.active ? 1 : 0.5
-              }}
-            >
-              ⏹
-            </button>
-            <button
-              onClick={() => handleSkip('next')}
-              disabled={!playlistState?.active}
-              style={{
-                width: 32, height: 32, borderRadius: 8,
-                background: '#1a1a25', border: '1px solid #2a2a35',
-                color: playlistState?.active ? '#fff' : '#444', fontSize: 14, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                opacity: playlistState?.active ? 1 : 0.5
-              }}
-            >
-              ⏭
-            </button>
-            <div style={{ marginLeft: 6, flex: 1, minWidth: 0 }}>
-              {playlistState?.active ? (
-                <>
-                  <div style={{ fontSize: 12, color: '#ddd', fontWeight: 600 }}>
-                    {activeSequenceName ?? 'Sequence'}
-                  </div>
-                  <div style={{ fontSize: 10, color: '#888' }}>
-                    Step {(playlistState.currentStep ?? 0) + 1}/{playlistState.playlist?.steps.length ?? '?'}
-                    {playlistState.playlist?.steps[playlistState.currentStep] && (
-                      <> &middot; {stepLabel(playlistState.playlist.steps[playlistState.currentStep] as PlaylistStep)}</>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <div style={{ fontSize: 11, color: '#555' }}>No sequence playing</div>
-              )}
-            </div>
-          </div>
-
-          {/* Step list — compact, scrollable */}
-          {playlistState?.active && playlistState.playlist?.steps && (
-            <div style={{ maxHeight: 100, overflowY: 'auto', borderRadius: 6, background: '#0a0a10', padding: 4, marginTop: 6 }}>
-              {playlistState.playlist.steps.map((step, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center gap-1"
-                  style={{
-                    padding: '2px 6px',
-                    borderRadius: 4,
-                    fontSize: 10,
-                    background: idx === playlistState.currentStep ? '#1a2a3a' : 'transparent',
-                    color: idx === playlistState.currentStep ? '#8cf' : '#666'
-                  }}
-                >
-                  <span style={{ minWidth: 14 }}>{idx + 1}.</span>
-                  <span style={{ flex: 1 }}>{stepLabel(step as PlaylistStep)}</span>
-                  <span style={{ color: '#444' }}>{formatDuration(step.duration)}</span>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, gap: 12 }}>
+      {/* Transport controls — always visible, fixed at top */}
+      <div style={{ flexShrink: 0 }}>
+        <p
+          className="text-xs font-medium"
+          style={{ color: '#888898', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}
+        >
+          Now Playing
+        </p>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => handleSkip('back')}
+            disabled={!playlistState?.active}
+            style={{
+              width: 32, height: 32, borderRadius: 8,
+              background: '#1a1a25', border: '1px solid #2a2a35',
+              color: playlistState?.active ? '#fff' : '#444', fontSize: 14, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              opacity: playlistState?.active ? 1 : 0.5
+            }}
+          >
+            ⏮
+          </button>
+          <button
+            onClick={handleStop}
+            disabled={!playlistState?.active}
+            style={{
+              width: 32, height: 32, borderRadius: 8,
+              background: playlistState?.active ? '#3a1515' : '#1a1a25',
+              border: '1px solid ' + (playlistState?.active ? '#5a2525' : '#2a2a35'),
+              color: playlistState?.active ? '#ff6666' : '#444', fontSize: 14, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              opacity: playlistState?.active ? 1 : 0.5
+            }}
+          >
+            ⏹
+          </button>
+          <button
+            onClick={() => handleSkip('next')}
+            disabled={!playlistState?.active}
+            style={{
+              width: 32, height: 32, borderRadius: 8,
+              background: '#1a1a25', border: '1px solid #2a2a35',
+              color: playlistState?.active ? '#fff' : '#444', fontSize: 14, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              opacity: playlistState?.active ? 1 : 0.5
+            }}
+          >
+            ⏭
+          </button>
+          <div style={{ marginLeft: 6, flex: 1, minWidth: 0 }}>
+            {playlistState?.active ? (
+              <>
+                <div style={{ fontSize: 12, color: '#ddd', fontWeight: 600 }}>
+                  {activeSequenceName ?? 'Sequence'}
                 </div>
-              ))}
-            </div>
-          )}
+                <div style={{ fontSize: 10, color: '#888' }}>
+                  Step {(playlistState.currentStep ?? 0) + 1}/{playlistState.playlist?.steps.length ?? '?'}
+                  {playlistState.playlist?.steps[playlistState.currentStep] && (
+                    <> &middot; {stepLabel(playlistState.playlist.steps[playlistState.currentStep] as PlaylistStep)}</>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div style={{ fontSize: 11, color: '#555' }}>No sequence playing</div>
+            )}
+          </div>
         </div>
-      </ControlGroup>
 
-      {/* Sequence presets — compact cards */}
-      <ControlGroup label="Sequences">
-        <div className="flex flex-col gap-1.5" style={{ overflowY: 'auto', flex: 1 }}>
-          {SEQUENCES.map((seq) => (
-            <SequenceCard
-              key={seq.name}
-              sequence={seq}
-              active={activeSequenceName === seq.name}
-              onPlay={() => handlePlay(seq)}
-            />
-          ))}
+        {/* Step list — compact, scrollable */}
+        {playlistState?.active && playlistState.playlist?.steps && (
+          <div style={{ maxHeight: 100, overflowY: 'auto', borderRadius: 6, background: '#0a0a10', padding: 4, marginTop: 6 }}>
+            {playlistState.playlist.steps.map((step, idx) => (
+              <div
+                key={idx}
+                className="flex items-center gap-1"
+                style={{
+                  padding: '2px 6px',
+                  borderRadius: 4,
+                  fontSize: 10,
+                  background: idx === playlistState.currentStep ? '#1a2a3a' : 'transparent',
+                  color: idx === playlistState.currentStep ? '#8cf' : '#666'
+                }}
+              >
+                <span style={{ minWidth: 14 }}>{idx + 1}.</span>
+                <span style={{ flex: 1 }}>{stepLabel(step as PlaylistStep)}</span>
+                <span style={{ color: '#444' }}>{formatDuration(step.duration)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Sequence presets — fills remaining height, scrolls */}
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+        <p
+          className="text-xs font-medium"
+          style={{ color: '#888898', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8, flexShrink: 0 }}
+        >
+          Sequences
+        </p>
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+          <div className="flex flex-col gap-1.5">
+            {SEQUENCES.map((seq) => (
+              <SequenceCard
+                key={seq.name}
+                sequence={seq}
+                active={activeSequenceName === seq.name}
+                onPlay={() => handlePlay(seq)}
+              />
+            ))}
+          </div>
         </div>
-      </ControlGroup>
-    </ControlGrid>
+      </div>
+    </div>
   );
 }
 
