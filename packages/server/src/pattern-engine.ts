@@ -37,12 +37,16 @@ export class ServerPatternEngine {
   private gridSize: number;
   private cols: number;
   private rows: number;
+  private _speed: number = 1.0;
 
   constructor(cols: number, rows: number) {
     this.cols = cols;
     this.rows = rows;
     this.gridSize = cols * rows;
   }
+
+  /** Set speed multiplier for pattern time (1.0 = normal). */
+  set speed(v: number) { this._speed = v; }
 
   /**
    * Load a pattern from code string. Returns true if successful.
@@ -206,7 +210,7 @@ export class ServerPatternEngine {
   }
 
   private makeCtx(grid: HSBColor[]): PatternCtx {
-    const elapsed = (Date.now() - this.startTime) / 1000;
+    const elapsed = ((Date.now() - this.startTime) / 1000) * this._speed;
     const cols = this.cols;
     const rows = this.rows;
     const count = this.gridSize;

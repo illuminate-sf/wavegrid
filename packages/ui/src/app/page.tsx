@@ -204,6 +204,8 @@ function ToolContent({
           send={send}
           activePattern={activePattern}
           onPatternSelect={onPatternSelect}
+          animSpeed={animSpeed}
+          onAnimSpeed={onAnimSpeed}
         />
       )}
 

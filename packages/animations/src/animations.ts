@@ -114,11 +114,11 @@ export const animations: Record<string, AnimationFn> = {
     ];
     // Colors: I = gold, heart = red, SF = gold
     const colors = [
-      { h: 45, s: 95, b: 85 },
+      { h: 45, s: 100, b: 100 },
       { h: 0, s: 100, b: 100 },
-      { h: 45, s: 95, b: 85 }
+      { h: 45, s: 100, b: 100 }
     ];
-    const frameTicks = 90; // 1.5s per frame
+    const frameTicks = 180; // 3s per frame
     const frame = Math.floor(tick / frameTicks) % 3;
     const bitmap = bitmaps[frame];
     const color = colors[frame];
