@@ -21,6 +21,7 @@ import * as fs from 'fs';
 import { resolve } from 'path';
 
 import { ConsoleOutput, MultiOutput, OutputAdapter, WebSocketInput, WebSocketOutput } from './adapters';
+import { startDebugUI } from './debug-ui';
 import { DEFAULT_GRID_COLUMNS, DEFAULT_NUM_CANNONS } from './filter';
 import { Receiver, ShardConfig } from './receiver';
 
@@ -136,6 +137,16 @@ if (process.env.DEBUG_OSC) console.log('  → DEBUG_OSC: enabled (logging all OS
 console.log('');
 
 receiver.start();
+
+// ─── Debug UI (optional) ───
+const DEBUG_UI_PORT = process.env.DEBUG_UI_PORT ? parseInt(process.env.DEBUG_UI_PORT, 10) : undefined;
+if (DEBUG_UI_PORT) {
+  startDebugUI({
+    port: DEBUG_UI_PORT,
+    gridColumns: GRID_COLUMNS,
+    getGrid: () => receiver.rawGrid,
+  });
+}
 
 // ─── Crash logging ───
 const LOG_FILE = process.env.RECEIVER_LOG || resolve(process.cwd(), 'wavegrid-receiver.log');

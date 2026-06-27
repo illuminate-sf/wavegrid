@@ -108,6 +108,9 @@ export class Receiver {
   get fallbackActive(): boolean { return this._fallbackActive; }
   get animationState(): AnimationState { return this._animState; }
 
+  /** Raw filtered grid — BEFORE orientation remap. For debug UI. */
+  get rawGrid(): FilteredCannon[] | null { return this.grid; }
+
   /** Lazily create the grid on first command. */
   private ensureGrid(): FilteredCannon[] {
     if (!this.grid) {
