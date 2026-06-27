@@ -297,7 +297,11 @@ export function SequencesTab({
           Sequences
         </p>
         <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-          <div className="flex flex-col gap-1.5">
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+            gap: 6
+          }}>
             {SEQUENCES.map((seq) => (
               <SequenceCard
                 key={seq.name}
