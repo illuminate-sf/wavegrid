@@ -6,9 +6,9 @@ import { WebSocket,WebSocketServer } from 'ws';
 import { animations } from './animations';
 import type { BlendMode, CannonState, Orientation, Rotation } from './grid';
 import {compositeLayer, createGrid, DEFAULT_ALPHA, DEFAULT_GRID_COLUMNS, DEFAULT_NUM_CANNONS, defaultOrientation, mapUiToGrid, remapGridForUi, setAllTargets, setCannonTarget, shiftGrid, tickGrid } from './grid';
+import { ServerPatternEngine } from './pattern-engine';
 import { compilePlaylist, type PlaylistDef, type PlaylistStep } from './playlist-compiler';
 import { applyScene, scenes } from './scenes';
-import { getHTML } from './ui';
 
 const PORT = parseInt(process.env.PORT || '3000', 10);
 const TICK_MS = 1000 / 60; // 60fps interpolation
@@ -102,6 +102,8 @@ let shiftAccX = 0;
 let shiftAccY = 0;
 const GRID_ROWS = Math.ceil(NUM_CANNONS / GRID_COLUMNS);
 let activePlaylist: PlaylistDef | null = null;
+let playlistCurrentStep = 0;
+const patternEngine = new ServerPatternEngine(GRID_COLUMNS, GRID_ROWS);
 
 // Restore persisted state on boot
 const restored = loadPersistedState();
@@ -128,19 +130,10 @@ if (restored) {
   console.log(`  ◈ Restored state from ${STATE_FILE}`);
 }
 
-// constructive.io brand mark — served as the favicon
-const FAVICON_SVG = `<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path fill-rule="evenodd" clip-rule="evenodd" d="M23.3315 21.7046V28.9348L26.2354 27.2232L29.8206 25.1157L36.9909 29.3307V37.761L30.1657 41.7731V41.785L22.9955 46L19.4102 43.8925L15.8343 41.7848V41.7749L12.5759 39.8595L9 37.7518V21.2924L12.5759 19.1847L15.8343 17.2694V9.25722L19.4102 7.14956L22.6685 5.23418V5.21521L26.2445 3.10755L29.8297 1L37 5.21499V13.6453L30.1657 17.6628V17.6873L23.3315 21.7046ZM16.16 17.8789L12.9168 19.7854L10.0443 21.4784L16.0542 25.0113L22.2948 21.4903L19.4101 19.7945L16.16 17.8789ZM23.6598 5.43249L29.7813 9.0309L35.955 5.40169L33.0743 3.70829L29.8297 1.80095L26.5853 3.70818L23.6598 5.43249ZM22.5139 38.2327L16.8333 41.5721L19.7511 43.2918L22.5185 44.9187L22.5196 38.2427L22.5139 38.2327ZM29.0399 33.6349L29.0153 33.5916L29.1105 33.5357L26.24 31.8482L23.3405 30.1438V33.546V36.9854L29.0399 33.6349ZM29.0998 9.43154L26.24 7.75041L22.9953 5.84307L19.7509 7.7503L16.8486 9.461L22.97 13.0595L29.0348 9.49437L29.0244 9.47595L29.0998 9.43154ZM16.5153 10.0661V13.4722V17.2854L22.5224 20.8167L22.5236 13.598L16.5153 10.0661ZM35.9458 29.5176L33.0651 27.8242L29.8205 25.9168L26.5761 27.8241L23.6705 29.5367L29.7919 33.1352L35.9458 29.5176ZM15.794 33.7218L12.5758 31.8299L9.68105 30.1237V33.5369V37.3517L12.9167 39.2589L15.7928 40.9496L15.794 33.7218ZM15.7954 25.7332L9.68116 22.1389V25.5074V29.3222L12.9168 31.2293L15.7943 32.9208L15.7954 25.7332Z" fill="#01A1FF"/>
-</svg>`;
-
 const server = http.createServer((req, res) => {
-  if (req.url === '/favicon.svg' || req.url === '/favicon.ico') {
-    res.writeHead(200, { 'Content-Type': 'image/svg+xml; charset=utf-8' });
-    res.end(FAVICON_SVG);
-    return;
-  }
-  res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-  res.end(getHTML(NUM_CANNONS, GRID_COLUMNS));
+  // No HTML UI served — only WebSocket connections are accepted on this port.
+  res.writeHead(204);
+  res.end();
 });
 
 const wss = new WebSocketServer({ noServer: true });
@@ -228,7 +221,8 @@ function broadcastPlaylistState() {
   const payload = JSON.stringify({
     type: 'playlist_state',
     active: activePlaylist !== null,
-    playlist: activePlaylist
+    playlist: activePlaylist,
+    currentStep: playlistCurrentStep
   });
   wss.clients.forEach(client => {
     if (client.readyState === WebSocket.OPEN) {
@@ -306,6 +300,7 @@ function handleMessage(msg: any) {
     if (msg.name && scenes[msg.name]) {
       currentAnimation = null;
       cancelPlaylistIfActive();
+      patternEngine.stop();
       applyScene(grid, msg.name, GRID_COLUMNS);
       broadcastCommand({ action: 'setScene', name: msg.name });
       scheduleSave();
@@ -316,11 +311,13 @@ function handleMessage(msg: any) {
       currentAnimation = msg.name;
       animationTick = 0;
       cancelPlaylistIfActive();
+      patternEngine.stop();
       broadcastCommand({ action: 'setAnimation', name: msg.name, speed: animSpeed });
       scheduleSave();
     } else if (msg.name === 'stop') {
       currentAnimation = null;
       cancelPlaylistIfActive();
+      patternEngine.stop();
       broadcastCommand({ action: 'stop' });
       scheduleSave();
     }
@@ -345,6 +342,7 @@ function handleMessage(msg: any) {
     if (Array.isArray(msg.indices)) {
       currentAnimation = null;
       cancelPlaylistIfActive();
+      patternEngine.stop();
       const cells: Array<{ idx: number; h: number; s: number; b: number }> = [];
       for (const uiIdx of msg.indices) {
         const gi = mapUiToGrid(uiIdx, GRID_COLUMNS, GRID_ROWS, orientation);
@@ -400,6 +398,7 @@ function handleMessage(msg: any) {
   case 'clear':
     currentAnimation = null;
     cancelPlaylistIfActive();
+    patternEngine.stop();
     setAllTargets(grid, 0, 0, 0, 1.0);
     broadcastCommand({ action: 'clear' });
     broadcastState();
@@ -449,6 +448,7 @@ function handleMessage(msg: any) {
     if (typeof msg.code === 'string') {
       currentAnimation = null;
       cancelPlaylistIfActive();
+      patternEngine.load(msg.code);
       broadcastCommand({
         action: 'evalPattern',
         code: msg.code,
@@ -466,6 +466,7 @@ function handleMessage(msg: any) {
     }
     break;
   case 'stopPattern':
+    patternEngine.stop();
     broadcastCommand({ action: 'stopPattern' });
     break;
   case 'playlist':
@@ -477,19 +478,34 @@ function handleMessage(msg: any) {
         transitionDuration: typeof msg.transitionDuration === 'number' ? msg.transitionDuration : 2
       };
       activePlaylist = playlistDef;
+      playlistCurrentStep = typeof msg.startAt === 'number' ? msg.startAt : 0;
       currentAnimation = null;
-      const compiled = compilePlaylist(playlistDef);
+      const compiled = compilePlaylist(playlistDef, playlistCurrentStep);
+      patternEngine.load(compiled);
       broadcastCommand({ action: 'evalPattern', code: compiled, params: {} });
-      // Broadcast playlist state to UI clients
       broadcastPlaylistState();
       scheduleSave();
     }
     break;
   case 'playlist_stop':
     activePlaylist = null;
+    playlistCurrentStep = 0;
+    patternEngine.stop();
     broadcastCommand({ action: 'stopPattern' });
     broadcastPlaylistState();
     scheduleSave();
+    break;
+  case 'playlist_skip':
+    if (activePlaylist) {
+      const stepCount = activePlaylist.steps.length;
+      const direction = msg.direction === 'back' ? -1 : 1;
+      playlistCurrentStep = ((playlistCurrentStep + direction) % stepCount + stepCount) % stepCount;
+      const recompiled = compilePlaylist(activePlaylist, playlistCurrentStep);
+      patternEngine.load(recompiled);
+      broadcastCommand({ action: 'evalPattern', code: recompiled, params: {} });
+      broadcastPlaylistState();
+      scheduleSave();
+    }
     break;
   case 'playlist_get':
     // Respond with current playlist state (handled per-client below)
@@ -506,6 +522,16 @@ setInterval(() => {
   if (!calibrationMode && currentAnimation && animations[currentAnimation]) {
     animations[currentAnimation](grid, animationTick, currentAttack, GRID_COLUMNS);
     animationTick += animSpeed;
+  } else if (!calibrationMode && patternEngine.active) {
+    // Render evalPattern locally for UI preview — write to targets so tickGrid lerps smoothly
+    const previewGrid = grid.map(c => ({ h: c.targetH, s: c.targetS, b: c.targetB }));
+    if (patternEngine.render(previewGrid)) {
+      for (let i = 0; i < previewGrid.length && i < grid.length; i++) {
+        grid[i].targetH = previewGrid[i].h;
+        grid[i].targetS = previewGrid[i].s;
+        grid[i].targetB = previewGrid[i].b;
+      }
+    }
   }
   if (shiftVx !== 0 || shiftVy !== 0) {
     shiftAccX += shiftVx / 60;

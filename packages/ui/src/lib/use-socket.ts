@@ -16,6 +16,7 @@ export interface Orientation {
 
 export interface PlaylistState {
   active: boolean;
+  currentStep: number;
   playlist: {
     steps: Array<{ type: string; name?: string; code?: string; duration: number }>;
     loop: boolean;
@@ -53,7 +54,7 @@ export function useSocket(url: string) {
         } else if (msg.type === 'orientation') {
           setOrientation({ rotation: msg.rotation ?? 0, flipH: !!msg.flipH, flipV: !!msg.flipV });
         } else if (msg.type === 'playlist_state') {
-          setPlaylistState({ active: !!msg.active, playlist: msg.playlist ?? null });
+          setPlaylistState({ active: !!msg.active, currentStep: msg.currentStep ?? 0, playlist: msg.playlist ?? null });
         }
       } catch {
         // ignore

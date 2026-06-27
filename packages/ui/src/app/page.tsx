@@ -18,13 +18,14 @@ import { AnimationPalette, ScenePalette } from '@/components/palette';
 import { PatternsTab } from '@/components/patterns-tab';
 import { PlaylistTab } from '@/components/playlist-tab';
 import { PrideTab } from '@/components/pride-tab';
+import { SequencesTab } from '@/components/sequences-tab';
 import { SettingsTab } from '@/components/settings-tab';
 import { ShiftDial } from '@/components/shift-dial';
 import { useAudio } from '@/lib/use-audio';
 import { useAuth } from '@/lib/use-auth';
 import { useConfig } from '@/lib/use-config';
 import { useIsPhone } from '@/lib/use-media-query';
-import { useSocket } from '@/lib/use-socket';
+import { useSocket, type PlaylistState } from '@/lib/use-socket';
 
 type PanelLayout = 'bottom' | 'right';
 type TrailFadeEntry = {
@@ -42,6 +43,7 @@ const tabs: { key: GridMode; label: string }[] = [
   { key: 'animations', label: 'Anim' },
   { key: 'pride', label: 'Pride' },
   { key: 'patterns', label: 'Patterns' },
+  { key: 'sequences', label: 'Sequences' },
   { key: 'playlist', label: 'Playlist' },
   { key: 'flags', label: 'Flags' },
   { key: 'drops', label: 'Drops' },
@@ -92,7 +94,7 @@ function ToolContent({
   gridColumns: number;
   activePattern: string | null;
   onPatternSelect: (id: string) => void;
-  playlistState: { active: boolean; playlist: unknown } | null;
+  playlistState: PlaylistState | null;
 }) {
   return (
     <>
@@ -207,6 +209,10 @@ function ToolContent({
 
       {tab === 'patterns' && (
         <PatternsTab send={send} />
+      )}
+
+      {tab === 'sequences' && (
+        <SequencesTab send={send} playlistState={playlistState} />
       )}
 
       {tab === 'playlist' && (

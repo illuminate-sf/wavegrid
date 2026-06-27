@@ -350,13 +350,18 @@ function getStepBody(step: PlaylistStep): string | null {
  * Compile a playlist definition into a single evalPattern code string.
  * The compiled pattern runs autonomously on the receiver — no internet needed.
  */
-export function compilePlaylist(playlist: PlaylistDef): string {
+export function compilePlaylist(playlist: PlaylistDef, startAtStep = 0): string {
   const steps = playlist.steps.filter(s => getStepBody(s) !== null);
   if (steps.length === 0) return '({ render(ctx) { ctx.fill(0, 0, 0); } })';
 
   const durations = steps.map(s => s.duration);
   const totalDuration = durations.reduce((a, b) => a + b, 0);
   const transDur = playlist.transition === 'fade' ? playlist.transitionDuration : 0;
+
+  // Calculate time offset to start at a specific step
+  const clampedStart = Math.max(0, Math.min(startAtStep, steps.length - 1));
+  let timeOffset = 0;
+  for (let i = 0; i < clampedStart; i++) timeOffset += durations[i];
 
   // Build render functions array
   const renderFns = steps.map((step, idx) => {
@@ -373,8 +378,8 @@ export function compilePlaylist(playlist: PlaylistDef): string {
     var transDur = ${transDur};
     var useFade = ${playlist.transition === 'fade'};
 
-    // Time in seconds since pattern started (using frame-based for consistency)
-    var elapsed = ctx.t;
+    // Time in seconds since pattern started, offset to start at a specific step
+    var elapsed = ctx.t + ${timeOffset};
 
     // Handle looping
     if (loop) {
