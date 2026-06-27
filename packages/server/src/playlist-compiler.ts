@@ -276,7 +276,7 @@ const ANIMATION_SOURCES: Record<string, string> = {
 // ── ctx-compatible render bodies for scenes (static) ──────────────
 
 const SCENE_SOURCES: Record<string, string> = {
-  civic: `ctx.fill(220, 90, 80);`,
+  civic: `ctx.fill(220, 100, 100);`,
 
   pride: `
     for (var i = 0; i < ctx.count; i++) {
@@ -300,26 +300,26 @@ const SCENE_SOURCES: Record<string, string> = {
 
   gold: `ctx.fill(45, 100, 100);`,
 
-  white: `ctx.fill(0, 0, 80);`,
+  white: `ctx.fill(0, 0, 100);`,
 
   solstice: `
     for (var i = 0; i < ctx.count; i++) {
       var row = Math.floor(i / ctx.cols);
       var col = i % ctx.cols;
-      ctx.set(i, 40 + row * 5 + col * 4, 85, 80);
+      ctx.set(i, 40 + row * 5 + col * 4, 100, 100);
     }`,
 
   ocean: `
     for (var i = 0; i < ctx.count; i++) {
       var row = Math.floor(i / ctx.cols);
       var col = i % ctx.cols;
-      ctx.set(i, 180 + row * 8 + col * 3, 75, 70);
+      ctx.set(i, 180 + row * 8 + col * 3, 100, 100);
     }`,
 
   sunset: `
     for (var i = 0; i < ctx.count; i++) {
       var row = Math.floor(i / ctx.cols);
-      ctx.set(i, 10 + row * 5, 90, 85 - row * 5);
+      ctx.set(i, 10 + row * 5, 100, 100);
     }`,
 
   heart: `

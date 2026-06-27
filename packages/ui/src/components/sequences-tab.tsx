@@ -26,6 +26,24 @@ interface SequenceDef {
 
 const SEQUENCES: SequenceDef[] = [
   {
+    name: 'Solid Vibes',
+    description: 'Pure colors, gradients, and static scenes — no movement, just beautiful light',
+    gradient: 'linear-gradient(135deg, #e40303, #ff8c00, #ffed00, #008026, #004dff, #c8a000)',
+    transition: 'fade',
+    transitionDuration: 3,
+    steps: [
+      { type: 'scene', name: 'pride', duration: 180 },
+      { type: 'scene', name: 'gold', duration: 120 },
+      { type: 'scene', name: 'trans', duration: 150 },
+      { type: 'scene', name: 'sunset', duration: 120 },
+      { type: 'scene', name: 'heart', duration: 120 },
+      { type: 'animation', name: 'pride-breathe', duration: 150 },
+      { type: 'scene', name: 'ocean', duration: 120 },
+      { type: 'scene', name: 'sf', duration: 120 },
+      { type: 'scene', name: 'solstice', duration: 120 }
+    ]
+  },
+  {
     name: 'Pride Show',
     description: 'Static flags + flowing animations — alternating calm and motion',
     gradient: 'linear-gradient(135deg, #e40303, #ff8c00, #ffed00, #008026, #004dff, #750787)',
