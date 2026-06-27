@@ -81,12 +81,40 @@ function makeStripesPattern(colorsCode: string): string {
   return `({\n${colorsCode}\nrender: function(ctx) {\n  var rows = ctx.rows;\n  for (var i = 0; i < ctx.count; i++) {\n    var uv = ctx.uv(i);\n    var bandIdx = Math.floor(uv[1] * COLORS.length);\n    if (bandIdx >= COLORS.length) bandIdx = COLORS.length - 1;\n    var c = COLORS[bandIdx];\n    ctx.set(i, c[0], c[1], c[2]);\n  }\n},\nmeta: { name: 'stripes' }\n})`;
 }
 
-const PRIDE_PATTERNS: PatternDef[] = [
+const PRIDE_STATIC: PatternDef[] = [
   {
-    name: 'Stripes',
+    name: 'Rainbow',
     gradient: 'linear-gradient(180deg, #e40303, #ff8c00, #ffed00, #008026, #004dff, #750787)',
-    code: makeStripesPattern(PRIDE_COLORS_CODE)
+    code: `({\n${PRIDE_COLORS_CODE}\nrender: function(ctx) {\n  for (var i = 0; i < ctx.count; i++) {\n    var uv = ctx.uv(i);\n    var bandIdx = Math.floor(uv[1] * COLORS.length);\n    if (bandIdx >= COLORS.length) bandIdx = COLORS.length - 1;\n    var c = COLORS[bandIdx];\n    ctx.set(i, c[0], c[1], c[2]);\n  }\n},\nmeta: { name: 'pride-rainbow' }\n})`
   },
+  {
+    name: 'Columns',
+    gradient: 'linear-gradient(90deg, #e40303, #ff8c00, #ffed00, #008026, #004dff, #750787)',
+    code: `({\n${PRIDE_COLORS_CODE}\nrender: function(ctx) {\n  for (var i = 0; i < ctx.count; i++) {\n    var uv = ctx.uv(i);\n    var bandIdx = Math.floor(uv[0] * COLORS.length);\n    if (bandIdx >= COLORS.length) bandIdx = COLORS.length - 1;\n    var c = COLORS[bandIdx];\n    ctx.set(i, c[0], c[1], c[2]);\n  }\n},\nmeta: { name: 'pride-columns' }\n})`
+  },
+  {
+    name: 'Diagonal',
+    gradient: 'linear-gradient(135deg, #e40303, #ff8c00, #ffed00, #008026, #004dff, #750787)',
+    code: `({\n${PRIDE_COLORS_CODE}\nrender: function(ctx) {\n  for (var i = 0; i < ctx.count; i++) {\n    var uv = ctx.uv(i);\n    var d = (uv[0] + uv[1]) / 2;\n    var bandIdx = Math.floor(d * COLORS.length);\n    if (bandIdx >= COLORS.length) bandIdx = COLORS.length - 1;\n    var c = COLORS[bandIdx];\n    ctx.set(i, c[0], c[1], c[2]);\n  }\n},\nmeta: { name: 'pride-diagonal' }\n})`
+  },
+  {
+    name: 'Solid Red',
+    gradient: 'linear-gradient(135deg, #e40303, #cc0000)',
+    code: `({ render: function(ctx) { ctx.fill(0, 100, 90); }, meta: { name: 'pride-red' } })`
+  },
+  {
+    name: 'Solid Gold',
+    gradient: 'linear-gradient(135deg, #ffed00, #ccb800)',
+    code: `({ render: function(ctx) { ctx.fill(55, 100, 90); }, meta: { name: 'pride-gold' } })`
+  },
+  {
+    name: 'Solid Purple',
+    gradient: 'linear-gradient(135deg, #750787, #5a0566)',
+    code: `({ render: function(ctx) { ctx.fill(290, 100, 80); }, meta: { name: 'pride-purple' } })`
+  }
+];
+
+const PRIDE_PATTERNS: PatternDef[] = [
   {
     name: 'Flow',
     gradient: 'linear-gradient(180deg, #e40303 0%, #ff8c00 20%, #ffed00 40%, #008026 60%, #004dff 80%, #750787 100%)',
@@ -111,6 +139,29 @@ const PRIDE_PATTERNS: PatternDef[] = [
     name: 'Wave',
     gradient: 'linear-gradient(135deg, #e40303 0%, #008026 50%, #750787 100%)',
     code: makeWavePattern(PRIDE_COLORS_CODE)
+  }
+];
+
+const TRANS_STATIC: PatternDef[] = [
+  {
+    name: 'Flag',
+    gradient: 'linear-gradient(180deg, #5BCEFA, #F5A9B8, #FFFFFF, #F5A9B8, #5BCEFA)',
+    code: `({\n${TRANS_COLORS_CODE}\nrender: function(ctx) {\n  for (var i = 0; i < ctx.count; i++) {\n    var uv = ctx.uv(i);\n    var bandIdx = Math.floor(uv[1] * COLORS.length);\n    if (bandIdx >= COLORS.length) bandIdx = COLORS.length - 1;\n    var c = COLORS[bandIdx];\n    ctx.set(i, c[0], c[1], c[2]);\n  }\n},\nmeta: { name: 'trans-flag' }\n})`
+  },
+  {
+    name: 'Columns',
+    gradient: 'linear-gradient(90deg, #5BCEFA, #F5A9B8, #FFFFFF, #F5A9B8, #5BCEFA)',
+    code: `({\n${TRANS_COLORS_CODE}\nrender: function(ctx) {\n  for (var i = 0; i < ctx.count; i++) {\n    var uv = ctx.uv(i);\n    var bandIdx = Math.floor(uv[0] * COLORS.length);\n    if (bandIdx >= COLORS.length) bandIdx = COLORS.length - 1;\n    var c = COLORS[bandIdx];\n    ctx.set(i, c[0], c[1], c[2]);\n  }\n},\nmeta: { name: 'trans-columns' }\n})`
+  },
+  {
+    name: 'Solid Blue',
+    gradient: 'linear-gradient(135deg, #5BCEFA, #3aa8d8)',
+    code: `({ render: function(ctx) { ctx.fill(197, 63, 98); }, meta: { name: 'trans-blue' } })`
+  },
+  {
+    name: 'Solid Pink',
+    gradient: 'linear-gradient(135deg, #F5A9B8, #d88a9a)',
+    code: `({ render: function(ctx) { ctx.fill(346, 31, 96); }, meta: { name: 'trans-pink' } })`
   }
 ];
 
@@ -199,7 +250,20 @@ export function PrideTab({
 
   return (
     <ControlGrid minCellWidth={200}>
-      <ControlGroup label="Pride">
+      <ControlGroup label="Pride — Static">
+        <div className="flex gap-2.5 flex-wrap">
+          {PRIDE_STATIC.map((p) => (
+            <PatternTile
+              key={`pride-s-${p.name}`}
+              pattern={p}
+              active={activePattern === `pride-s-${p.name}`}
+              onClick={() => handleSelect('pride-s', p)}
+            />
+          ))}
+        </div>
+      </ControlGroup>
+
+      <ControlGroup label="Pride — Animated">
         <div className="flex gap-2.5 flex-wrap">
           {PRIDE_PATTERNS.map((p) => (
             <PatternTile
@@ -212,7 +276,20 @@ export function PrideTab({
         </div>
       </ControlGroup>
 
-      <ControlGroup label="Trans">
+      <ControlGroup label="Trans — Static">
+        <div className="flex gap-2.5 flex-wrap">
+          {TRANS_STATIC.map((p) => (
+            <PatternTile
+              key={`trans-s-${p.name}`}
+              pattern={p}
+              active={activePattern === `trans-s-${p.name}`}
+              onClick={() => handleSelect('trans-s', p)}
+            />
+          ))}
+        </div>
+      </ControlGroup>
+
+      <ControlGroup label="Trans — Animated">
         <div className="flex gap-2.5 flex-wrap">
           {TRANS_PATTERNS.map((p) => (
             <PatternTile

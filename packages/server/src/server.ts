@@ -237,6 +237,15 @@ function broadcastPlaylistState() {
   });
 }
 
+/** Cancel any active playlist when another visual command arrives. */
+function cancelPlaylistIfActive() {
+  if (activePlaylist) {
+    activePlaylist = null;
+    broadcastPlaylistState();
+    scheduleSave();
+  }
+}
+
 wss.on('connection', (ws) => {
   // Send initial state + orientation
   const initGrid = remapGridForUi(
@@ -296,6 +305,7 @@ function handleMessage(msg: any) {
   case 'scene':
     if (msg.name && scenes[msg.name]) {
       currentAnimation = null;
+      cancelPlaylistIfActive();
       applyScene(grid, msg.name, GRID_COLUMNS);
       broadcastCommand({ action: 'setScene', name: msg.name });
       scheduleSave();
@@ -305,10 +315,12 @@ function handleMessage(msg: any) {
     if (msg.name && animations[msg.name]) {
       currentAnimation = msg.name;
       animationTick = 0;
+      cancelPlaylistIfActive();
       broadcastCommand({ action: 'setAnimation', name: msg.name, speed: animSpeed });
       scheduleSave();
     } else if (msg.name === 'stop') {
       currentAnimation = null;
+      cancelPlaylistIfActive();
       broadcastCommand({ action: 'stop' });
       scheduleSave();
     }
@@ -332,6 +344,7 @@ function handleMessage(msg: any) {
   case 'selection':
     if (Array.isArray(msg.indices)) {
       currentAnimation = null;
+      cancelPlaylistIfActive();
       const cells: Array<{ idx: number; h: number; s: number; b: number }> = [];
       for (const uiIdx of msg.indices) {
         const gi = mapUiToGrid(uiIdx, GRID_COLUMNS, GRID_ROWS, orientation);
@@ -386,6 +399,7 @@ function handleMessage(msg: any) {
     break;
   case 'clear':
     currentAnimation = null;
+    cancelPlaylistIfActive();
     setAllTargets(grid, 0, 0, 0, 1.0);
     broadcastCommand({ action: 'clear' });
     broadcastState();
@@ -434,6 +448,7 @@ function handleMessage(msg: any) {
   case 'evalPattern':
     if (typeof msg.code === 'string') {
       currentAnimation = null;
+      cancelPlaylistIfActive();
       broadcastCommand({
         action: 'evalPattern',
         code: msg.code,
