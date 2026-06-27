@@ -15,6 +15,8 @@ import { GridDisplay } from '@/components/grid-display';
 import { LoginScreen } from '@/components/login-screen';
 import { MotionControls, useMotion } from '@/components/motion-tab';
 import { AnimationPalette, ScenePalette } from '@/components/palette';
+import { PatternsTab } from '@/components/patterns-tab';
+import { PrideTab } from '@/components/pride-tab';
 import { SettingsTab } from '@/components/settings-tab';
 import { ShiftDial } from '@/components/shift-dial';
 import { useAudio } from '@/lib/use-audio';
@@ -37,6 +39,8 @@ const tabs: { key: GridMode; label: string }[] = [
   { key: 'gradient', label: 'Gradient' },
   { key: 'scenes', label: 'Scenes' },
   { key: 'animations', label: 'Anim' },
+  { key: 'pride', label: 'Pride' },
+  { key: 'patterns', label: 'Patterns' },
   { key: 'flags', label: 'Flags' },
   { key: 'drops', label: 'Drops' },
   { key: 'audio', label: 'Audio' },
@@ -58,7 +62,8 @@ function ToolContent({
   flags, brightness, audio,
   isPhone,
   onShift,
-  numCannons, gridColumns
+  numCannons, gridColumns,
+  activePattern, onPatternSelect
 }: {
   tab: GridMode;
   hue: number; sat: number; bright: number; brushSize: number; softEdge: boolean; trailFade: boolean;
@@ -82,6 +87,8 @@ function ToolContent({
   onShift: (vx: number, vy: number) => void;
   numCannons: number;
   gridColumns: number;
+  activePattern: string | null;
+  onPatternSelect: (id: string) => void;
 }) {
   return (
     <>
@@ -184,6 +191,18 @@ function ToolContent({
             </ControlGroup>
           </ControlGrid>
         </div>
+      )}
+
+      {tab === 'pride' && (
+        <PrideTab
+          send={send}
+          activePattern={activePattern}
+          onPatternSelect={onPatternSelect}
+        />
+      )}
+
+      {tab === 'patterns' && (
+        <PatternsTab send={send} />
       )}
 
       {tab === 'flags' && (
@@ -438,6 +457,7 @@ export default function Home() {
 
   const [activeScene, setActiveScene] = useState<string | null>(null);
   const [activeAnim, setActiveAnim] = useState<string | null>(null);
+  const [activePattern, setActivePattern] = useState<string | null>(null);
   const [animSpeed, setAnimSpeed] = useState(1.0);
   const [shiftActive, setShiftActive] = useState(false);
   const [dropsConfig, setDropsConfig] = useState({
@@ -527,6 +547,7 @@ export default function Home() {
     (name: string) => {
       setActiveScene(name);
       setActiveAnim(null);
+      setActivePattern(null);
       send({ type: 'scene', name });
     },
     [send]
@@ -535,9 +556,19 @@ export default function Home() {
   const handleAnim = useCallback(
     (name: string) => {
       setActiveAnim(name);
+      setActivePattern(null);
       send({ type: 'animation', name });
     },
     [send]
+  );
+
+  const handlePatternSelect = useCallback(
+    (id: string) => {
+      setActivePattern(id);
+      setActiveAnim(null);
+      setActiveScene(null);
+    },
+    []
   );
 
   const handleAnimSpeed = useCallback(
@@ -559,8 +590,10 @@ export default function Home() {
   const handleGlobalStop = useCallback(() => {
     setActiveAnim(null);
     setActiveScene(null);
+    setActivePattern(null);
     setShiftActive(false);
     send({ type: 'animation', name: 'stop' });
+    send({ type: 'stopPattern' });
     send({ type: 'shift', vx: 0, vy: 0 });
     flags.stop();
     brightness.setMode('off');
@@ -652,7 +685,9 @@ export default function Home() {
     isPhone,
     onShift: handleShift,
     numCannons: NUM_CANNONS,
-    gridColumns: GRID_COLUMNS
+    gridColumns: GRID_COLUMNS,
+    activePattern,
+    onPatternSelect: handlePatternSelect
   };
 
   /* ---------- Loading gates (after all hooks, to respect Rules of Hooks) ---------- */

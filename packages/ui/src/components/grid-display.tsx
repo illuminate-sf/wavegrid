@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef } from 'react';
 
 import type { CannonColor, Orientation } from '@/lib/use-socket';
 
-export type GridMode = 'paint' | 'gradient' | 'drops' | 'motion' | 'scenes' | 'animations' | 'audio' | 'flags' | 'debug';
+export type GridMode = 'paint' | 'gradient' | 'drops' | 'motion' | 'scenes' | 'animations' | 'audio' | 'flags' | 'pride' | 'patterns' | 'debug';
 
 interface GridDisplayProps {
   grid: CannonColor[];
