@@ -8,22 +8,22 @@ import { ControlGrid, ControlGroup } from './control-grid';
 
 const PRIDE_COLORS_CODE = `
 var COLORS = [
-  [0, 100, 90],
-  [30, 100, 90],
-  [55, 100, 90],
-  [120, 100, 80],
-  [210, 100, 80],
-  [290, 100, 80]
+  [0, 100, 100],
+  [30, 100, 100],
+  [55, 100, 100],
+  [120, 100, 100],
+  [210, 100, 100],
+  [290, 100, 100]
 ];
 `;
 
 const TRANS_COLORS_CODE = `
 var COLORS = [
-  [197, 63, 98],
-  [346, 31, 96],
+  [197, 100, 100],
+  [346, 60, 100],
   [0, 0, 100],
-  [346, 31, 96],
-  [197, 63, 98]
+  [346, 60, 100],
+  [197, 100, 100]
 ];
 `;
 
@@ -62,19 +62,19 @@ function makeFlowPattern(colorsCode: string): string {
 }
 
 function makeBreathePattern(colorsCode: string): string {
-  return `({\n${colorsCode}\n${lerpColorCode()}\nrender: function(ctx) {\n  var speed = ctx.t * 0.008;\n  var brightness = 70 + Math.sin(ctx.t * 0.6) * 20;\n  var c = colorAt(speed);\n  for (var i = 0; i < ctx.count; i++) {\n    ctx.set(i, c[0], c[1], brightness);\n  }\n},\nmeta: { name: 'breathe' }\n})`;
+  return `({\n${colorsCode}\n${lerpColorCode()}\nrender: function(ctx) {\n  var speed = ctx.t * 0.008;\n  var brightness = 90 + Math.sin(ctx.t * 0.6) * 10;\n  var c = colorAt(speed);\n  for (var i = 0; i < ctx.count; i++) {\n    ctx.set(i, c[0], c[1], brightness);\n  }\n},\nmeta: { name: 'breathe' }\n})`;
 }
 
 function makeRotatePattern(colorsCode: string): string {
-  return `({\n${colorsCode}\n${lerpColorCode()}\nrender: function(ctx) {\n  var offset = ctx.t * 0.5;\n  for (var i = 0; i < ctx.count; i++) {\n    var uv = ctx.uv(i);\n    var c = colorAt(uv[0] + offset);\n    ctx.set(i, c[0], c[1], 90);\n  }\n},\nmeta: { name: 'rotate' }\n})`;
+  return `({\n${colorsCode}\n${lerpColorCode()}\nrender: function(ctx) {\n  var offset = ctx.t * 0.5;\n  for (var i = 0; i < ctx.count; i++) {\n    var uv = ctx.uv(i);\n    var c = colorAt(uv[0] + offset);\n    ctx.set(i, c[0], c[1], 100);\n  }\n},\nmeta: { name: 'rotate' }\n})`;
 }
 
 function makeRingPattern(colorsCode: string): string {
-  return `({\n${colorsCode}\n${lerpColorCode()}\nrender: function(ctx) {\n  var speed = ctx.t * 0.012;\n  for (var i = 0; i < ctx.count; i++) {\n    var c = colorAt(i / ctx.count + speed);\n    ctx.set(i, c[0], c[1], 90);\n  }\n},\nmeta: { name: 'ring' }\n})`;
+  return `({\n${colorsCode}\n${lerpColorCode()}\nrender: function(ctx) {\n  var speed = ctx.t * 0.012;\n  for (var i = 0; i < ctx.count; i++) {\n    var c = colorAt(i / ctx.count + speed);\n    ctx.set(i, c[0], c[1], 100);\n  }\n},\nmeta: { name: 'ring' }\n})`;
 }
 
 function makeWavePattern(colorsCode: string): string {
-  return `({\n${colorsCode}\n${lerpColorCode()}\nrender: function(ctx) {\n  for (var i = 0; i < ctx.count; i++) {\n    var uv = ctx.uv(i);\n    var phase = Math.sin(uv[0] * Math.PI * 2 - ctx.t * 2);\n    var c = colorAt(uv[1] + ctx.t * 0.02);\n    var b = Math.max(5, c[2] * (0.5 + 0.5 * phase));\n    ctx.set(i, c[0], c[1], b);\n  }\n},\nmeta: { name: 'wave' }\n})`;
+  return `({\n${colorsCode}\n${lerpColorCode()}\nrender: function(ctx) {\n  for (var i = 0; i < ctx.count; i++) {\n    var uv = ctx.uv(i);\n    var phase = Math.sin(uv[0] * Math.PI * 2 - ctx.t * 2);\n    var c = colorAt(uv[1] + ctx.t * 0.02);\n    var b = 60 + 40 * (0.5 + 0.5 * phase);\n    ctx.set(i, c[0], c[1], b);\n  }\n},\nmeta: { name: 'wave' }\n})`;
 }
 
 function makeStripesPattern(colorsCode: string): string {
@@ -100,17 +100,17 @@ const PRIDE_STATIC: PatternDef[] = [
   {
     name: 'Solid Red',
     gradient: 'linear-gradient(135deg, #e40303, #cc0000)',
-    code: `({ render: function(ctx) { ctx.fill(0, 100, 90); }, meta: { name: 'pride-red' } })`
+    code: `({ render: function(ctx) { ctx.fill(0, 100, 100); }, meta: { name: 'pride-red' } })`
   },
   {
     name: 'Solid Gold',
     gradient: 'linear-gradient(135deg, #ffed00, #ccb800)',
-    code: `({ render: function(ctx) { ctx.fill(55, 100, 90); }, meta: { name: 'pride-gold' } })`
+    code: `({ render: function(ctx) { ctx.fill(55, 100, 100); }, meta: { name: 'pride-gold' } })`
   },
   {
     name: 'Solid Purple',
     gradient: 'linear-gradient(135deg, #750787, #5a0566)',
-    code: `({ render: function(ctx) { ctx.fill(290, 100, 80); }, meta: { name: 'pride-purple' } })`
+    code: `({ render: function(ctx) { ctx.fill(290, 100, 100); }, meta: { name: 'pride-purple' } })`
   }
 ];
 
@@ -156,12 +156,12 @@ const TRANS_STATIC: PatternDef[] = [
   {
     name: 'Solid Blue',
     gradient: 'linear-gradient(135deg, #5BCEFA, #3aa8d8)',
-    code: `({ render: function(ctx) { ctx.fill(197, 63, 98); }, meta: { name: 'trans-blue' } })`
+    code: `({ render: function(ctx) { ctx.fill(197, 100, 100); }, meta: { name: 'trans-blue' } })`
   },
   {
     name: 'Solid Pink',
     gradient: 'linear-gradient(135deg, #F5A9B8, #d88a9a)',
-    code: `({ render: function(ctx) { ctx.fill(346, 31, 96); }, meta: { name: 'trans-pink' } })`
+    code: `({ render: function(ctx) { ctx.fill(346, 60, 100); }, meta: { name: 'trans-pink' } })`
   }
 ];
 
@@ -236,11 +236,15 @@ function PatternTile({
 export function PrideTab({
   send,
   activePattern,
-  onPatternSelect
+  onPatternSelect,
+  animSpeed,
+  onAnimSpeed
 }: {
   send: (msg: Record<string, unknown>) => void;
   activePattern: string | null;
   onPatternSelect: (id: string) => void;
+  animSpeed: number;
+  onAnimSpeed: (v: number) => void;
 }) {
   const handleSelect = useCallback((groupPrefix: string, pattern: PatternDef) => {
     const id = `${groupPrefix}-${pattern.name}`;
@@ -249,58 +253,80 @@ export function PrideTab({
   }, [send, onPatternSelect]);
 
   return (
-    <ControlGrid minCellWidth={200}>
-      <ControlGroup label="Pride — Static">
-        <div className="flex gap-2.5 flex-wrap">
-          {PRIDE_STATIC.map((p) => (
-            <PatternTile
-              key={`pride-s-${p.name}`}
-              pattern={p}
-              active={activePattern === `pride-s-${p.name}`}
-              onClick={() => handleSelect('pride-s', p)}
-            />
-          ))}
-        </div>
-      </ControlGroup>
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center gap-3 px-2">
+        <span className="text-xs font-medium shrink-0" style={{ color: '#888898', textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: 11 }}>
+          Speed
+        </span>
+        <input
+          type="range"
+          className="flex-1"
+          style={{ minWidth: 120, height: 28 }}
+          min={0}
+          max={1000}
+          value={Math.round(Math.log(animSpeed / 0.1) / Math.log(5.0 / 0.1) * 1000)}
+          onChange={(e) => {
+            const t = parseInt(e.target.value, 10) / 1000;
+            onAnimSpeed(0.1 * Math.pow(5.0 / 0.1, t));
+          }}
+        />
+        <span className="text-xs font-mono shrink-0" style={{ color: '#888898', minWidth: 36, textAlign: 'right' }}>
+          {animSpeed < 1 ? animSpeed.toFixed(2) : animSpeed.toFixed(1)}x
+        </span>
+      </div>
+      <ControlGrid minCellWidth={200}>
+        <ControlGroup label="Pride — Static">
+          <div className="flex gap-2.5 flex-wrap">
+            {PRIDE_STATIC.map((p) => (
+              <PatternTile
+                key={`pride-s-${p.name}`}
+                pattern={p}
+                active={activePattern === `pride-s-${p.name}`}
+                onClick={() => handleSelect('pride-s', p)}
+              />
+            ))}
+          </div>
+        </ControlGroup>
 
-      <ControlGroup label="Pride — Animated">
-        <div className="flex gap-2.5 flex-wrap">
-          {PRIDE_PATTERNS.map((p) => (
-            <PatternTile
-              key={`pride-${p.name}`}
-              pattern={p}
-              active={activePattern === `pride-${p.name}`}
-              onClick={() => handleSelect('pride', p)}
-            />
-          ))}
-        </div>
-      </ControlGroup>
+        <ControlGroup label="Pride — Animated">
+          <div className="flex gap-2.5 flex-wrap">
+            {PRIDE_PATTERNS.map((p) => (
+              <PatternTile
+                key={`pride-${p.name}`}
+                pattern={p}
+                active={activePattern === `pride-${p.name}`}
+                onClick={() => handleSelect('pride', p)}
+              />
+            ))}
+          </div>
+        </ControlGroup>
 
-      <ControlGroup label="Trans — Static">
-        <div className="flex gap-2.5 flex-wrap">
-          {TRANS_STATIC.map((p) => (
-            <PatternTile
-              key={`trans-s-${p.name}`}
-              pattern={p}
-              active={activePattern === `trans-s-${p.name}`}
-              onClick={() => handleSelect('trans-s', p)}
-            />
-          ))}
-        </div>
-      </ControlGroup>
+        <ControlGroup label="Trans — Static">
+          <div className="flex gap-2.5 flex-wrap">
+            {TRANS_STATIC.map((p) => (
+              <PatternTile
+                key={`trans-s-${p.name}`}
+                pattern={p}
+                active={activePattern === `trans-s-${p.name}`}
+                onClick={() => handleSelect('trans-s', p)}
+              />
+            ))}
+          </div>
+        </ControlGroup>
 
-      <ControlGroup label="Trans — Animated">
-        <div className="flex gap-2.5 flex-wrap">
-          {TRANS_PATTERNS.map((p) => (
-            <PatternTile
-              key={`trans-${p.name}`}
-              pattern={p}
-              active={activePattern === `trans-${p.name}`}
-              onClick={() => handleSelect('trans', p)}
-            />
-          ))}
-        </div>
-      </ControlGroup>
-    </ControlGrid>
+        <ControlGroup label="Trans — Animated">
+          <div className="flex gap-2.5 flex-wrap">
+            {TRANS_PATTERNS.map((p) => (
+              <PatternTile
+                key={`trans-${p.name}`}
+                pattern={p}
+                active={activePattern === `trans-${p.name}`}
+                onClick={() => handleSelect('trans', p)}
+              />
+            ))}
+          </div>
+        </ControlGroup>
+      </ControlGrid>
+    </div>
   );
 }

@@ -44,6 +44,26 @@ const SEQUENCES: SequenceDef[] = [
     ]
   },
   {
+    name: 'Pride & Trans',
+    description: 'Mixed pride and trans — static flags and flowing animations',
+    gradient: 'linear-gradient(135deg, #e40303, #ff8c00, #5BCEFA, #F5A9B8, #750787)',
+    transition: 'fade',
+    transitionDuration: 2,
+    steps: [
+      { type: 'scene', name: 'pride', duration: 120 },
+      { type: 'animation', name: 'pride-flow', duration: 150 },
+      { type: 'scene', name: 'trans', duration: 120 },
+      { type: 'animation', name: 'pride-ring', duration: 120 },
+      { type: 'scene', name: 'pride', duration: 90 },
+      { type: 'animation', name: 'pride-breathe', duration: 120 },
+      { type: 'scene', name: 'trans', duration: 90 },
+      { type: 'animation', name: 'pride-rotate', duration: 120 },
+      { type: 'animation', name: 'rainbow', duration: 120 },
+      { type: 'scene', name: 'trans', duration: 90 },
+      { type: 'animation', name: 'pride-flow', duration: 150 }
+    ]
+  },
+  {
     name: 'Heart Night',
     description: 'Romantic vibes — hearts, breathing, and city love',
     gradient: 'linear-gradient(135deg, #ff0040, #cc0030, #ff6080)',

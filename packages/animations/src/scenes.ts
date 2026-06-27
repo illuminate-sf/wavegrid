@@ -4,9 +4,23 @@ import { DEFAULT_GRID_COLUMNS, GridCell, SceneGenerator } from './types';
 export const scenes: Record<string, SceneGenerator> = {
   civic: () => ({ h: 220, s: 90, b: 80 }),
 
-  pride: (i, total) => ({ h: Math.round((i / total) * 360), s: 90, b: 80 }),
+  pride: (i, total) => ({ h: Math.round((i / total) * 360), s: 100, b: 100 }),
 
-  gold: () => ({ h: 45, s: 95, b: 80 }),
+  trans: (i, total, cols) => {
+    const rows = Math.ceil(total / cols);
+    const row = Math.floor(i / cols);
+    const band = Math.floor((row / rows) * 5);
+    const colors = [
+      { h: 197, s: 100, b: 100 },
+      { h: 346, s: 60, b: 100 },
+      { h: 0, s: 0, b: 100 },
+      { h: 346, s: 60, b: 100 },
+      { h: 197, s: 100, b: 100 }
+    ];
+    return colors[Math.min(band, 4)];
+  },
+
+  gold: () => ({ h: 45, s: 100, b: 100 }),
 
   white: () => ({ h: 0, s: 0, b: 80 }),
 
