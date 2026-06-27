@@ -45,7 +45,7 @@ const SEQUENCES: SequenceDef[] = [
   },
   {
     name: 'Pride & Trans',
-    description: 'Mixed pride and trans — static flags and flowing animations',
+    description: 'Mixed pride and trans — static flags, flowing animations, breathing colors',
     gradient: 'linear-gradient(135deg, #e40303, #ff8c00, #5BCEFA, #F5A9B8, #750787)',
     transition: 'fade',
     transitionDuration: 2,
@@ -53,14 +53,17 @@ const SEQUENCES: SequenceDef[] = [
       { type: 'scene', name: 'pride', duration: 120 },
       { type: 'animation', name: 'pride-flow', duration: 150 },
       { type: 'scene', name: 'trans', duration: 120 },
+      { type: 'animation', name: 'trans-flow', duration: 150 },
       { type: 'animation', name: 'pride-ring', duration: 120 },
+      { type: 'scene', name: 'trans', duration: 90 },
+      { type: 'animation', name: 'trans-breathe', duration: 120 },
       { type: 'scene', name: 'pride', duration: 90 },
       { type: 'animation', name: 'pride-breathe', duration: 120 },
+      { type: 'animation', name: 'trans-ring', duration: 120 },
       { type: 'scene', name: 'trans', duration: 90 },
       { type: 'animation', name: 'pride-rotate', duration: 120 },
       { type: 'animation', name: 'rainbow', duration: 120 },
-      { type: 'scene', name: 'trans', duration: 90 },
-      { type: 'animation', name: 'pride-flow', duration: 150 }
+      { type: 'animation', name: 'trans-flow', duration: 150 }
     ]
   },
   {
