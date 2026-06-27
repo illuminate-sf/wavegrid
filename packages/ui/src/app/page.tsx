@@ -16,6 +16,7 @@ import { LoginScreen } from '@/components/login-screen';
 import { MotionControls, useMotion } from '@/components/motion-tab';
 import { AnimationPalette, ScenePalette } from '@/components/palette';
 import { PatternsTab } from '@/components/patterns-tab';
+import { PlaylistTab } from '@/components/playlist-tab';
 import { PrideTab } from '@/components/pride-tab';
 import { SettingsTab } from '@/components/settings-tab';
 import { ShiftDial } from '@/components/shift-dial';
@@ -41,6 +42,7 @@ const tabs: { key: GridMode; label: string }[] = [
   { key: 'animations', label: 'Anim' },
   { key: 'pride', label: 'Pride' },
   { key: 'patterns', label: 'Patterns' },
+  { key: 'playlist', label: 'Playlist' },
   { key: 'flags', label: 'Flags' },
   { key: 'drops', label: 'Drops' },
   { key: 'audio', label: 'Audio' },
@@ -63,7 +65,8 @@ function ToolContent({
   isPhone,
   onShift,
   numCannons, gridColumns,
-  activePattern, onPatternSelect
+  activePattern, onPatternSelect,
+  playlistState
 }: {
   tab: GridMode;
   hue: number; sat: number; bright: number; brushSize: number; softEdge: boolean; trailFade: boolean;
@@ -89,6 +92,7 @@ function ToolContent({
   gridColumns: number;
   activePattern: string | null;
   onPatternSelect: (id: string) => void;
+  playlistState: { active: boolean; playlist: unknown } | null;
 }) {
   return (
     <>
@@ -203,6 +207,10 @@ function ToolContent({
 
       {tab === 'patterns' && (
         <PatternsTab send={send} />
+      )}
+
+      {tab === 'playlist' && (
+        <PlaylistTab send={send} playlistState={playlistState as Parameters<typeof PlaylistTab>[0]['playlistState']} />
       )}
 
       {tab === 'flags' && (
@@ -395,7 +403,7 @@ function MasterSliders({
 export default function Home() {
   const config = useConfig();
   const { user, checked, login, logout } = useAuth();
-  const { connected, grid, orientation, send } = useSocket(config?.simulatorUrl ?? 'ws://localhost:3000');
+  const { connected, grid, orientation, playlistState, send } = useSocket(config?.simulatorUrl ?? 'ws://localhost:3000');
   const isPhone = useIsPhone();
 
   const NUM_CANNONS = config?.numCannons ?? 49;
@@ -687,7 +695,8 @@ export default function Home() {
     numCannons: NUM_CANNONS,
     gridColumns: GRID_COLUMNS,
     activePattern,
-    onPatternSelect: handlePatternSelect
+    onPatternSelect: handlePatternSelect,
+    playlistState
   };
 
   /* ---------- Loading gates (after all hooks, to respect Rules of Hooks) ---------- */

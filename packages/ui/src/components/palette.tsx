@@ -33,7 +33,11 @@ const animGradients: Record<string, string> = {
   ].join(', '),
   rain: 'linear-gradient(135deg, #0369a1, #0ea5e9)',
   'i-heart-sf': 'linear-gradient(135deg, #ffd700, #ef4444, #1a3a8a)',
-  'heart-breathe': 'radial-gradient(circle at 50% 40%, #ef4444, #b91c1c, #1a1a25)'
+  'heart-breathe': 'radial-gradient(circle at 50% 40%, #ef4444, #b91c1c, #1a1a25)',
+  'pride-flow': 'linear-gradient(180deg, #e40303, #ff8c00, #ffed00, #008026, #24408e, #732982)',
+  'pride-breathe': 'linear-gradient(135deg, #e40303, #ff8c00, #ffed00, #008026, #24408e)',
+  'pride-rotate': 'linear-gradient(90deg, #e40303, #ff8c00, #ffed00, #008026, #24408e, #732982)',
+  'pride-ring': 'conic-gradient(from 0deg, #e40303, #ff8c00, #ffed00, #008026, #24408e, #732982, #e40303)'
 };
 
 function Tile({

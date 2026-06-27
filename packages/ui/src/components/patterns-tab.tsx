@@ -2,21 +2,16 @@
 
 import { useCallback, useState } from 'react';
 
-const DEFAULT_CODE = `({
-  render(ctx) {
-    for (let i = 0; i < ctx.count; i++) {
-      const [u, v] = ctx.uv(i);
-      const hue = (u * 360 + ctx.t * 60) % 360;
-      const bright = 50 + Math.sin(v * Math.PI + ctx.t) * 40;
-      ctx.set(i, hue, 100, bright);
-    }
-  },
-  meta: { name: 'custom' }
-})`;
+interface PatternDef {
+  name: string;
+  gradient: string;
+  code: string;
+}
 
-const PRESETS: { name: string; code: string }[] = [
+const PRESETS: PatternDef[] = [
   {
     name: 'Color Cycle',
+    gradient: 'conic-gradient(from 0deg, #e33, #ee0, #3a5, #35e, #e33)',
     code: `({
   render(ctx) {
     ctx.fill(ctx.t * 30 % 360, 100, 80);
@@ -26,6 +21,7 @@ const PRESETS: { name: string; code: string }[] = [
   },
   {
     name: 'Noise Field',
+    gradient: 'linear-gradient(135deg, #1a2a3a, #3a5a2a, #2a1a4a)',
     code: `({
   render(ctx) {
     for (let i = 0; i < ctx.count; i++) {
@@ -39,6 +35,7 @@ const PRESETS: { name: string; code: string }[] = [
   },
   {
     name: 'Radial Pulse',
+    gradient: 'radial-gradient(circle, #3a7ad8, #1a2a5a, #0a1a3a)',
     code: `({
   render(ctx) {
     for (let i = 0; i < ctx.count; i++) {
@@ -52,6 +49,7 @@ const PRESETS: { name: string; code: string }[] = [
   },
   {
     name: 'Matrix Rain',
+    gradient: 'linear-gradient(180deg, #001a00, #00cc00, #001a00)',
     code: `({
   render(ctx) {
     for (let i = 0; i < ctx.count; i++) {
@@ -67,6 +65,7 @@ const PRESETS: { name: string; code: string }[] = [
   },
   {
     name: 'Checkerboard',
+    gradient: 'repeating-conic-gradient(#555 0% 25%, #e8e8e8 0% 50%) 50% / 36px 36px',
     code: `({
   render(ctx) {
     for (let i = 0; i < ctx.count; i++) {
@@ -80,6 +79,7 @@ const PRESETS: { name: string; code: string }[] = [
   },
   {
     name: 'Spiral',
+    gradient: 'conic-gradient(from 0deg, #e33, #ee0, #3a5, #35e, transparent)',
     code: `({
   render(ctx) {
     for (let i = 0; i < ctx.count; i++) {
@@ -92,22 +92,114 @@ const PRESETS: { name: string; code: string }[] = [
   },
   meta: { name: 'spiral' }
 })`
+  },
+  {
+    name: 'Lava',
+    gradient: 'linear-gradient(135deg, #ff4500, #cc0000, #ff8c00, #ff4500)',
+    code: `({
+  render(ctx) {
+    for (let i = 0; i < ctx.count; i++) {
+      const [u, v] = ctx.uv(i);
+      const n1 = ctx.noise(u * 2, v * 2, ctx.t * 0.3);
+      const n2 = ctx.noise(u * 4, v * 4, ctx.t * 0.5 + 10);
+      const h = 10 + n1 * 30;
+      const b = 40 + n2 * 60;
+      ctx.set(i, h, 100, b);
+    }
+  },
+  meta: { name: 'lava' }
+})`
+  },
+  {
+    name: 'Aurora',
+    gradient: 'linear-gradient(135deg, #00ff88, #0088ff, #8800ff, #00ff88)',
+    code: `({
+  render(ctx) {
+    for (let i = 0; i < ctx.count; i++) {
+      const [u, v] = ctx.uv(i);
+      const wave = Math.sin(u * 4 + ctx.t) * 0.2;
+      const n = ctx.noise(u * 2, v + wave, ctx.t * 0.2);
+      const h = 120 + n * 180;
+      const b = Math.max(5, n * 100);
+      ctx.set(i, h, 80, b);
+    }
+  },
+  meta: { name: 'aurora' }
+})`
   }
 ];
+
+const DEFAULT_CODE = `({
+  render(ctx) {
+    for (let i = 0; i < ctx.count; i++) {
+      const [u, v] = ctx.uv(i);
+      const hue = (u * 360 + ctx.t * 60) % 360;
+      const bright = 50 + Math.sin(v * Math.PI + ctx.t) * 40;
+      ctx.set(i, hue, 100, bright);
+    }
+  },
+  meta: { name: 'custom' }
+})`;
+
+function PatternTile({
+  pattern,
+  active,
+  onClick
+}: {
+  pattern: PatternDef;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="relative overflow-hidden transition-transform active:scale-93"
+      style={{
+        width: 72,
+        height: 72,
+        borderRadius: 16,
+        background: pattern.gradient,
+        border: active ? '2.5px solid #fff' : '2.5px solid transparent'
+      }}
+    >
+      <span
+        className="absolute bottom-1 left-0 right-0 text-center text-white font-semibold"
+        style={{
+          fontSize: 9,
+          textShadow: '0 1px 4px rgba(0,0,0,0.8)',
+          letterSpacing: '0.02em'
+        }}
+      >
+        {pattern.name}
+      </span>
+    </button>
+  );
+}
 
 export function PatternsTab({
   send
 }: {
   send: (msg: Record<string, unknown>) => void;
 }) {
+  const [activePattern, setActivePattern] = useState<string | null>(null);
+  const [showEditor, setShowEditor] = useState(false);
   const [code, setCode] = useState(DEFAULT_CODE);
   const [status, setStatus] = useState<'idle' | 'running' | 'error'>('idle');
   const [error, setError] = useState<string | null>(null);
+
+  const handleSelect = useCallback((pattern: PatternDef) => {
+    setActivePattern(pattern.name);
+    setCode(pattern.code);
+    setError(null);
+    setStatus('running');
+    send({ type: 'evalPattern', code: pattern.code, params: {} });
+  }, [send]);
 
   const handleRun = useCallback(() => {
     try {
       setError(null);
       setStatus('running');
+      setActivePattern(null);
       send({ type: 'evalPattern', code, params: {} });
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : String(e));
@@ -118,97 +210,117 @@ export function PatternsTab({
   const handleStop = useCallback(() => {
     send({ type: 'stopPattern' });
     setStatus('idle');
-  }, [send]);
-
-  const handlePreset = useCallback((preset: typeof PRESETS[number]) => {
-    setCode(preset.code);
-    setError(null);
-    setStatus('running');
-    send({ type: 'evalPattern', code: preset.code, params: {} });
+    setActivePattern(null);
   }, [send]);
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Presets */}
-      <div className="flex gap-2 flex-wrap">
+      {/* Pattern tiles */}
+      <div className="flex gap-2.5 flex-wrap">
         {PRESETS.map((p) => (
-          <button
+          <PatternTile
             key={p.name}
-            onClick={() => handlePreset(p)}
-            className="transition-all"
-            style={{
-              padding: '6px 12px',
-              borderRadius: 16,
-              fontSize: 12,
-              fontWeight: 500,
-              background: '#12121a',
-              border: '1px solid #1a1a25',
-              color: '#888898'
-            }}
-          >
-            {p.name}
-          </button>
+            pattern={p}
+            active={activePattern === p.name}
+            onClick={() => handleSelect(p)}
+          />
         ))}
       </div>
 
-      {/* Code editor */}
-      <textarea
-        value={code}
-        onChange={(e) => setCode(e.target.value)}
-        spellCheck={false}
-        className="font-mono text-sm"
-        style={{
-          width: '100%',
-          minHeight: 200,
-          padding: 12,
-          borderRadius: 12,
-          background: '#0a0a10',
-          border: '1px solid #1a1a25',
-          color: '#c8c8d8',
-          resize: 'vertical',
-          outline: 'none',
-          lineHeight: 1.5,
-          tabSize: 2
-        }}
-      />
-
-      {/* Controls */}
-      <div className="flex gap-2 items-center">
-        <button
-          onClick={handleRun}
-          style={{
-            padding: '10px 24px',
-            borderRadius: 20,
-            fontSize: 14,
-            fontWeight: 600,
-            background: status === 'running' ? '#1a3a2a' : '#1a1a2e',
-            border: status === 'running' ? '1px solid #2a5a3a' : '1px solid #333',
-            color: status === 'running' ? '#4ade80' : '#e8e8f0'
-          }}
-        >
-          {status === 'running' ? 'Update' : 'Run'}
-        </button>
+      {/* Stop button */}
+      {status === 'running' && (
         <button
           onClick={handleStop}
           style={{
-            padding: '10px 24px',
-            borderRadius: 20,
-            fontSize: 14,
+            padding: '8px 20px',
+            borderRadius: 16,
+            fontSize: 12,
             fontWeight: 600,
             background: '#1a1a2e',
             border: '1px solid #333',
-            color: '#f87171'
+            color: '#f87171',
+            alignSelf: 'flex-start'
           }}
         >
-          Stop
+          Stop Pattern
         </button>
-        {status === 'running' && (
-          <span style={{ fontSize: 12, color: '#4ade80' }}>Pattern active</span>
-        )}
-        {error && (
-          <span style={{ fontSize: 12, color: '#f87171' }}>{error}</span>
-        )}
-      </div>
+      )}
+
+      {/* Editor toggle */}
+      <button
+        onClick={() => setShowEditor(v => !v)}
+        style={{
+          padding: '6px 12px',
+          borderRadius: 12,
+          fontSize: 11,
+          fontWeight: 500,
+          background: 'transparent',
+          border: '1px solid #1a1a25',
+          color: '#555',
+          alignSelf: 'flex-start',
+          cursor: 'pointer'
+        }}
+      >
+        {showEditor ? 'Hide Editor' : 'Code Editor'}
+      </button>
+
+      {/* Code editor (toggled) */}
+      {showEditor && (
+        <div className="flex flex-col gap-3">
+          <textarea
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            spellCheck={false}
+            className="font-mono text-sm"
+            style={{
+              width: '100%',
+              minHeight: 200,
+              padding: 12,
+              borderRadius: 12,
+              background: '#0a0a10',
+              border: '1px solid #1a1a25',
+              color: '#c8c8d8',
+              resize: 'vertical',
+              outline: 'none',
+              lineHeight: 1.5,
+              tabSize: 2
+            }}
+          />
+          <div className="flex gap-2 items-center">
+            <button
+              onClick={handleRun}
+              style={{
+                padding: '8px 20px',
+                borderRadius: 16,
+                fontSize: 12,
+                fontWeight: 600,
+                background: status === 'running' ? '#1a3a2a' : '#1a1a2e',
+                border: status === 'running' ? '1px solid #2a5a3a' : '1px solid #333',
+                color: status === 'running' ? '#4ade80' : '#e8e8f0'
+              }}
+            >
+              {status === 'running' ? 'Update' : 'Run'}
+            </button>
+            <button
+              onClick={handleStop}
+              style={{
+                padding: '8px 20px',
+                borderRadius: 16,
+                fontSize: 12,
+                fontWeight: 600,
+                background: '#1a1a2e',
+                border: '1px solid #333',
+                color: '#f87171'
+              }}
+            >
+              Stop
+            </button>
+            {error && (
+              <span style={{ fontSize: 12, color: '#f87171' }}>{error}</span>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
