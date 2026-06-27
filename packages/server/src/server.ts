@@ -301,6 +301,7 @@ function handleMessage(msg: any) {
       currentAnimation = null;
       cancelPlaylistIfActive();
       patternEngine.stop();
+      setAllTargets(grid, 0, 0, 0, 1.0);
       applyScene(grid, msg.name, GRID_COLUMNS);
       broadcastCommand({ action: 'setScene', name: msg.name });
       scheduleSave();
@@ -312,6 +313,7 @@ function handleMessage(msg: any) {
       animationTick = 0;
       cancelPlaylistIfActive();
       patternEngine.stop();
+      setAllTargets(grid, 0, 0, 0, 1.0);
       broadcastCommand({ action: 'setAnimation', name: msg.name, speed: animSpeed });
       scheduleSave();
     } else if (msg.name === 'stop') {
@@ -449,6 +451,7 @@ function handleMessage(msg: any) {
     if (typeof msg.code === 'string') {
       currentAnimation = null;
       cancelPlaylistIfActive();
+      setAllTargets(grid, 0, 0, 0, 1.0);
       patternEngine.load(msg.code);
       broadcastCommand({
         action: 'evalPattern',

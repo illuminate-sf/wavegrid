@@ -139,6 +139,22 @@ const PRIDE_PATTERNS: PatternDef[] = [
     name: 'Wave',
     gradient: 'linear-gradient(135deg, #e40303 0%, #008026 50%, #750787 100%)',
     code: makeWavePattern(PRIDE_COLORS_CODE)
+  },
+  {
+    name: 'Rainbow',
+    gradient: 'linear-gradient(90deg, #e33, #ee0, #3a5, #35e, #e33)',
+    code: `({
+  render: function(ctx) {
+    for (var i = 0; i < ctx.count; i++) {
+      var uv = ctx.uv(i);
+      var row = Math.floor(i / ctx.cols);
+      var col = i % ctx.cols;
+      var hue = (ctx.t * 30 + (row + col) * 25) % 360;
+      ctx.set(i, hue, 100, 100);
+    }
+  },
+  meta: { name: 'pride-rainbow-anim' }
+})`
   }
 ];
 

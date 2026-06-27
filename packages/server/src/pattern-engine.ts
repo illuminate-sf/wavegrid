@@ -28,7 +28,10 @@ interface PatternCtx {
   get: (idx: number) => [number, number, number];
   fill: (h: number, s: number, b: number) => void;
   uv: (idx: number) => [number, number];
+  xy: (idx: number) => [number, number];
   polar: (idx: number) => [number, number];
+  noise: (x: number, y: number, z: number) => number;
+  smoothstep: (edge0: number, edge1: number, x: number) => number;
 }
 
 export class ServerPatternEngine {
@@ -249,6 +252,11 @@ export class ServerPatternEngine {
         const row = Math.floor(idx / cols);
         return [col / (cols - 1 || 1), row / (rows - 1 || 1)];
       },
+      xy(idx: number): [number, number] {
+        const col = idx % cols;
+        const row = Math.floor(idx / cols);
+        return [col, row];
+      },
       polar(idx: number): [number, number] {
         const col = idx % cols;
         const row = Math.floor(idx / cols);
@@ -259,6 +267,16 @@ export class ServerPatternEngine {
         const r = Math.sqrt(dx * dx + dy * dy) / Math.max(cx, cy);
         const a = (Math.atan2(dy, dx) / Math.PI + 1) / 2;
         return [r, a];
+      },
+      noise(x: number, y: number, z: number): number {
+        // Simple deterministic hash-based noise (0-1 range)
+        const dot = x * 12.9898 + y * 78.233 + z * 37.719;
+        const s = Math.sin(dot) * 43758.5453;
+        return s - Math.floor(s);
+      },
+      smoothstep(edge0: number, edge1: number, x: number): number {
+        const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
+        return t * t * (3 - 2 * t);
       }
     };
   }

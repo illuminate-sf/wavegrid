@@ -32,14 +32,14 @@ const ANIMATION_SOURCES: Record<string, string> = {
     for (var i = 0; i < ctx.count; i++) {
       var col = i % ctx.cols;
       var hue = (ctx.frame * 2 + col * 40) % 360;
-      var bright = 60 + Math.sin(ctx.frame * 0.05 + col * 0.8) * 20;
-      ctx.set(i, hue, 85, bright);
+      var bright = 70 + Math.sin(ctx.frame * 0.05 + col * 0.8) * 30;
+      ctx.set(i, hue, 100, bright);
     }`,
 
   breathe: `
-    var brightness = 40 + Math.sin(ctx.frame * 0.03) * 35;
+    var brightness = 70 + Math.sin(ctx.frame * 0.03) * 30;
     for (var i = 0; i < ctx.count; i++) {
-      ctx.set(i, 220, 80, brightness);
+      ctx.set(i, 220, 100, brightness);
     }`,
 
   rainbow: `
@@ -47,7 +47,7 @@ const ANIMATION_SOURCES: Record<string, string> = {
       var row = Math.floor(i / ctx.cols);
       var col = i % ctx.cols;
       var hue = (ctx.frame * 1.5 + (row + col) * 25) % 360;
-      ctx.set(i, hue, 90, 80);
+      ctx.set(i, hue, 100, 100);
     }`,
 
   pacman: `
@@ -108,8 +108,8 @@ const ANIMATION_SOURCES: Record<string, string> = {
       var col = i % ctx.cols;
       var phase = (ctx.frame * 0.15 + col * 2.3 + col * col * 0.7) % rows;
       var dist = Math.abs(row - phase);
-      var bright = dist < 1.5 ? 90 - dist * 30 : 10;
-      ctx.set(i, 200 + col * 8, 70, bright);
+      var bright = dist < 1.5 ? 100 - dist * 25 : 20;
+      ctx.set(i, 200 + col * 8, 90, bright);
     }`,
 
   'i-heart-sf': `
@@ -118,8 +118,8 @@ const ANIMATION_SOURCES: Record<string, string> = {
       [[0,1,0,0,0,1,0],[1,1,1,0,1,1,1],[1,1,1,1,1,1,1],[0,1,1,1,1,1,0],[0,0,1,1,1,0,0],[0,0,0,1,0,0,0],[0,0,0,0,0,0,0]],
       [[0,1,1,0,1,1,1],[1,0,0,0,1,0,0],[1,0,0,0,1,0,0],[0,1,1,0,1,1,0],[0,0,1,0,1,0,0],[0,0,1,0,1,0,0],[1,1,0,0,1,0,0]]
     ];
-    var colors = [{h:45,s:95,b:85},{h:0,s:100,b:100},{h:45,s:95,b:85}];
-    var frame = Math.floor(ctx.frame / 90) % 3;
+    var colors = [{h:45,s:100,b:100},{h:0,s:100,b:100},{h:45,s:100,b:100}];
+    var frame = Math.floor(ctx.frame / 180) % 3;
     var bitmap = bitmaps[frame];
     var color = colors[frame];
     for (var i = 0; i < ctx.count; i++) {
@@ -162,7 +162,7 @@ const ANIMATION_SOURCES: Record<string, string> = {
     for (var i = 0; i < ctx.count; i++) {
       var row = Math.floor(i / ctx.cols);
       var c = roygbivAt(row / ctx.rows + speed);
-      ctx.set(i, c.h, c.s, 90);
+      ctx.set(i, c.h, c.s, 100);
     }`,
 
   'pride-breathe': `
@@ -179,7 +179,7 @@ const ANIMATION_SOURCES: Record<string, string> = {
       return { h: ((ROYGBIV[idx].h + dh * mx) % 360 + 360) % 360, s: 100 };
     }
     var speed = ctx.frame * 0.008;
-    var brightness = 70 + Math.sin(ctx.frame * 0.04) * 20;
+    var brightness = 90 + Math.sin(ctx.frame * 0.04) * 10;
     var c = roygbivAt(speed);
     for (var i = 0; i < ctx.count; i++) {
       ctx.set(i, c.h, c.s, brightness);
@@ -191,7 +191,7 @@ const ANIMATION_SOURCES: Record<string, string> = {
     for (var i = 0; i < ctx.count; i++) {
       var col = i % ctx.cols;
       var idx = ((col + offset) % ROYGBIV.length + ROYGBIV.length) % ROYGBIV.length;
-      ctx.set(i, ROYGBIV[idx].h, ROYGBIV[idx].s, 90);
+      ctx.set(i, ROYGBIV[idx].h, ROYGBIV[idx].s, 100);
     }`,
 
   'pride-ring': `
@@ -210,42 +210,116 @@ const ANIMATION_SOURCES: Record<string, string> = {
     var speed = ctx.frame * 0.012;
     for (var i = 0; i < ctx.count; i++) {
       var c = roygbivAt(i / ctx.count + speed);
-      ctx.set(i, c.h, c.s, 90);
+      ctx.set(i, c.h, c.s, 100);
+    }`,
+
+  'trans-flow': `
+    var TRANS = [{h:197,s:100},{h:346,s:60},{h:0,s:0},{h:346,s:60},{h:197,s:100}];
+    function transAt(pos) {
+      var p = ((pos % 1) + 1) % 1;
+      var sc = p * TRANS.length;
+      var idx = Math.floor(sc) % TRANS.length;
+      var nxt = (idx + 1) % TRANS.length;
+      var mx = sc - Math.floor(sc);
+      var dh = TRANS[nxt].h - TRANS[idx].h;
+      if (dh > 180) dh -= 360;
+      if (dh < -180) dh += 360;
+      return { h: ((TRANS[idx].h + dh * mx) % 360 + 360) % 360, s: TRANS[idx].s + (TRANS[nxt].s - TRANS[idx].s) * mx };
+    }
+    var speed = ctx.frame * 0.012;
+    for (var i = 0; i < ctx.count; i++) {
+      var row = Math.floor(i / ctx.cols);
+      var c = transAt(row / ctx.rows + speed);
+      ctx.set(i, c.h, c.s, 100);
+    }`,
+
+  'trans-breathe': `
+    var TRANS = [{h:197,s:100},{h:346,s:60},{h:0,s:0},{h:346,s:60},{h:197,s:100}];
+    function transAt(pos) {
+      var p = ((pos % 1) + 1) % 1;
+      var sc = p * TRANS.length;
+      var idx = Math.floor(sc) % TRANS.length;
+      var nxt = (idx + 1) % TRANS.length;
+      var mx = sc - Math.floor(sc);
+      var dh = TRANS[nxt].h - TRANS[idx].h;
+      if (dh > 180) dh -= 360;
+      if (dh < -180) dh += 360;
+      return { h: ((TRANS[idx].h + dh * mx) % 360 + 360) % 360, s: TRANS[idx].s + (TRANS[nxt].s - TRANS[idx].s) * mx };
+    }
+    var speed = ctx.frame * 0.008;
+    var brightness = 90 + Math.sin(ctx.frame * 0.04) * 10;
+    var c = transAt(speed);
+    for (var i = 0; i < ctx.count; i++) {
+      ctx.set(i, c.h, c.s, brightness);
+    }`,
+
+  'trans-ring': `
+    var TRANS = [{h:197,s:100},{h:346,s:60},{h:0,s:0},{h:346,s:60},{h:197,s:100}];
+    function transAt(pos) {
+      var p = ((pos % 1) + 1) % 1;
+      var sc = p * TRANS.length;
+      var idx = Math.floor(sc) % TRANS.length;
+      var nxt = (idx + 1) % TRANS.length;
+      var mx = sc - Math.floor(sc);
+      var dh = TRANS[nxt].h - TRANS[idx].h;
+      if (dh > 180) dh -= 360;
+      if (dh < -180) dh += 360;
+      return { h: ((TRANS[idx].h + dh * mx) % 360 + 360) % 360, s: TRANS[idx].s + (TRANS[nxt].s - TRANS[idx].s) * mx };
+    }
+    var speed = ctx.frame * 0.012;
+    for (var i = 0; i < ctx.count; i++) {
+      var c = transAt(i / ctx.count + speed);
+      ctx.set(i, c.h, c.s, 100);
     }`
 };
 
 // ── ctx-compatible render bodies for scenes (static) ──────────────
 
 const SCENE_SOURCES: Record<string, string> = {
-  civic: `ctx.fill(220, 90, 80);`,
+  civic: `ctx.fill(220, 100, 100);`,
 
   pride: `
     for (var i = 0; i < ctx.count; i++) {
-      ctx.set(i, Math.round(i / ctx.count * 360), 90, 80);
+      ctx.set(i, Math.round(i / ctx.count * 360), 100, 100);
     }`,
 
-  gold: `ctx.fill(45, 95, 80);`,
+  trans: `
+    var colors = [
+      [197, 100, 100],
+      [346, 60, 100],
+      [0, 0, 100],
+      [346, 60, 100],
+      [197, 100, 100]
+    ];
+    for (var i = 0; i < ctx.count; i++) {
+      var row = Math.floor(i / ctx.cols);
+      var band = Math.min(4, Math.floor(row / ctx.rows * 5));
+      var c = colors[band];
+      ctx.set(i, c[0], c[1], c[2]);
+    }`,
 
-  white: `ctx.fill(0, 0, 80);`,
+  gold: `ctx.fill(45, 100, 100);`,
+
+  white: `ctx.fill(0, 0, 100);`,
 
   solstice: `
     for (var i = 0; i < ctx.count; i++) {
       var row = Math.floor(i / ctx.cols);
       var col = i % ctx.cols;
-      ctx.set(i, 40 + row * 5 + col * 4, 85, 80);
+      ctx.set(i, 40 + row * 5 + col * 4, 100, 100);
     }`,
 
   ocean: `
     for (var i = 0; i < ctx.count; i++) {
       var row = Math.floor(i / ctx.cols);
       var col = i % ctx.cols;
-      ctx.set(i, 180 + row * 8 + col * 3, 75, 70);
+      ctx.set(i, 180 + row * 8 + col * 3, 100, 100);
     }`,
 
   sunset: `
     for (var i = 0; i < ctx.count; i++) {
       var row = Math.floor(i / ctx.cols);
-      ctx.set(i, 10 + row * 5, 90, 85 - row * 5);
+      ctx.set(i, 10 + row * 5, 100, 100);
     }`,
 
   heart: `
