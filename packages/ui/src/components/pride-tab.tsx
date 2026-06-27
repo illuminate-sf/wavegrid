@@ -20,9 +20,9 @@ var COLORS = [
 const TRANS_COLORS_CODE = `
 var COLORS = [
   [197, 100, 100],
-  [346, 60, 100],
+  [340, 100, 100],
   [0, 0, 100],
-  [346, 60, 100],
+  [340, 100, 100],
   [197, 100, 100]
 ];
 `;
@@ -177,7 +177,7 @@ const TRANS_STATIC: PatternDef[] = [
   {
     name: 'Solid Pink',
     gradient: 'linear-gradient(135deg, #F5A9B8, #d88a9a)',
-    code: `({ render: function(ctx) { ctx.fill(346, 60, 100); }, meta: { name: 'trans-pink' } })`
+    code: `({ render: function(ctx) { ctx.fill(340, 100, 100); }, meta: { name: 'trans-pink' } })`
   }
 ];
 

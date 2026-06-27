@@ -32,15 +32,15 @@ const SEQUENCES: SequenceDef[] = [
     transition: 'fade',
     transitionDuration: 3,
     steps: [
-      { type: 'scene', name: 'pride', duration: 180 },
+      { type: 'scene', name: 'pride', duration: 150 },
       { type: 'scene', name: 'gold', duration: 120 },
       { type: 'scene', name: 'trans', duration: 150 },
       { type: 'scene', name: 'sunset', duration: 120 },
-      { type: 'scene', name: 'heart', duration: 120 },
-      { type: 'animation', name: 'pride-breathe', duration: 150 },
       { type: 'scene', name: 'ocean', duration: 120 },
-      { type: 'scene', name: 'sf', duration: 120 },
-      { type: 'scene', name: 'solstice', duration: 120 }
+      { type: 'scene', name: 'forest', duration: 120 },
+      { type: 'scene', name: 'solstice', duration: 120 },
+      { type: 'scene', name: 'fire', duration: 120 },
+      { type: 'scene', name: 'night', duration: 120 }
     ]
   },
   {
