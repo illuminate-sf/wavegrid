@@ -12,9 +12,9 @@ export const scenes: Record<string, SceneGenerator> = {
     const band = Math.floor((row / rows) * 5);
     const colors = [
       { h: 197, s: 100, b: 100 },
-      { h: 346, s: 60, b: 100 },
+      { h: 340, s: 100, b: 100 },
       { h: 0, s: 0, b: 100 },
-      { h: 346, s: 60, b: 100 },
+      { h: 340, s: 100, b: 100 },
       { h: 197, s: 100, b: 100 }
     ];
     return colors[Math.min(band, 4)];

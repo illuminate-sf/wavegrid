@@ -214,7 +214,7 @@ const ANIMATION_SOURCES: Record<string, string> = {
     }`,
 
   'trans-flow': `
-    var TRANS = [{h:197,s:100},{h:346,s:60},{h:0,s:0},{h:346,s:60},{h:197,s:100}];
+    var TRANS = [{h:197,s:100},{h:340,s:100},{h:0,s:0},{h:340,s:100},{h:197,s:100}];
     function transAt(pos) {
       var p = ((pos % 1) + 1) % 1;
       var sc = p * TRANS.length;
@@ -234,7 +234,7 @@ const ANIMATION_SOURCES: Record<string, string> = {
     }`,
 
   'trans-breathe': `
-    var TRANS = [{h:197,s:100},{h:346,s:60},{h:0,s:0},{h:346,s:60},{h:197,s:100}];
+    var TRANS = [{h:197,s:100},{h:340,s:100},{h:0,s:0},{h:340,s:100},{h:197,s:100}];
     function transAt(pos) {
       var p = ((pos % 1) + 1) % 1;
       var sc = p * TRANS.length;
@@ -254,7 +254,7 @@ const ANIMATION_SOURCES: Record<string, string> = {
     }`,
 
   'trans-ring': `
-    var TRANS = [{h:197,s:100},{h:346,s:60},{h:0,s:0},{h:346,s:60},{h:197,s:100}];
+    var TRANS = [{h:197,s:100},{h:340,s:100},{h:0,s:0},{h:340,s:100},{h:197,s:100}];
     function transAt(pos) {
       var p = ((pos % 1) + 1) % 1;
       var sc = p * TRANS.length;
@@ -286,9 +286,9 @@ const SCENE_SOURCES: Record<string, string> = {
   trans: `
     var colors = [
       [197, 100, 100],
-      [346, 60, 100],
+      [340, 100, 100],
       [0, 0, 100],
-      [346, 60, 100],
+      [340, 100, 100],
       [197, 100, 100]
     ];
     for (var i = 0; i < ctx.count; i++) {
@@ -365,14 +365,14 @@ const SCENE_SOURCES: Record<string, string> = {
     for (var i = 0; i < ctx.count; i++) {
       var row = Math.floor(i / ctx.cols);
       var col = i % ctx.cols;
-      ctx.set(i, 120 + row * 6 + col * 2, 75, 30 + row * 8);
+      ctx.set(i, 120 + row * 6 + col * 2, 100, 70 + row * 5);
     }`,
 
   fire: `
     for (var i = 0; i < ctx.count; i++) {
       var row = Math.floor(i / ctx.cols);
       var invRow = (ctx.cols - 1) - row;
-      ctx.set(i, 10 + invRow * 6, 95, 40 + invRow * 8);
+      ctx.set(i, 10 + invRow * 6, 100, 70 + invRow * 5);
     }`,
 
   night: `
@@ -385,8 +385,8 @@ const SCENE_SOURCES: Record<string, string> = {
       var col = i % ctx.cols;
       var isStar = false;
       for (var s = 0; s < stars.length; s++) { if (stars[s] === i) { isStar = true; break; } }
-      if (isStar) ctx.set(i, 200 + (row + col) * 10, 20, 90);
-      else ctx.set(i, 240, 60, 8 + row * 2);
+      if (isStar) ctx.set(i, 200 + (row + col) * 10, 30, 100);
+      else ctx.set(i, 240, 80, 30 + row * 5);
     }`,
 
   checker: `
