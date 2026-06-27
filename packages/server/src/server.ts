@@ -5,7 +5,7 @@ import { WebSocket,WebSocketServer } from 'ws';
 
 import { animations } from './animations';
 import type { BlendMode, CannonState, Orientation, Rotation } from './grid';
-import {compositeLayer, createGrid, DEFAULT_ALPHA, DEFAULT_GRID_COLUMNS, DEFAULT_NUM_CANNONS, defaultOrientation, mapUiToGrid, remapGridForUi, setAllTargets, setCannonTarget, shiftGrid, tickGrid } from './grid';
+import {compositeLayer, createGrid, DEFAULT_ALPHA, DEFAULT_GRID_COLUMNS, DEFAULT_NUM_CANNONS, defaultOrientation, mapUiToGrid, remapGridForUi, resetGrid, setAllTargets, setCannonTarget, shiftGrid, tickGrid } from './grid';
 import { ServerPatternEngine } from './pattern-engine';
 import { compilePlaylist, type PlaylistDef, type PlaylistStep } from './playlist-compiler';
 import { applyScene, scenes } from './scenes';
@@ -301,8 +301,14 @@ function handleMessage(msg: any) {
       currentAnimation = null;
       cancelPlaylistIfActive();
       patternEngine.stop();
-      setAllTargets(grid, 0, 0, 0, 1.0);
+      resetGrid(grid);
       applyScene(grid, msg.name, GRID_COLUMNS);
+      // Snap current to match targets so scene appears instantly
+      for (let i = 0; i < grid.length; i++) {
+        grid[i].h = grid[i].targetH;
+        grid[i].s = grid[i].targetS;
+        grid[i].b = grid[i].targetB;
+      }
       broadcastCommand({ action: 'setScene', name: msg.name });
       scheduleSave();
     }
@@ -313,7 +319,7 @@ function handleMessage(msg: any) {
       animationTick = 0;
       cancelPlaylistIfActive();
       patternEngine.stop();
-      setAllTargets(grid, 0, 0, 0, 1.0);
+      resetGrid(grid);
       broadcastCommand({ action: 'setAnimation', name: msg.name, speed: animSpeed });
       scheduleSave();
     } else if (msg.name === 'stop') {
@@ -401,7 +407,7 @@ function handleMessage(msg: any) {
     currentAnimation = null;
     cancelPlaylistIfActive();
     patternEngine.stop();
-    setAllTargets(grid, 0, 0, 0, 1.0);
+    resetGrid(grid);
     broadcastCommand({ action: 'clear' });
     broadcastState();
     scheduleSave();
@@ -451,7 +457,7 @@ function handleMessage(msg: any) {
     if (typeof msg.code === 'string') {
       currentAnimation = null;
       cancelPlaylistIfActive();
-      setAllTargets(grid, 0, 0, 0, 1.0);
+      resetGrid(grid);
       patternEngine.load(msg.code);
       broadcastCommand({
         action: 'evalPattern',
