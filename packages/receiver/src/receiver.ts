@@ -25,6 +25,7 @@ import {
   DEFAULT_NUM_CANNONS,
   DEFAULT_RECEIVER_ALPHA,
   FilteredCannon,
+  resetFilteredGrid,
   tickFilter
 } from './filter';
 import { createSandboxEngine, SandboxEngine } from './sandbox-engine';
@@ -195,16 +196,18 @@ export class Receiver {
         handleCommand(this._animState, cmd);
         applyPaint(grid, cmd.cells, this._animState.attack);
       } else if (cmd.action === 'evalPattern') {
+        // Reset grid to black before loading new pattern — prevents
+        // old cell values from bleeding into the new pattern's output
+        resetFilteredGrid(grid);
         handleCommand(this._animState, cmd);
         this.handleEvalPattern(cmd);
       } else if (cmd.action === 'clear') {
         handleCommand(this._animState, cmd);
         this.disposeSandbox();
-        for (let i = 0; i < grid.length; i++) {
-          setTarget(grid, i, 0, 0, 0, 1.0);
-        }
+        resetFilteredGrid(grid);
       } else {
-        // setAnimation, setScene, etc.
+        // setAnimation, setScene — reset grid so old values don't bleed
+        resetFilteredGrid(grid);
         handleCommand(this._animState, cmd);
       }
     });
