@@ -232,11 +232,23 @@ export class Receiver {
         const now = Date.now();
         const timeSinceData = now - this.lastDataAt;
 
-        // Check if we should switch to fallback
+        // Check if we should switch to fallback — only when nothing is
+        // running locally.  If an animation, scene, or pattern is active the
+        // receiver keeps playing it autonomously without the server.
+        const hasLocalContent =
+          !!this._animState.currentAnimation ||
+          !!this._animState.currentScene ||
+          this._animState.patternActive;
+
         if (timeSinceData > this.config.fallbackDelay && !this._fallbackActive) {
-          this._fallbackActive = true;
-          this._status = 'fallback';
-          console.log('\n  \u25C8 Signal lost \u2014 entering sine wave fallback');
+          if (!hasLocalContent) {
+            this._fallbackActive = true;
+            this._status = 'fallback';
+            console.log('\n  \u25C8 Signal lost \u2014 entering sine wave fallback');
+          } else if (this._status === 'connected') {
+            this._status = 'reconnecting';
+            console.log('\n  \u25C8 Signal lost \u2014 continuing current content autonomously');
+          }
         }
 
         if (this._fallbackActive) {
