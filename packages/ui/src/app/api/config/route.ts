@@ -26,14 +26,25 @@ function parseGrid(): { numCannons: number; gridColumns: number } {
   };
 }
 
-export function GET() {
+export function GET(request: Request) {
   const { numCannons, gridColumns } = parseGrid();
-  return Response.json({
-    simulatorUrl:
+
+  // Check if request came through HTTPS reverse proxy
+  const forwardedProto = request.headers.get('x-forwarded-proto');
+  const wsPath = process.env.WS_PATH;
+  const host = request.headers.get('host');
+
+  let simulatorUrl: string;
+  if (forwardedProto === 'https' && wsPath && host) {
+    // Behind Traefik with SSL — use wss:// with the same domain
+    simulatorUrl = `wss://${host}${wsPath}`;
+  } else {
+    // Direct access — use explicit URL or default
+    simulatorUrl =
       process.env.SIMULATOR_URL ||
       process.env.NEXT_PUBLIC_SIMULATOR_URL ||
-      'ws://localhost:3000',
-    numCannons,
-    gridColumns
-  });
+      'ws://localhost:3000';
+  }
+
+  return Response.json({ simulatorUrl, numCannons, gridColumns });
 }
