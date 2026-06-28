@@ -547,6 +547,16 @@ setInterval(() => {
   }
   tickGrid(grid, currentAlpha);
 
+  // When audio layer is active, composite it with the base grid and
+  // send paint commands to receivers so the lasers reflect audio visuals.
+  if (audioLayer) {
+    const base = grid.map(c => ({ h: c.h, s: c.s, b: c.b }));
+    const composited = compositeLayer(base, audioLayer, audioBlend);
+    const cells = composited.map((c, i) => ({ idx: i, h: c.h, s: c.s, b: c.b }));
+    broadcastCommand({ action: 'paint', cells });
+    framesSinceLastCommand = 0;
+  }
+
   // Send grid state to UI clients so the preview stays in sync
   broadcastState();
 
