@@ -264,9 +264,8 @@ export class ServerPatternEngine {
         const cy = (rows - 1) / 2;
         const dx = col - cx;
         const dy = row - cy;
-        const r = Math.sqrt(dx * dx + dy * dy) / Math.max(cx, cy);
-        const a = (Math.atan2(dy, dx) / Math.PI + 1) / 2;
-        return [r, a];
+        const mr = Math.hypot(cx, cy) || 1;
+        return [Math.hypot(dx, dy) / mr, Math.atan2(dy, dx)];
       },
       noise(x: number, y: number, z: number): number {
         // Simple deterministic hash-based noise (0-1 range)
