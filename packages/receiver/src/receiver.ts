@@ -199,9 +199,6 @@ export class Receiver {
         handleCommand(this._animState, cmd);
         applyPaint(grid, cmd.cells, this._animState.attack);
       } else if (cmd.action === 'evalPattern') {
-        // Reset grid to black before loading new pattern — prevents
-        // old cell values from bleeding into the new pattern's output
-        resetFilteredGrid(grid);
         handleCommand(this._animState, cmd);
         this.handleEvalPattern(cmd);
       } else if (cmd.action === 'clear') {
@@ -209,8 +206,7 @@ export class Receiver {
         this.disposeSandbox();
         resetFilteredGrid(grid);
       } else {
-        // setAnimation, setScene — reset grid so old values don't bleed
-        resetFilteredGrid(grid);
+        // setAnimation, setScene — LP filter handles smooth transition
         handleCommand(this._animState, cmd);
       }
     });
