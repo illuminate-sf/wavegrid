@@ -25,7 +25,7 @@ import { useAudio } from '@/lib/use-audio';
 import { useAuth } from '@/lib/use-auth';
 import { useConfig } from '@/lib/use-config';
 import { useIsPhone } from '@/lib/use-media-query';
-import { useSocket, type PlaylistState } from '@/lib/use-socket';
+import { type PlaylistState,useSocket } from '@/lib/use-socket';
 
 type PanelLayout = 'bottom' | 'right';
 type TrailFadeEntry = {
@@ -166,14 +166,14 @@ function ToolContent({
               style={{ minWidth: 120, height: 28 }}
               min={0}
               max={1000}
-              value={Math.round(Math.log(animSpeed / 0.1) / Math.log(5.0 / 0.1) * 1000)}
+              value={Math.round(Math.log(animSpeed / 0.01) / Math.log(5.0 / 0.01) * 1000)}
               onChange={(e) => {
                 const t = parseInt(e.target.value, 10) / 1000;
-                onAnimSpeed(0.1 * Math.pow(5.0 / 0.1, t));
+                onAnimSpeed(0.01 * Math.pow(5.0 / 0.01, t));
               }}
             />
             <span className="text-xs font-mono shrink-0" style={{ color: '#888898', minWidth: 36, textAlign: 'right' }}>
-              {animSpeed < 1 ? animSpeed.toFixed(2) : animSpeed.toFixed(1)}x
+              {animSpeed < 0.1 ? animSpeed.toFixed(3) : animSpeed < 1 ? animSpeed.toFixed(2) : animSpeed.toFixed(1)}x
             </span>
           </div>
           <ControlGrid minCellWidth={200}>
@@ -181,6 +181,7 @@ function ToolContent({
               <AnimationPalette
                 active={activeAnim}
                 onSelect={handleAnim}
+                speed={animSpeed}
               />
             </ControlGroup>
             <ControlGroup label="Brightness Effects">
