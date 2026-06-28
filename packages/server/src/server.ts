@@ -301,14 +301,7 @@ function handleMessage(msg: any) {
       currentAnimation = null;
       cancelPlaylistIfActive();
       patternEngine.stop();
-      resetGrid(grid);
       applyScene(grid, msg.name, GRID_COLUMNS);
-      // Snap current to match targets so scene appears instantly
-      for (let i = 0; i < grid.length; i++) {
-        grid[i].h = grid[i].targetH;
-        grid[i].s = grid[i].targetS;
-        grid[i].b = grid[i].targetB;
-      }
       broadcastCommand({ action: 'setScene', name: msg.name });
       scheduleSave();
     }
@@ -319,7 +312,6 @@ function handleMessage(msg: any) {
       animationTick = 0;
       cancelPlaylistIfActive();
       patternEngine.stop();
-      resetGrid(grid);
       broadcastCommand({ action: 'setAnimation', name: msg.name, speed: animSpeed });
       scheduleSave();
     } else if (msg.name === 'stop') {
@@ -457,7 +449,6 @@ function handleMessage(msg: any) {
     if (typeof msg.code === 'string') {
       currentAnimation = null;
       cancelPlaylistIfActive();
-      resetGrid(grid);
       patternEngine.load(msg.code);
       broadcastCommand({
         action: 'evalPattern',
