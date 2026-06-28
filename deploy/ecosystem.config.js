@@ -98,7 +98,7 @@ module.exports = {
       ...common,
       name: 'wavegrid-ui',
       args: 'start:ui',
-      env: { ...baseEnv, PORT: UI_PORT },
+      env: { ...baseEnv, PORT: UI_PORT, WS_PATH: '/ws' },
     },
 
     // ── Pride show (7×2, 14 cannons) ─────────────────────────────────
@@ -122,6 +122,7 @@ module.exports = {
         GRID: PRIDE_GRID,
         SIMULATOR_URL: PRIDE_SIMULATOR_URL,
         NEXT_PUBLIC_SIMULATOR_URL: PRIDE_SIMULATOR_URL,
+        WS_PATH: '/ws',
       },
     },
   ],

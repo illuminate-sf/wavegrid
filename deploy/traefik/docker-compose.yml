@@ -1,0 +1,19 @@
+# Traefik reverse proxy with Let's Encrypt SSL.
+# Sits in front of the existing PM2 services — purely additive.
+#
+#   docker compose -f deploy/traefik/docker-compose.yml up -d
+#
+# Requires deploy/.env with MAIN_DOMAIN, PRIDE_DOMAIN, LETSENCRYPT_EMAIL set,
+# and deploy/traefik/dynamic.toml generated via: node deploy/gen-traefik.js
+
+services:
+  traefik:
+    image: traefik:v3.1
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./dynamic.toml:/etc/traefik/dynamic.toml:ro
+      - ./acme.json:/etc/traefik/acme.json
+    # network_mode: host means ports 80 and 443 are bound directly.
+    # No "ports:" mapping needed.
