@@ -1,6 +1,13 @@
 'use client';
 
+import { useState } from 'react';
+
+import { ANIMATION_SOURCES, SCENE_SOURCES } from '@/lib/preview-sources';
+
+import { MiniGridPreview } from './mini-grid-preview';
+
 const TILE = 72;
+const TILE_EXPANDED = 96;
 const TILE_RADIUS = 16;
 const LABEL_SIZE = 10;
 
@@ -44,25 +51,39 @@ function Tile({
   name,
   gradient,
   active,
-  onClick
+  onClick,
+  previewSource,
+  previewSpeed,
+  showPreview
 }: {
   name: string;
   gradient: string;
   active: boolean;
   onClick: () => void;
+  previewSource?: string;
+  previewSpeed?: number;
+  showPreview?: boolean;
 }) {
+  const tileSize = showPreview ? TILE_EXPANDED : TILE;
   return (
     <button
       onClick={onClick}
-      className="relative overflow-hidden transition-transform active:scale-93"
+      className="relative overflow-hidden transition-all active:scale-93"
       style={{
-        width: TILE,
-        height: TILE,
+        width: tileSize,
+        height: tileSize,
         borderRadius: TILE_RADIUS,
-        background: gradient,
+        background: showPreview ? '#0a0a12' : gradient,
         border: active ? '2.5px solid #fff' : '2.5px solid transparent'
       }}
     >
+      {showPreview && previewSource ? (
+        <MiniGridPreview
+          source={previewSource}
+          speed={previewSpeed}
+          size={tileSize}
+        />
+      ) : null}
       <span
         className="absolute bottom-1 left-0 right-0 text-center text-white font-semibold"
         style={{
@@ -77,6 +98,37 @@ function Tile({
   );
 }
 
+function PreviewToggle({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) {
+  return (
+    <button
+      onClick={onToggle}
+      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors"
+      style={{
+        background: enabled ? '#2563eb' : '#1a1a25',
+        color: enabled ? '#fff' : '#888898',
+        border: '1px solid ' + (enabled ? '#3b82f6' : '#2a2a35')
+      }}
+      title={enabled ? 'Hide previews' : 'Show animated previews'}
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        {enabled ? (
+          <>
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+            <circle cx="12" cy="12" r="3" />
+          </>
+        ) : (
+          <>
+            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+            <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+            <line x1="1" y1="1" x2="23" y2="23" />
+          </>
+        )}
+      </svg>
+      Preview
+    </button>
+  );
+}
+
 export function ScenePalette({
   active,
   onSelect
@@ -84,39 +136,60 @@ export function ScenePalette({
   active: string | null;
   onSelect: (name: string) => void;
 }) {
+  const [showPreview, setShowPreview] = useState(false);
+
   return (
-    <div className="flex gap-2.5 flex-wrap">
-      {Object.keys(sceneGradients).map((name) => (
-        <Tile
-          key={name}
-          name={name}
-          gradient={sceneGradients[name]}
-          active={active === name}
-          onClick={() => onSelect(name)}
-        />
-      ))}
+    <div className="flex flex-col gap-2.5">
+      <div className="flex justify-end">
+        <PreviewToggle enabled={showPreview} onToggle={() => setShowPreview(!showPreview)} />
+      </div>
+      <div className="flex gap-2.5 flex-wrap overflow-y-auto" style={{ maxHeight: showPreview ? 360 : undefined }}>
+        {Object.keys(sceneGradients).map((name) => (
+          <Tile
+            key={name}
+            name={name}
+            gradient={sceneGradients[name]}
+            active={active === name}
+            onClick={() => onSelect(name)}
+            previewSource={SCENE_SOURCES[name]}
+            showPreview={showPreview}
+          />
+        ))}
+      </div>
     </div>
   );
 }
 
 export function AnimationPalette({
   active,
-  onSelect
+  onSelect,
+  speed
 }: {
   active: string | null;
   onSelect: (name: string) => void;
+  speed?: number;
 }) {
+  const [showPreview, setShowPreview] = useState(false);
+
   return (
-    <div className="flex gap-2.5 flex-wrap">
-      {Object.keys(animGradients).map((name) => (
-        <Tile
-          key={name}
-          name={name}
-          gradient={animGradients[name]}
-          active={active === name}
-          onClick={() => onSelect(name)}
-        />
-      ))}
+    <div className="flex flex-col gap-2.5">
+      <div className="flex justify-end">
+        <PreviewToggle enabled={showPreview} onToggle={() => setShowPreview(!showPreview)} />
+      </div>
+      <div className="flex gap-2.5 flex-wrap overflow-y-auto" style={{ maxHeight: showPreview ? 360 : undefined }}>
+        {Object.keys(animGradients).map((name) => (
+          <Tile
+            key={name}
+            name={name}
+            gradient={animGradients[name]}
+            active={active === name}
+            onClick={() => onSelect(name)}
+            previewSource={ANIMATION_SOURCES[name]}
+            previewSpeed={speed}
+            showPreview={showPreview}
+          />
+        ))}
+      </div>
     </div>
   );
 }
