@@ -251,6 +251,7 @@ wss.on('connection', (ws) => {
   ws.send(JSON.stringify({ type: 'command', action: 'setOrientation', rotation: orientation.rotation, flipH: orientation.flipH, flipV: orientation.flipV }));
   ws.send(JSON.stringify({ type: 'command', action: 'setSmoothness', value: currentAlpha }));
   ws.send(JSON.stringify({ type: 'command', action: 'setAttack', value: currentAttack }));
+  ws.send(JSON.stringify({ type: 'command', action: 'setSpeed', value: animSpeed }));
   if (currentAnimation) {
     ws.send(JSON.stringify({ type: 'command', action: 'setAnimation', name: currentAnimation, speed: animSpeed }));
   }
@@ -439,7 +440,7 @@ function handleMessage(msg: any) {
     break;
   case 'anim_speed':
     if (typeof msg.value === 'number') {
-      animSpeed = Math.max(0.1, Math.min(5.0, msg.value));
+      animSpeed = Math.max(0.01, Math.min(5.0, msg.value));
       patternEngine.speed = animSpeed;
       broadcastCommand({ action: 'setSpeed', value: animSpeed });
       scheduleSave();
