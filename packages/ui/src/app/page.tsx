@@ -424,7 +424,7 @@ function MasterSliders({
 
 export default function Home() {
   const config = useConfig();
-  const { user, checked, login, logout } = useAuth();
+  const { user, checked, login } = useAuth();
   const { connected, grid, orientation, playlistState, settings, send } = useSocket(config?.simulatorUrl ?? 'ws://localhost:3000');
   const isPhone = useIsPhone();
 
@@ -790,13 +790,6 @@ export default function Home() {
               ⏹
             </button>
             <button
-              onClick={logout}
-              className="text-xs px-2 py-1 rounded"
-              style={{ color: '#666', background: '#12121a', border: '1px solid #1a1a25' }}
-            >
-              Logout
-            </button>
-            <button
               onClick={() => setShowMasterSliders(!showMasterSliders)}
               className="flex items-center justify-center transition-all"
               style={{
@@ -813,6 +806,23 @@ export default function Home() {
             </button>
           </div>
         </header>
+
+        {/* Always-visible fade slider on mobile */}
+        <div className="flex items-center gap-2 px-4 py-2 shrink-0" style={{ background: '#0a0a10', borderBottom: '1px solid #1a1a25' }}>
+          <span className="text-xs font-medium shrink-0" style={{ color: '#888898' }}>Fade</span>
+          <input
+            type="range"
+            className="flex-1"
+            style={{ height: 24 }}
+            min={0}
+            max={100}
+            value={smoothness}
+            onChange={throttledSlider(handleSmooth)}
+          />
+          <span className="text-xs font-mono shrink-0" style={{ color: '#888898', minWidth: 24, textAlign: 'right' }}>
+            {smoothness}
+          </span>
+        </div>
 
         {/* Expandable master sliders */}
         {showMasterSliders && (
@@ -994,13 +1004,6 @@ export default function Home() {
             <span className="text-xs" style={{ color: '#555' }}>
               {user}
             </span>
-            <button
-              onClick={logout}
-              className="text-xs px-2 py-1 rounded ml-1"
-              style={{ color: '#666', background: '#12121a', border: '1px solid #1a1a25' }}
-            >
-              Logout
-            </button>
           </div>
 
           {/* Orientation + layout + stop buttons (always visible top-right) */}
