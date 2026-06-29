@@ -28,6 +28,16 @@ var COLORS = [
 ];
 `;
 
+const LESBIAN_COLORS_CODE = `
+var COLORS = [
+  [14, 100, 84],
+  [24, 68, 94],
+  [0, 0, 100],
+  [322, 52, 82],
+  [330, 97, 64]
+];
+`;
+
 function lerpColorCode(): string {
   return `
 function lerpColor(a, b, t) {
@@ -275,6 +285,52 @@ const TRANS_PRESETS: PatternDef[] = [
   }
 ];
 
+const LESBIAN_STATIC: PatternDef[] = [
+  {
+    name: 'Flag',
+    gradient: 'linear-gradient(180deg, #D52D00, #EF7627, #FFFFFF, #D162A4, #A30262)',
+    code: `(function(){\n${LESBIAN_COLORS_CODE}\nreturn {\nrender: function(ctx) {\n  for (var i = 0; i < ctx.count; i++) {\n    var uv = ctx.uv(i);\n    var bandIdx = Math.floor(uv[1] * COLORS.length);\n    if (bandIdx >= COLORS.length) bandIdx = COLORS.length - 1;\n    var c = COLORS[bandIdx];\n    ctx.set(i, c[0], c[1], c[2]);\n  }\n},\nmeta: { name: 'lesbian-flag' }\n};\n})()`
+  },
+  {
+    name: 'Columns',
+    gradient: 'linear-gradient(90deg, #D52D00, #EF7627, #FFFFFF, #D162A4, #A30262)',
+    code: `(function(){\n${LESBIAN_COLORS_CODE}\nreturn {\nrender: function(ctx) {\n  for (var i = 0; i < ctx.count; i++) {\n    var uv = ctx.uv(i);\n    var bandIdx = Math.floor(uv[0] * COLORS.length);\n    if (bandIdx >= COLORS.length) bandIdx = COLORS.length - 1;\n    var c = COLORS[bandIdx];\n    ctx.set(i, c[0], c[1], c[2]);\n  }\n},\nmeta: { name: 'lesbian-columns' }\n};\n})()`
+  },
+  {
+    name: 'Diagonal',
+    gradient: 'linear-gradient(135deg, #D52D00, #EF7627, #FFFFFF, #D162A4, #A30262)',
+    code: `(function(){\n${LESBIAN_COLORS_CODE}\nreturn {\nrender: function(ctx) {\n  for (var i = 0; i < ctx.count; i++) {\n    var uv = ctx.uv(i);\n    var d = (uv[0] + uv[1]) / 2;\n    var bandIdx = Math.floor(d * COLORS.length);\n    if (bandIdx >= COLORS.length) bandIdx = COLORS.length - 1;\n    var c = COLORS[bandIdx];\n    ctx.set(i, c[0], c[1], c[2]);\n  }\n},\nmeta: { name: 'lesbian-diagonal' }\n};\n})()`
+  }
+];
+
+const LESBIAN_PATTERNS: PatternDef[] = [
+  {
+    name: 'Flow',
+    gradient: 'linear-gradient(180deg, #D52D00, #EF7627, #FFFFFF, #D162A4, #A30262)',
+    code: makeFlowPattern(LESBIAN_COLORS_CODE)
+  },
+  {
+    name: 'Rotate',
+    gradient: 'linear-gradient(90deg, #D52D00, #EF7627, #FFFFFF, #D162A4, #A30262)',
+    code: makeRotatePattern(LESBIAN_COLORS_CODE)
+  },
+  {
+    name: 'Ring',
+    gradient: 'conic-gradient(#D52D00, #EF7627, #FFFFFF, #D162A4, #A30262, #D52D00)',
+    code: makeRingPattern(LESBIAN_COLORS_CODE)
+  },
+  {
+    name: 'Breathe',
+    gradient: 'radial-gradient(circle, #FFFFFF, #D162A4, #D52D00)',
+    code: makeBreathePattern(LESBIAN_COLORS_CODE)
+  },
+  {
+    name: 'Wave',
+    gradient: 'linear-gradient(135deg, #D52D00, #FFFFFF, #A30262)',
+    code: makeWavePattern(LESBIAN_COLORS_CODE)
+  }
+];
+
 function PatternTile({
   pattern,
   active,
@@ -450,6 +506,36 @@ export function PrideTab({
                 pattern={p}
                 active={activePattern === `trans-${p.name}`}
                 onClick={() => handleSelect('trans', p)}
+                showPreview={showPreview}
+                speed={animSpeed}
+              />
+            ))}
+          </div>
+        </ControlGroup>
+
+        <ControlGroup label="Lesbian — Static">
+          <div className="flex gap-2.5 flex-wrap overflow-y-auto" style={{ maxHeight: showPreview ? 320 : undefined }}>
+            {LESBIAN_STATIC.map((p) => (
+              <PatternTile
+                key={`lesbian-s-${p.name}`}
+                pattern={p}
+                active={activePattern === `lesbian-s-${p.name}`}
+                onClick={() => handleSelect('lesbian-s', p)}
+                showPreview={showPreview}
+                speed={animSpeed}
+              />
+            ))}
+          </div>
+        </ControlGroup>
+
+        <ControlGroup label="Lesbian — Animated">
+          <div className="flex gap-2.5 flex-wrap overflow-y-auto" style={{ maxHeight: showPreview ? 320 : undefined }}>
+            {LESBIAN_PATTERNS.map((p) => (
+              <PatternTile
+                key={`lesbian-${p.name}`}
+                pattern={p}
+                active={activePattern === `lesbian-${p.name}`}
+                onClick={() => handleSelect('lesbian', p)}
                 showPreview={showPreview}
                 speed={animSpeed}
               />
