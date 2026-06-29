@@ -21,7 +21,6 @@ const sceneGradients: Record<string, string> = {
   sunset: 'linear-gradient(135deg, #c2185b, #e65100, #f9a825)',
   heart: 'radial-gradient(circle at 50% 40%, #ef4444, #b91c1c, #1a1a25)',
   sf: 'linear-gradient(135deg, #1a3a8a, #ffd700, #1a3a8a)',
-  smiley: 'radial-gradient(circle at 50% 45%, #facc15, #ca8a04, #1a1a25)',
   forest: 'linear-gradient(to top, #14532d, #22c55e, #86efac)',
   fire: 'linear-gradient(to top, #fbbf24, #f97316, #b91c1c)',
   night: 'linear-gradient(135deg, #0f172a, #1e3a5f, #0f172a)',
