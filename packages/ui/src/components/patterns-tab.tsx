@@ -2,6 +2,8 @@
 
 import { useCallback, useState } from 'react';
 
+import { MiniGridPreview } from './mini-grid-preview';
+
 interface PatternDef {
   name: string;
   gradient: string;
@@ -144,24 +146,34 @@ const DEFAULT_CODE = `({
 function PatternTile({
   pattern,
   active,
-  onClick
+  onClick,
+  showPreview
 }: {
   pattern: PatternDef;
   active: boolean;
   onClick: () => void;
+  showPreview?: boolean;
 }) {
+  const tileSize = showPreview ? 96 : 72;
   return (
     <button
       onClick={onClick}
       className="relative overflow-hidden transition-transform active:scale-93"
       style={{
-        width: 72,
-        height: 72,
+        width: tileSize,
+        height: tileSize,
         borderRadius: 16,
-        background: pattern.gradient,
+        background: showPreview ? '#0a0a12' : pattern.gradient,
         border: active ? '2.5px solid #fff' : '2.5px solid transparent'
       }}
     >
+      {showPreview ? (
+        <MiniGridPreview
+          source={pattern.code}
+          size={tileSize}
+          isPattern
+        />
+      ) : null}
       <span
         className="absolute bottom-1 left-0 right-0 text-center text-white font-semibold"
         style={{
@@ -176,12 +188,47 @@ function PatternTile({
   );
 }
 
+function PreviewToggle({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) {
+  return (
+    <button
+      onClick={onToggle}
+      style={{
+        padding: '4px 10px',
+        borderRadius: 12,
+        fontSize: 11,
+        fontWeight: 500,
+        background: enabled ? 'rgba(59,130,246,0.15)' : 'transparent',
+        color: enabled ? '#fff' : '#888898',
+        border: '1px solid ' + (enabled ? '#3b82f6' : '#2a2a35')
+      }}
+      title={enabled ? 'Hide previews' : 'Show animated previews'}
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: 4 }}>
+        {enabled ? (
+          <>
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+            <circle cx="12" cy="12" r="3" />
+          </>
+        ) : (
+          <>
+            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+            <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+            <line x1="1" y1="1" x2="23" y2="23" />
+          </>
+        )}
+      </svg>
+      Preview
+    </button>
+  );
+}
+
 export function PatternsTab({
   send
 }: {
   send: (msg: Record<string, unknown>) => void;
 }) {
   const [activePattern, setActivePattern] = useState<string | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
   const [code, setCode] = useState(DEFAULT_CODE);
   const [status, setStatus] = useState<'idle' | 'running' | 'error'>('idle');
@@ -215,14 +262,20 @@ export function PatternsTab({
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Preview toggle */}
+      <div className="flex justify-end">
+        <PreviewToggle enabled={showPreview} onToggle={() => setShowPreview(!showPreview)} />
+      </div>
+
       {/* Pattern tiles */}
-      <div className="flex gap-2.5 flex-wrap">
+      <div className="flex gap-2.5 flex-wrap overflow-y-auto" style={{ maxHeight: showPreview ? 360 : undefined }}>
         {PRESETS.map((p) => (
           <PatternTile
             key={p.name}
             pattern={p}
             active={activePattern === p.name}
             onClick={() => handleSelect(p)}
+            showPreview={showPreview}
           />
         ))}
       </div>
