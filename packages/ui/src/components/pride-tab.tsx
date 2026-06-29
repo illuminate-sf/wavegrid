@@ -78,9 +78,6 @@ function makeWavePattern(colorsCode: string): string {
   return `(function(){\n${colorsCode}\n${lerpColorCode()}\nreturn {\nrender: function(ctx) {\n  for (var i = 0; i < ctx.count; i++) {\n    var uv = ctx.uv(i);\n    var phase = Math.sin(uv[0] * Math.PI * 2 - ctx.t * 2);\n    var c = colorAt(uv[1] + ctx.t * 0.02);\n    var b = 60 + 40 * (0.5 + 0.5 * phase);\n    ctx.set(i, c[0], c[1], b);\n  }\n},\nmeta: { name: 'wave' }\n};\n})()`;
 }
 
-function makeStripesPattern(colorsCode: string): string {
-  return `(function(){\n${colorsCode}\nreturn {\nrender: function(ctx) {\n  var rows = ctx.rows;\n  for (var i = 0; i < ctx.count; i++) {\n    var uv = ctx.uv(i);\n    var bandIdx = Math.floor(uv[1] * COLORS.length);\n    if (bandIdx >= COLORS.length) bandIdx = COLORS.length - 1;\n    var c = COLORS[bandIdx];\n    ctx.set(i, c[0], c[1], c[2]);\n  }\n},\nmeta: { name: 'stripes' }\n};\n})()`;
-}
 
 const PRIDE_STATIC: PatternDef[] = [
   {
@@ -250,7 +247,7 @@ const PRIDE_PATTERNS: PatternDef[] = [
   }
 ];
 
-const TRANS_STATIC: PatternDef[] = [
+const TRANS_PRESETS: PatternDef[] = [
   {
     name: 'Flag',
     gradient: 'linear-gradient(180deg, #5BCEFA, #F5A9B8, #FFFFFF, #F5A9B8, #5BCEFA)',
@@ -262,32 +259,9 @@ const TRANS_STATIC: PatternDef[] = [
     code: `(function(){\n${TRANS_COLORS_CODE}\nreturn {\nrender: function(ctx) {\n  for (var i = 0; i < ctx.count; i++) {\n    var uv = ctx.uv(i);\n    var bandIdx = Math.floor(uv[0] * COLORS.length);\n    if (bandIdx >= COLORS.length) bandIdx = COLORS.length - 1;\n    var c = COLORS[bandIdx];\n    ctx.set(i, c[0], c[1], c[2]);\n  }\n},\nmeta: { name: 'trans-columns' }\n};\n})()`
   },
   {
-    name: 'Solid Blue',
-    gradient: 'linear-gradient(135deg, #5BCEFA, #3aa8d8)',
-    code: `({ render: function(ctx) { ctx.fill(197, 100, 100); }, meta: { name: 'trans-blue' } })`
-  },
-  {
-    name: 'Solid Pink',
-    gradient: 'linear-gradient(135deg, #F5A9B8, #d88a9a)',
-    code: `({ render: function(ctx) { ctx.fill(340, 100, 100); }, meta: { name: 'trans-pink' } })`
-  }
-];
-
-const TRANS_PATTERNS: PatternDef[] = [
-  {
-    name: 'Stripes',
-    gradient: 'linear-gradient(180deg, #5BCEFA, #F5A9B8, #FFFFFF, #F5A9B8, #5BCEFA)',
-    code: makeStripesPattern(TRANS_COLORS_CODE)
-  },
-  {
     name: 'Flow',
     gradient: 'linear-gradient(180deg, #5BCEFA, #F5A9B8, #FFFFFF, #F5A9B8, #5BCEFA)',
     code: makeFlowPattern(TRANS_COLORS_CODE)
-  },
-  {
-    name: 'Breathe',
-    gradient: 'radial-gradient(circle, #FFFFFF, #F5A9B8, #5BCEFA)',
-    code: makeBreathePattern(TRANS_COLORS_CODE)
   },
   {
     name: 'Rotate',
@@ -295,14 +269,9 @@ const TRANS_PATTERNS: PatternDef[] = [
     code: makeRotatePattern(TRANS_COLORS_CODE)
   },
   {
-    name: 'Ring',
-    gradient: 'conic-gradient(#5BCEFA, #F5A9B8, #FFFFFF, #F5A9B8, #5BCEFA)',
-    code: makeRingPattern(TRANS_COLORS_CODE)
-  },
-  {
-    name: 'Wave',
-    gradient: 'linear-gradient(135deg, #5BCEFA, #FFFFFF, #F5A9B8)',
-    code: makeWavePattern(TRANS_COLORS_CODE)
+    name: 'Breathe',
+    gradient: 'radial-gradient(circle, #FFFFFF, #F5A9B8, #5BCEFA)',
+    code: makeBreathePattern(TRANS_COLORS_CODE)
   }
 ];
 
@@ -460,24 +429,9 @@ export function PrideTab({
           </div>
         </ControlGroup>
 
-        <ControlGroup label="Trans — Static">
+        <ControlGroup label="Trans">
           <div className="flex gap-2.5 flex-wrap overflow-y-auto" style={{ maxHeight: showPreview ? 320 : undefined }}>
-            {TRANS_STATIC.map((p) => (
-              <PatternTile
-                key={`trans-s-${p.name}`}
-                pattern={p}
-                active={activePattern === `trans-s-${p.name}`}
-                onClick={() => handleSelect('trans-s', p)}
-                showPreview={showPreview}
-                speed={animSpeed}
-              />
-            ))}
-          </div>
-        </ControlGroup>
-
-        <ControlGroup label="Trans — Animated">
-          <div className="flex gap-2.5 flex-wrap overflow-y-auto" style={{ maxHeight: showPreview ? 320 : undefined }}>
-            {TRANS_PATTERNS.map((p) => (
+            {TRANS_PRESETS.map((p) => (
               <PatternTile
                 key={`trans-${p.name}`}
                 pattern={p}
