@@ -98,13 +98,7 @@ module.exports = {
       ...common,
       name: 'wavegrid-ui',
       args: 'start:ui',
-      env: {
-        ...baseEnv,
-        PORT: UI_PORT,
-        WS_PATH: '/ws',
-        SITE_TITLE: fileEnv.SITE_TITLE || 'Wavegrid',
-        SITE_DESCRIPTION: fileEnv.SITE_DESCRIPTION || 'Painting the sky with light',
-      },
+      env: { ...baseEnv, PORT: UI_PORT, WS_PATH: '/ws' },
     },
 
     // ── Pride show (7×2, 14 cannons) ─────────────────────────────────
@@ -129,8 +123,6 @@ module.exports = {
         SIMULATOR_URL: PRIDE_SIMULATOR_URL,
         NEXT_PUBLIC_SIMULATOR_URL: PRIDE_SIMULATOR_URL,
         WS_PATH: '/ws',
-        SITE_TITLE: fileEnv.PRIDE_SITE_TITLE || 'Wavegrid Pride',
-        SITE_DESCRIPTION: fileEnv.PRIDE_SITE_DESCRIPTION || 'Painting the sky with light — Pride',
       },
     },
   ],
