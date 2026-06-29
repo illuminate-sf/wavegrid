@@ -252,6 +252,13 @@ wss.on('connection', (ws) => {
   ws.send(JSON.stringify({ type: 'command', action: 'setSmoothness', value: currentAlpha }));
   ws.send(JSON.stringify({ type: 'command', action: 'setAttack', value: currentAttack }));
   ws.send(JSON.stringify({ type: 'command', action: 'setSpeed', value: animSpeed }));
+  ws.send(JSON.stringify({
+    type: 'settings',
+    alpha: currentAlpha,
+    attack: currentAttack,
+    speed: animSpeed,
+    animation: currentAnimation
+  }));
   if (currentAnimation) {
     ws.send(JSON.stringify({ type: 'command', action: 'setAnimation', name: currentAnimation, speed: animSpeed }));
   }

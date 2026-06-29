@@ -412,7 +412,7 @@ function MasterSliders({
 export default function Home() {
   const config = useConfig();
   const { user, checked, login, logout } = useAuth();
-  const { connected, grid, orientation, playlistState, send } = useSocket(config?.simulatorUrl ?? 'ws://localhost:3000');
+  const { connected, grid, orientation, playlistState, settings, send } = useSocket(config?.simulatorUrl ?? 'ws://localhost:3000');
   const isPhone = useIsPhone();
 
   const NUM_CANNONS = config?.numCannons ?? 49;
@@ -446,6 +446,20 @@ export default function Home() {
       return next;
     });
   }, []);
+
+  // Sync slider state from server on initial connect
+  const settingsSyncedRef = useRef(false);
+  useEffect(() => {
+    if (!settings || settingsSyncedRef.current) return;
+    settingsSyncedRef.current = true;
+    // Reverse: alpha = 10^(-2.7 * smoothness/100) → smoothness = -100*log10(alpha)/2.7
+    const smoothnessFromAlpha = Math.round(Math.max(0, Math.min(100, -100 * Math.log10(settings.alpha) / 2.7)));
+    setSmoothness(smoothnessFromAlpha);
+    // Reverse: attackValue = 0.05 + (attack/100)*0.95 → attack = (attackValue-0.05)/0.95 * 100
+    const attackFromValue = Math.round(Math.max(0, Math.min(100, (settings.attack - 0.05) / 0.95 * 100)));
+    setAttack(attackFromValue);
+    setAnimSpeed(settings.speed);
+  }, [settings]);
 
   useEffect(() => {
     if (tab === 'debug') return;
