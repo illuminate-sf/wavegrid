@@ -327,10 +327,10 @@ export function PrideTab({
           style={{ minWidth: 120, height: 28 }}
           min={0}
           max={1000}
-          value={Math.round(Math.log(animSpeed / 0.01) / Math.log(5.0 / 0.01) * 1000)}
+          value={Math.round(Math.log(animSpeed / 0.001) / Math.log(5.0 / 0.001) * 1000)}
           onChange={(e) => {
             const t = parseInt(e.target.value, 10) / 1000;
-            onAnimSpeed(0.01 * Math.pow(5.0 / 0.01, t));
+            onAnimSpeed(0.001 * Math.pow(5.0 / 0.001, t));
           }}
         />
         <span className="text-xs font-mono shrink-0" style={{ color: '#888898', minWidth: 36, textAlign: 'right' }}>

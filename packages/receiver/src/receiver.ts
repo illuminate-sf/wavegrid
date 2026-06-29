@@ -330,8 +330,8 @@ export class Receiver {
     if (!this._sandbox?.loaded) return;
 
     const now = Date.now();
-    const t = (now - this._patternStartTime) / 1000;
-    const dt = 1 / 60;
+    const t = ((now - this._patternStartTime) / 1000) * this._animState.speed;
+    const dt = (1 / 60) * this._animState.speed;
     this._patternFrame++;
 
     const frame = this._sandbox.renderFrame(t, dt, this._patternFrame);
