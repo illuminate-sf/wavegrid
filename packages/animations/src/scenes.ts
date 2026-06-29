@@ -22,7 +22,7 @@ export const scenes: Record<string, SceneGenerator> = {
 
   gold: () => ({ h: 45, s: 100, b: 100 }),
 
-  white: () => ({ h: 0, s: 0, b: 80 }),
+  white: () => ({ h: 0, s: 0, b: 100 }),
 
   solstice: (i, _total, cols) => {
     const row = Math.floor(i / cols);
@@ -77,24 +77,6 @@ export const scenes: Record<string, SceneGenerator> = {
     return on ? { h: 45, s: 95, b: 85 } : { h: 220, s: 80, b: 8 };
   },
 
-  smiley: (i, total, cols) => {
-    const rows = Math.ceil(total / cols);
-    if (cols !== 7 || rows < 7) return { h: 0, s: 0, b: 2 };
-    const row = Math.floor(i / cols);
-    const col = i % cols;
-    const bitmap = [
-      [0, 1, 1, 1, 1, 1, 0],
-      [1, 0, 0, 0, 0, 0, 1],
-      [1, 0, 1, 0, 1, 0, 1],
-      [1, 0, 0, 0, 0, 0, 1],
-      [1, 1, 0, 0, 0, 1, 1],
-      [1, 0, 1, 1, 1, 0, 1],
-      [0, 1, 1, 1, 1, 1, 0]
-    ];
-    const FACE = 1;
-    const on = bitmap[row]?.[col] === FACE;
-    return on ? { h: 50, s: 90, b: 85 } : { h: 0, s: 0, b: 2 };
-  },
 
   forest: (i, _total, cols) => {
     const row = Math.floor(i / cols);

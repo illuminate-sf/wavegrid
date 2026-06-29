@@ -29,6 +29,7 @@ const NAVY: HSB = [230, 80, 35];
 const DARK_RED: HSB = [350, 90, 55];
 const BRIGHT_GREEN: HSB = [120, 100, 50];
 const DARK_PURPLE: HSB = [270, 80, 25];
+const ORANGE: HSB = [30, 90, 80];
 
 function hStripes(bands: [HSB, number][]): (row: number, col: number) => HSB {
   const map: HSB[] = [];
@@ -224,6 +225,91 @@ const FLAGS: FlagDef[] = [
       if (row <= 2 && col <= 2) return [220, 90, 50];
       return row % 2 === 0 ? [0, 95, 65] : WHITE;
     }
+  },
+  {
+    name: 'Canada',
+    gradient: 'linear-gradient(90deg, #FF0000 25%, #fff 25%, #fff 75%, #FF0000 75%)',
+    pattern: (row, col) => {
+      if (col <= 1 || col >= 5) return RED;
+      if (col === 3 && row >= 2 && row <= 4) return RED;
+      if (row === 3 && col >= 2 && col <= 4) return RED;
+      return WHITE;
+    }
+  },
+  {
+    name: 'China',
+    gradient: 'linear-gradient(135deg, #DE2910, #FFDE00, #DE2910)',
+    pattern: (row, col) => {
+      if (row <= 2 && col <= 2) return YELLOW;
+      return [0, 100, 70];
+    }
+  },
+  {
+    name: 'Colombia',
+    gradient: 'linear-gradient(180deg, #FCD116 0%, #FCD116 50%, #003893 50%, #003893 75%, #CE1126 75%)',
+    pattern: hStripes([[YELLOW, 4], [BLUE, 2], [RED, 1]])
+  },
+  {
+    name: 'India',
+    gradient: 'linear-gradient(180deg, #FF9933 0%, #FF9933 33%, #fff 33%, #fff 66%, #138808 66%)',
+    pattern: (row, col) => {
+      if (row <= 1) return [25, 90, 90] as HSB;
+      if (row <= 4) {
+        if (row === 3 && Math.abs(col - 3) <= 1) return [220, 80, 50] as HSB;
+        return WHITE;
+      }
+      return GREEN;
+    }
+  },
+  {
+    name: 'Ireland',
+    gradient: 'linear-gradient(90deg, #169B62 0%, #169B62 33%, #fff 33%, #fff 66%, #FF883E 66%)',
+    pattern: vStripes([[GREEN, 2], [WHITE, 3], [ORANGE, 2]])
+  },
+  {
+    name: 'Netherlands',
+    gradient: 'linear-gradient(180deg, #AE1C28 0%, #AE1C28 33%, #fff 33%, #fff 66%, #21468B 66%)',
+    pattern: hStripes([[RED, 2], [WHITE, 3], [BLUE, 2]])
+  },
+  {
+    name: 'Nigeria',
+    gradient: 'linear-gradient(90deg, #008751 0%, #008751 33%, #fff 33%, #fff 66%, #008751 66%)',
+    pattern: vStripes([[GREEN, 2], [WHITE, 3], [GREEN, 2]])
+  },
+  {
+    name: 'Poland',
+    gradient: 'linear-gradient(180deg, #fff 0%, #fff 50%, #DC143C 50%)',
+    pattern: hStripes([[WHITE, 3], [RED, 4]])
+  },
+  {
+    name: 'Sweden',
+    gradient: 'linear-gradient(180deg, #006AA7 42%, #FECC00 42%, #FECC00 58%, #006AA7 58%)',
+    pattern: (row, col) => {
+      if (row === 3 || col === 2) return YELLOW;
+      return [210, 90, 55] as HSB;
+    }
+  },
+  {
+    name: 'Switzerland',
+    gradient: 'linear-gradient(135deg, #FF0000, #FF0000)',
+    pattern: (row, col) => {
+      if ((row === 3 && col >= 2 && col <= 4) || (col === 3 && row >= 2 && row <= 4)) return WHITE;
+      return RED;
+    }
+  },
+  {
+    name: 'Turkey',
+    gradient: 'radial-gradient(circle at 40% 50%, #fff 15%, #E30A17 30%)',
+    pattern: (row, col) => {
+      const dist = Math.sqrt((row - 3) ** 2 + (col - 2.5) ** 2);
+      if (dist <= 1.8) return WHITE;
+      return [0, 100, 70] as HSB;
+    }
+  },
+  {
+    name: 'Ukraine',
+    gradient: 'linear-gradient(180deg, #0057B7 0%, #0057B7 50%, #FFD700 50%)',
+    pattern: hStripes([[BLUE, 3], [YELLOW, 4]])
   }
 ];
 
@@ -383,6 +469,62 @@ export function useFlagAnimation(
   return { activeFlag, effect, setEffect, purpleBlack, setPurpleBlack, selectFlag, stop };
 }
 
+function FlagPreview({ flag, size = 96 }: { flag: FlagDef; size?: number }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx2d = canvas.getContext('2d');
+    if (!ctx2d) return;
+    const cellW = size / COLS;
+    const cellH = size / ROWS;
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        const [h, s, b] = flag.pattern(r, c);
+        ctx2d.fillStyle = `hsl(${h}, ${s}%, ${b}%)`;
+        ctx2d.fillRect(c * cellW, r * cellH, cellW + 0.5, cellH + 0.5);
+      }
+    }
+  }, [flag, size]);
+
+  return <canvas ref={canvasRef} width={size} height={size} style={{ width: size, height: size, borderRadius: 12 }} />;
+}
+
+function PreviewToggle({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) {
+  return (
+    <button
+      onClick={onToggle}
+      style={{
+        padding: '4px 10px',
+        borderRadius: 12,
+        fontSize: 11,
+        fontWeight: 500,
+        background: enabled ? 'rgba(59,130,246,0.15)' : 'transparent',
+        color: enabled ? '#fff' : '#888898',
+        border: '1px solid ' + (enabled ? '#3b82f6' : '#2a2a35')
+      }}
+      title={enabled ? 'Hide previews' : 'Show flag previews'}
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: 4 }}>
+        {enabled ? (
+          <>
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+            <circle cx="12" cy="12" r="3" />
+          </>
+        ) : (
+          <>
+            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+            <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+            <line x1="1" y1="1" x2="23" y2="23" />
+          </>
+        )}
+      </svg>
+      Preview
+    </button>
+  );
+}
+
 export function FlagsTab({
   activeFlag,
   effect,
@@ -398,24 +540,31 @@ export function FlagsTab({
   onEffect: (e: FlagEffect) => void;
   onPurpleBlack: (v: boolean) => void;
 }) {
+  const [showPreview, setShowPreview] = useState(true);
+  const tileSize = showPreview ? 96 : 72;
+
   return (
     <ControlGrid minCellWidth={240}>
       {/* Flag swatches */}
       <ControlGroup label="Flags">
-        <div className="flex gap-2.5 flex-wrap">
+        <div className="flex justify-end mb-2">
+          <PreviewToggle enabled={showPreview} onToggle={() => setShowPreview(!showPreview)} />
+        </div>
+        <div className="flex gap-2.5 flex-wrap overflow-y-auto" style={{ maxHeight: showPreview ? 400 : undefined }}>
           {FLAGS.map((flag) => (
             <button
               key={flag.name}
               onClick={() => onSelectFlag(flag.name, flag)}
               className="relative overflow-hidden transition-transform active:scale-93"
               style={{
-                width: 72,
-                height: 72,
+                width: tileSize,
+                height: tileSize,
                 borderRadius: 16,
-                background: flag.gradient,
+                background: showPreview ? '#0a0a12' : flag.gradient,
                 border: activeFlag === flag.name ? '2.5px solid #fff' : '2.5px solid transparent'
               }}
             >
+              {showPreview ? <FlagPreview flag={flag} size={tileSize} /> : null}
               <span
                 className="absolute bottom-1 left-0 right-0 text-center text-white font-semibold"
                 style={{

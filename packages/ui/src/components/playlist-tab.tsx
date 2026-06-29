@@ -24,7 +24,7 @@ const AVAILABLE_ANIMATIONS = [
 
 const AVAILABLE_SCENES = [
   'civic', 'pride', 'gold', 'white', 'solstice', 'ocean',
-  'sunset', 'heart', 'sf', 'smiley', 'forest', 'fire', 'night', 'checker', 'off'
+  'sunset', 'heart', 'sf', 'forest', 'fire', 'night', 'checker', 'off'
 ];
 
 const PRESETS: { name: string; playlist: PlaylistDef }[] = [

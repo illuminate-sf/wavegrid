@@ -252,18 +252,6 @@ export const SCENE_SOURCES: Record<string, string> = {
       else ctx.set(i, 220, 80, 8);
     }`,
 
-  smiley: `
-    var bitmap = [
-      [0,1,1,1,1,1,0],[1,0,0,0,0,0,1],[1,0,1,0,1,0,1],
-      [1,0,0,0,0,0,1],[1,1,0,0,0,1,1],[1,0,1,1,1,0,1],[0,1,1,1,1,1,0]
-    ];
-    for (var i = 0; i < ctx.count; i++) {
-      var row = Math.floor(i / ctx.cols);
-      var col = i % ctx.cols;
-      var on = bitmap[row] && bitmap[row][col];
-      if (on) ctx.set(i, 50, 90, 85);
-      else ctx.set(i, 0, 0, 2);
-    }`,
 
   forest: `
     for (var i = 0; i < ctx.count; i++) {

@@ -211,7 +211,7 @@ function ToolContent({
       )}
 
       {tab === 'patterns' && (
-        <PatternsTab send={send} />
+        <PatternsTab send={send} animSpeed={animSpeed} onAnimSpeed={onAnimSpeed} />
       )}
 
       {tab === 'sequences' && (

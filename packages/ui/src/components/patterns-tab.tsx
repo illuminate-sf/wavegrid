@@ -702,12 +702,14 @@ function PatternTile({
   pattern,
   active,
   onClick,
-  showPreview
+  showPreview,
+  speed
 }: {
   pattern: PatternDef;
   active: boolean;
   onClick: () => void;
   showPreview?: boolean;
+  speed?: number;
 }) {
   const tileSize = showPreview ? 96 : 72;
   return (
@@ -727,6 +729,7 @@ function PatternTile({
           source={pattern.code}
           size={tileSize}
           isPattern
+          speed={speed}
         />
       ) : null}
       <span
@@ -778,9 +781,13 @@ function PreviewToggle({ enabled, onToggle }: { enabled: boolean; onToggle: () =
 }
 
 export function PatternsTab({
-  send
+  send,
+  animSpeed,
+  onAnimSpeed
 }: {
   send: (msg: Record<string, unknown>) => void;
+  animSpeed: number;
+  onAnimSpeed: (v: number) => void;
 }) {
   const [activePattern, setActivePattern] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(true);
@@ -817,8 +824,24 @@ export function PatternsTab({
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Preview toggle */}
-      <div className="flex justify-end">
+      {/* Speed slider + Preview toggle */}
+      <div className="flex items-center gap-2">
+        <span className="text-xs font-medium shrink-0" style={{ color: '#888898' }}>Speed</span>
+        <input
+          type="range"
+          className="flex-1"
+          style={{ minWidth: 120, height: 28 }}
+          min={0}
+          max={1000}
+          value={Math.round(Math.log(animSpeed / 0.01) / Math.log(5.0 / 0.01) * 1000)}
+          onChange={(e) => {
+            const t = parseInt(e.target.value, 10) / 1000;
+            onAnimSpeed(0.01 * Math.pow(5.0 / 0.01, t));
+          }}
+        />
+        <span className="text-xs font-mono shrink-0" style={{ color: '#888898', minWidth: 36, textAlign: 'right' }}>
+          {animSpeed < 0.1 ? animSpeed.toFixed(3) : animSpeed < 1 ? animSpeed.toFixed(2) : animSpeed.toFixed(1)}x
+        </span>
         <PreviewToggle enabled={showPreview} onToggle={() => setShowPreview(!showPreview)} />
       </div>
 
@@ -831,6 +854,7 @@ export function PatternsTab({
             active={activePattern === p.name}
             onClick={() => handleSelect(p)}
             showPreview={showPreview}
+            speed={animSpeed}
           />
         ))}
       </div>
