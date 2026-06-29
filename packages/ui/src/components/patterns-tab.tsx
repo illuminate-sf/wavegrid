@@ -783,7 +783,7 @@ export function PatternsTab({
   send: (msg: Record<string, unknown>) => void;
 }) {
   const [activePattern, setActivePattern] = useState<string | null>(null);
-  const [showPreview, setShowPreview] = useState(false);
+  const [showPreview, setShowPreview] = useState(true);
   const [showEditor, setShowEditor] = useState(false);
   const [code, setCode] = useState(DEFAULT_CODE);
   const [status, setStatus] = useState<'idle' | 'running' | 'error'>('idle');

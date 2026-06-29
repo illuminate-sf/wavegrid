@@ -136,7 +136,7 @@ export function ScenePalette({
   active: string | null;
   onSelect: (name: string) => void;
 }) {
-  const [showPreview, setShowPreview] = useState(false);
+  const [showPreview, setShowPreview] = useState(true);
 
   return (
     <div className="flex flex-col gap-2.5">
@@ -169,7 +169,7 @@ export function AnimationPalette({
   onSelect: (name: string) => void;
   speed?: number;
 }) {
-  const [showPreview, setShowPreview] = useState(false);
+  const [showPreview, setShowPreview] = useState(true);
 
   return (
     <div className="flex flex-col gap-2.5">
