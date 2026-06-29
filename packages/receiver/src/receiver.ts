@@ -13,6 +13,8 @@
  */
 
 import { setTarget } from '@wavegrid/animations';
+import * as fs from 'fs';
+import { resolve } from 'path';
 
 import { ConsoleOutput, InputAdapter, OutputAdapter, WebSocketInput } from './adapters';
 import { AnimationState, applyPaint, createDefaultAnimationState, handleCommand, remapGridForOutput, tickCommandMode } from './command-engine';
@@ -99,9 +101,11 @@ export class Receiver {
   private _sandboxReady: Promise<SandboxEngine> | null = null;
   private _patternStartTime = 0;
   private _patternFrame = 0;
+  private _stateFile: string;
 
   constructor(config: Partial<ReceiverConfig> = {}) {
     this.config = { ...DEFAULT_RECEIVER_CONFIG, ...config };
+    this._stateFile = resolve(process.cwd(), '.state', 'receiver-last-pattern.json');
   }
 
   get status(): ReceiverStatus { return this._status; }
@@ -138,6 +142,7 @@ export class Receiver {
   start() {
     if (this._running) return;
     this._running = true;
+    this.restoreLastPattern();
     this.bindInput();
     this.startTickLoop();
     console.log('  \u25C8 Receiver started');
@@ -189,6 +194,7 @@ export class Receiver {
       if (cmd.action === 'stop' || cmd.action === 'stopPattern') {
         handleCommand(this._animState, cmd);
         this.disposeSandbox();
+        this.clearPersistedPattern();
         return;
       }
 
@@ -199,15 +205,19 @@ export class Receiver {
         handleCommand(this._animState, cmd);
         applyPaint(grid, cmd.cells, this._animState.attack);
       } else if (cmd.action === 'evalPattern') {
+        resetFilteredGrid(grid);
         handleCommand(this._animState, cmd);
         this.handleEvalPattern(cmd);
+        this.persistPattern(cmd);
       } else if (cmd.action === 'clear') {
         handleCommand(this._animState, cmd);
         this.disposeSandbox();
         resetFilteredGrid(grid);
+        this.clearPersistedPattern();
       } else {
         // setAnimation, setScene — LP filter handles smooth transition
         handleCommand(this._animState, cmd);
+        this.persistCommand(cmd);
       }
     });
 
@@ -232,8 +242,13 @@ export class Receiver {
         const now = Date.now();
         const timeSinceData = now - this.lastDataAt;
 
-        // Check if we should switch to fallback
-        if (timeSinceData > this.config.fallbackDelay && !this._fallbackActive) {
+        // Check if we should switch to fallback — but only if nothing
+        // is actively running locally (pattern, animation, or scene).
+        const hasLocalVisual = this._animState.patternActive ||
+          !!this._animState.currentAnimation ||
+          !!this._animState.currentScene;
+
+        if (timeSinceData > this.config.fallbackDelay && !this._fallbackActive && !hasLocalVisual) {
           this._fallbackActive = true;
           this._status = 'fallback';
           console.log('\n  \u25C8 Signal lost \u2014 entering sine wave fallback');
@@ -337,5 +352,65 @@ export class Receiver {
       this._sandbox = null;
     }
     this._sandboxReady = null;
+  }
+
+  // ── State persistence ────────────────────────────────────────
+
+  private persistPattern(cmd: EvalPatternCommand): void {
+    try {
+      const dir = resolve(process.cwd(), '.state');
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(this._stateFile, JSON.stringify({
+        type: 'evalPattern',
+        code: cmd.code,
+        params: cmd.params || {}
+      }), 'utf8');
+    } catch { /* best effort */ }
+  }
+
+  private persistCommand(cmd: CommandMessage): void {
+    try {
+      const dir = resolve(process.cwd(), '.state');
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(this._stateFile, JSON.stringify({
+        type: cmd.action,
+        name: (cmd as any).name
+      }), 'utf8');
+    } catch { /* best effort */ }
+  }
+
+  private clearPersistedPattern(): void {
+    try {
+      if (fs.existsSync(this._stateFile)) fs.unlinkSync(this._stateFile);
+    } catch { /* best effort */ }
+  }
+
+  private restoreLastPattern(): void {
+    try {
+      if (!fs.existsSync(this._stateFile)) return;
+      const raw = JSON.parse(fs.readFileSync(this._stateFile, 'utf8'));
+      if (!raw.type) return;
+
+      const grid = this.ensureGrid();
+      resetFilteredGrid(grid);
+
+      if (raw.type === 'evalPattern' && raw.code) {
+        console.log('  ◈ Restoring last pattern from disk');
+        this._animState.currentAnimation = null;
+        this._animState.currentScene = null;
+        this._animState.patternActive = true;
+        this.handleEvalPattern({ type: 'command', action: 'evalPattern', code: raw.code, params: raw.params || {} });
+      } else if (raw.type === 'setAnimation' && raw.name) {
+        console.log(`  ◈ Restoring last animation from disk: ${raw.name}`);
+        this._animState.currentAnimation = raw.name;
+        this._animState.currentScene = null;
+        this._animState.patternActive = false;
+      } else if (raw.type === 'setScene' && raw.name) {
+        console.log(`  ◈ Restoring last scene from disk: ${raw.name}`);
+        this._animState.currentScene = raw.name;
+        this._animState.currentAnimation = null;
+        this._animState.patternActive = false;
+      }
+    } catch { /* ignore — will get fresh command from server */ }
   }
 }
