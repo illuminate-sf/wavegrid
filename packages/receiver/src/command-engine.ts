@@ -102,7 +102,7 @@ export function handleCommand(state: AnimationState, cmd: CommandMessage): boole
     return true;
 
   case 'setSpeed':
-    state.speed = Math.max(0.01, Math.min(5.0, cmd.value));
+    state.speed = Math.max(0.001, Math.min(5.0, cmd.value));
     return true;
 
   default:

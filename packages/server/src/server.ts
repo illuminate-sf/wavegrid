@@ -440,7 +440,7 @@ function handleMessage(msg: any) {
     break;
   case 'anim_speed':
     if (typeof msg.value === 'number') {
-      animSpeed = Math.max(0.01, Math.min(5.0, msg.value));
+      animSpeed = Math.max(0.001, Math.min(5.0, msg.value));
       patternEngine.speed = animSpeed;
       broadcastCommand({ action: 'setSpeed', value: animSpeed });
       scheduleSave();
