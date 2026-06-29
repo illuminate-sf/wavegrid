@@ -2,28 +2,17 @@ import './globals.css';
 
 import type { Metadata, Viewport } from 'next';
 
-const siteTitle = process.env.NEXT_PUBLIC_SITE_TITLE || 'Wavegrid';
-const siteDescription = process.env.NEXT_PUBLIC_SITE_DESCRIPTION || 'Painting the sky with light';
-
-export const metadata: Metadata = {
-  title: siteTitle,
-  description: siteDescription,
-  openGraph: {
-    title: siteTitle,
-    description: siteDescription,
-    siteName: siteTitle
-  },
-  twitter: {
-    card: 'summary',
-    title: siteTitle,
-    description: siteDescription
-  },
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: 'black-translucent',
-    title: siteTitle
-  }
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const title = process.env.SITE_TITLE || 'Wavegrid';
+  const description = process.env.SITE_DESCRIPTION || 'Painting the sky with light';
+  return {
+    title,
+    description,
+    openGraph: { title, description, siteName: title },
+    twitter: { card: 'summary', title, description },
+    appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title }
+  };
+}
 
 export const viewport: Viewport = {
   width: 'device-width',
