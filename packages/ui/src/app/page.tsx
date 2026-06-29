@@ -431,7 +431,12 @@ export default function Home() {
   const NUM_CANNONS = config?.numCannons ?? 49;
   const GRID_COLUMNS = config?.gridColumns ?? 7;
 
-  const [tab, setTab] = useState<GridMode>('paint');
+  const [tab, setTab] = useState<GridMode>(() => {
+    if (typeof window === 'undefined') return 'paint';
+    const saved = localStorage.getItem('wavegrid-tab');
+    if (saved && tabs.some((t) => t.key === saved)) return saved as GridMode;
+    return 'paint';
+  });
   const [layout, setLayout] = useState<PanelLayout>('bottom');
   const [hue, setHue] = useState(220);
   const [sat, setSat] = useState(90);
@@ -712,6 +717,7 @@ export default function Home() {
       send({ type: 'calibration_mode', enabled: false });
     }
     setTab(t);
+    localStorage.setItem('wavegrid-tab', t);
     if (isPhone && sheetSnap === 'peek') {
       setSheetSnap('half');
     }
