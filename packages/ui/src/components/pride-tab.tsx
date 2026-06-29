@@ -94,6 +94,98 @@ const PRIDE_STATIC: PatternDef[] = [
     code: `(function(){\n${PRIDE_COLORS_CODE}\nreturn {\nrender: function(ctx) {\n  for (var i = 0; i < ctx.count; i++) {\n    var uv = ctx.uv(i);\n    var bandIdx = Math.floor(uv[0] * COLORS.length);\n    if (bandIdx >= COLORS.length) bandIdx = COLORS.length - 1;\n    var c = COLORS[bandIdx];\n    ctx.set(i, c[0], c[1], c[2]);\n  }\n},\nmeta: { name: 'pride-columns' }\n};\n})()`
   },
   {
+    name: 'ROYGBIV',
+    gradient: 'linear-gradient(90deg, #e40303, #ff8c00, #ffed00, #008026, #0047ff, #4b0082, #750787)',
+    code: `(function(){
+var ROYGBIV = [
+  [0, 100, 100],
+  [30, 100, 100],
+  [55, 100, 100],
+  [120, 100, 100],
+  [210, 100, 100],
+  [260, 100, 100],
+  [290, 100, 100]
+];
+return {
+render: function(ctx) {
+  for (var i = 0; i < ctx.count; i++) {
+    var col = i % ctx.cols;
+    var c = ROYGBIV[col % ROYGBIV.length];
+    ctx.set(i, c[0], c[1], c[2]);
+  }
+},
+meta: { name: 'pride-roygbiv' }
+};
+})()`
+  },
+  {
+    name: 'Mirror',
+    gradient: 'linear-gradient(90deg, #750787, #004dff, #008026, #ffed00, #008026, #004dff, #750787)',
+    code: `(function(){
+var HALF = [
+  [0, 100, 100],
+  [30, 100, 100],
+  [55, 100, 100],
+  [120, 100, 100],
+  [210, 100, 100],
+  [260, 100, 100],
+  [290, 100, 100]
+];
+return {
+render: function(ctx) {
+  var mid = (ctx.cols - 1) / 2;
+  for (var i = 0; i < ctx.count; i++) {
+    var col = i % ctx.cols;
+    var dist = Math.abs(col - mid);
+    var idx = Math.floor(dist / mid * (HALF.length - 1));
+    if (idx >= HALF.length) idx = HALF.length - 1;
+    var c = HALF[idx];
+    ctx.set(i, c[0], c[1], c[2]);
+  }
+},
+meta: { name: 'pride-mirror' }
+};
+})()`
+  },
+  {
+    name: 'Double',
+    gradient: 'linear-gradient(180deg, #e40303, #008026, #750787, #e40303, #008026, #750787)',
+    code: `(function(){
+${PRIDE_COLORS_CODE}
+return {
+render: function(ctx) {
+  for (var i = 0; i < ctx.count; i++) {
+    var row = Math.floor(i / ctx.cols);
+    var col = i % ctx.cols;
+    var pos = col / ctx.cols;
+    var bandIdx = Math.floor(pos * COLORS.length);
+    if (bandIdx >= COLORS.length) bandIdx = COLORS.length - 1;
+    var c = COLORS[bandIdx];
+    ctx.set(i, c[0], c[1], c[2]);
+  }
+},
+meta: { name: 'pride-double' }
+};
+})()`
+  },
+  {
+    name: 'Gradient',
+    gradient: 'linear-gradient(90deg, #e40303, #ff8c00, #ffed00, #008026, #004dff, #750787)',
+    code: `(function(){
+${PRIDE_COLORS_CODE}\n${lerpColorCode()}
+return {
+render: function(ctx) {
+  for (var i = 0; i < ctx.count; i++) {
+    var uv = ctx.uv(i);
+    var c = colorAt(uv[0]);
+    ctx.set(i, c[0], c[1], c[2]);
+  }
+},
+meta: { name: 'pride-gradient' }
+};
+})()`
+  },
+  {
     name: 'Diagonal',
     gradient: 'linear-gradient(135deg, #e40303, #ff8c00, #ffed00, #008026, #004dff, #750787)',
     code: `(function(){\n${PRIDE_COLORS_CODE}\nreturn {\nrender: function(ctx) {\n  for (var i = 0; i < ctx.count; i++) {\n    var uv = ctx.uv(i);\n    var d = (uv[0] + uv[1]) / 2;\n    var bandIdx = Math.floor(d * COLORS.length);\n    if (bandIdx >= COLORS.length) bandIdx = COLORS.length - 1;\n    var c = COLORS[bandIdx];\n    ctx.set(i, c[0], c[1], c[2]);\n  }\n},\nmeta: { name: 'pride-diagonal' }\n};\n})()`
@@ -116,6 +208,21 @@ const PRIDE_STATIC: PatternDef[] = [
 ];
 
 const PRIDE_PATTERNS: PatternDef[] = [
+  {
+    name: 'Rainbow',
+    gradient: 'linear-gradient(90deg, #e33, #ee0, #3a5, #35e, #e33)',
+    code: `({
+  render: function(ctx) {
+    for (var i = 0; i < ctx.count; i++) {
+      var row = Math.floor(i / ctx.cols);
+      var col = i % ctx.cols;
+      var hue = (ctx.t * 30 + (row + col) * 25) % 360;
+      ctx.set(i, hue, 100, 100);
+    }
+  },
+  meta: { name: 'pride-rainbow-anim' }
+})`
+  },
   {
     name: 'Flow',
     gradient: 'linear-gradient(180deg, #e40303 0%, #ff8c00 20%, #ffed00 40%, #008026 60%, #004dff 80%, #750787 100%)',
@@ -140,22 +247,6 @@ const PRIDE_PATTERNS: PatternDef[] = [
     name: 'Wave',
     gradient: 'linear-gradient(135deg, #e40303 0%, #008026 50%, #750787 100%)',
     code: makeWavePattern(PRIDE_COLORS_CODE)
-  },
-  {
-    name: 'Rainbow',
-    gradient: 'linear-gradient(90deg, #e33, #ee0, #3a5, #35e, #e33)',
-    code: `({
-  render: function(ctx) {
-    for (var i = 0; i < ctx.count; i++) {
-      var uv = ctx.uv(i);
-      var row = Math.floor(i / ctx.cols);
-      var col = i % ctx.cols;
-      var hue = (ctx.t * 30 + (row + col) * 25) % 360;
-      ctx.set(i, hue, 100, 100);
-    }
-  },
-  meta: { name: 'pride-rainbow-anim' }
-})`
   }
 ];
 
