@@ -367,7 +367,7 @@ export function PrideTab({
   animSpeed: number;
   onAnimSpeed: (v: number) => void;
 }) {
-  const [showPreview, setShowPreview] = useState(false);
+  const [showPreview, setShowPreview] = useState(true);
 
   const handleSelect = useCallback((groupPrefix: string, pattern: PatternDef) => {
     const id = `${groupPrefix}-${pattern.name}`;
