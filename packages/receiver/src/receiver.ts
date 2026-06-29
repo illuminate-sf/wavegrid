@@ -97,7 +97,7 @@ export class Receiver {
   private _animState: AnimationState = createDefaultAnimationState();
   private _sandbox: SandboxEngine | null = null;
   private _sandboxReady: Promise<SandboxEngine> | null = null;
-  private _patternStartTime = 0;
+  private _patternTime = 0;
   private _patternFrame = 0;
 
   constructor(config: Partial<ReceiverConfig> = {}) {
@@ -178,7 +178,7 @@ export class Receiver {
         this.config.alpha = Math.max(0.01, Math.min(1, cmd.value));
         return;
       }
-      if (cmd.action === 'setAttack' || cmd.action === 'setOrientation' || cmd.action === 'setShift') {
+      if (cmd.action === 'setAttack' || cmd.action === 'setOrientation' || cmd.action === 'setShift' || cmd.action === 'setSpeed') {
         handleCommand(this._animState, cmd);
         return;
       }
@@ -302,7 +302,7 @@ export class Receiver {
       .then((sb) => {
         try {
           const meta = sb.loadPattern(cmd.code, cmd.params);
-          this._patternStartTime = Date.now();
+          this._patternTime = 0;
           this._patternFrame = 0;
           console.log('  ◈ Pattern loaded:', meta.name || '(anonymous)');
         } catch (e: unknown) {
@@ -329,12 +329,11 @@ export class Receiver {
   private tickPattern(): void {
     if (!this._sandbox?.loaded) return;
 
-    const now = Date.now();
-    const t = ((now - this._patternStartTime) / 1000) * this._animState.speed;
     const dt = (1 / 60) * this._animState.speed;
+    this._patternTime += dt;
     this._patternFrame++;
 
-    const frame = this._sandbox.renderFrame(t, dt, this._patternFrame);
+    const frame = this._sandbox.renderFrame(this._patternTime, dt, this._patternFrame);
     if (!frame) return;
 
     const attack = this._animState.attack;

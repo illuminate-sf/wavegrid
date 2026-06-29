@@ -36,7 +36,8 @@ interface PatternCtx {
 
 export class ServerPatternEngine {
   private pattern: PatternObj | null = null;
-  private startTime: number = 0;
+  private _patternTime: number = 0;
+  private _lastTickMs: number = 0;
   private gridSize: number;
   private cols: number;
   private rows: number;
@@ -59,7 +60,8 @@ export class ServerPatternEngine {
       const result = this.evaluate(code);
       if (result && typeof result === 'object' && typeof (result as Record<string, unknown>).render === 'function') {
         this.pattern = result as unknown as PatternObj;
-        this.startTime = Date.now();
+        this._patternTime = 0;
+        this._lastTickMs = Date.now();
         if (this.pattern.init) {
           const ctx = this.makeCtx(new Array(this.gridSize).fill(null).map(() => ({ h: 0, s: 0, b: 0 })));
           try { this.pattern.init(ctx); } catch { /* ignore init errors */ }
@@ -213,7 +215,11 @@ export class ServerPatternEngine {
   }
 
   private makeCtx(grid: HSBColor[]): PatternCtx {
-    const elapsed = ((Date.now() - this.startTime) / 1000) * this._speed;
+    const now = Date.now();
+    const wallDt = (now - this._lastTickMs) / 1000;
+    this._lastTickMs = now;
+    this._patternTime += wallDt * this._speed;
+    const elapsed = this._patternTime;
     const cols = this.cols;
     const rows = this.rows;
     const count = this.gridSize;
