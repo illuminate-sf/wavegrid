@@ -432,6 +432,400 @@ render: function(ctx) {
 meta: { name: 'usa-spiral' }
 };
 })()`
+  },
+  {
+    name: 'Strobe',
+    gradient: 'linear-gradient(90deg, #BF0A30, #FFFFFF, #002868, #FFFFFF)',
+    code: `(function(){
+${USA_COLORS_CODE}
+return {
+render: function(ctx) {
+  var t = ctx.t * 4;
+  var phase = Math.floor(t) % 3;
+  var c = COLORS[phase];
+  var bright = 70 + 30 * (0.5 + 0.5 * Math.cos((t % 1) * Math.PI * 2));
+  for (var i = 0; i < ctx.count; i++) {
+    ctx.set(i, c[0], c[1], bright);
+  }
+},
+meta: { name: 'usa-strobe' }
+};
+})()`
+  },
+  {
+    name: 'Ripple',
+    gradient: 'radial-gradient(circle, #FFFFFF 20%, #BF0A30 50%, #002868)',
+    code: `(function(){
+${USA_COLORS_CODE}
+${lerpColorCode()}
+return {
+render: function(ctx) {
+  var cx = (ctx.cols - 1) / 2;
+  var cy = (ctx.rows - 1) / 2;
+  for (var i = 0; i < ctx.count; i++) {
+    var row = Math.floor(i / ctx.cols);
+    var col = i % ctx.cols;
+    var dx = col - cx;
+    var dy = row - cy;
+    var dist = Math.sqrt(dx * dx + dy * dy);
+    var wave = Math.sin(dist * 2 - ctx.t * 3);
+    var pos = (wave + 1) / 2;
+    var c = colorAt(pos);
+    ctx.set(i, c[0], c[1], c[2]);
+  }
+},
+meta: { name: 'usa-ripple' }
+};
+})()`
+  },
+  {
+    name: 'Lightning',
+    gradient: 'linear-gradient(180deg, #002868, #FFFFFF 50%, #002868)',
+    code: `(function(){
+${USA_COLORS_CODE}
+return {
+render: function(ctx) {
+  var bolt = Math.floor(ctx.t * 5) % 7;
+  for (var i = 0; i < ctx.count; i++) {
+    var row = Math.floor(i / ctx.cols);
+    var col = i % ctx.cols;
+    var onBolt = Math.abs(col - bolt) <= 0 && Math.sin(ctx.t * 10 + row) > 0;
+    if (onBolt) {
+      ctx.set(i, WHITE[0], WHITE[1], WHITE[2]);
+    } else {
+      var blend = row / ctx.rows;
+      if (blend < 0.5) {
+        ctx.set(i, RED[0], RED[1], 60 + blend * 40);
+      } else {
+        ctx.set(i, BLUE[0], BLUE[1], 40 + (1 - blend) * 40);
+      }
+    }
+  }
+},
+meta: { name: 'usa-lightning' }
+};
+})()`
+  },
+  {
+    name: 'Radar',
+    gradient: 'conic-gradient(#BF0A30, transparent, #002868, transparent, #BF0A30)',
+    code: `(function(){
+${USA_COLORS_CODE}
+return {
+render: function(ctx) {
+  var cx = (ctx.cols - 1) / 2;
+  var cy = (ctx.rows - 1) / 2;
+  var sweep = (ctx.t * 1.5) % (Math.PI * 2);
+  for (var i = 0; i < ctx.count; i++) {
+    var row = Math.floor(i / ctx.cols);
+    var col = i % ctx.cols;
+    var angle = Math.atan2(row - cy, col - cx) + Math.PI;
+    var diff = angle - sweep;
+    if (diff < 0) diff += Math.PI * 2;
+    if (diff < 0.6) {
+      var fade = 1 - diff / 0.6;
+      ctx.set(i, WHITE[0], WHITE[1], fade * 100);
+    } else {
+      var dist = Math.sqrt((col - cx) * (col - cx) + (row - cy) * (row - cy)) / cx;
+      if (dist < 0.5) {
+        ctx.set(i, RED[0], RED[1], 50);
+      } else {
+        ctx.set(i, BLUE[0], BLUE[1], 40);
+      }
+    }
+  }
+},
+meta: { name: 'usa-radar' }
+};
+})()`
+  },
+  {
+    name: 'Confetti',
+    gradient: 'linear-gradient(135deg, #BF0A30 33%, #FFFFFF 33% 66%, #002868 66%)',
+    code: `(function(){
+${USA_COLORS_CODE}
+return {
+render: function(ctx) {
+  var seed = Math.floor(ctx.t * 6);
+  for (var i = 0; i < ctx.count; i++) {
+    var row = Math.floor(i / ctx.cols);
+    var col = i % ctx.cols;
+    var hash = (seed * 31 + row * 17 + col * 13) % 100;
+    var fall = (row / ctx.rows + ctx.t * 0.5 + col * 0.1) % 1;
+    var bright = 60 + 40 * (1 - fall);
+    if (hash < 33) {
+      ctx.set(i, RED[0], RED[1], bright);
+    } else if (hash < 66) {
+      ctx.set(i, WHITE[0], WHITE[1], bright);
+    } else {
+      ctx.set(i, BLUE[0], BLUE[1], bright);
+    }
+  }
+},
+meta: { name: 'usa-confetti' }
+};
+})()`
+  },
+  {
+    name: 'Snake',
+    gradient: 'linear-gradient(90deg, #BF0A30, #002868, #FFFFFF)',
+    code: `(function(){
+${USA_COLORS_CODE}
+return {
+render: function(ctx) {
+  var len = ctx.count;
+  var headPos = Math.floor(ctx.t * 8) % len;
+  for (var i = 0; i < ctx.count; i++) {
+    var dist = (i - headPos + len) % len;
+    var segment = Math.floor(dist / 5) % 3;
+    var c = COLORS[segment];
+    var fade = Math.max(30, 100 - dist * 2);
+    ctx.set(i, c[0], c[1], fade);
+  }
+},
+meta: { name: 'usa-snake' }
+};
+})()`
+  },
+  {
+    name: 'Heartbeat',
+    gradient: 'radial-gradient(circle, #BF0A30 40%, #002868)',
+    code: `(function(){
+${USA_COLORS_CODE}
+return {
+render: function(ctx) {
+  var beat = Math.pow(Math.sin(ctx.t * 3.14), 2);
+  var cx = (ctx.cols - 1) / 2;
+  var cy = (ctx.rows - 1) / 2;
+  for (var i = 0; i < ctx.count; i++) {
+    var row = Math.floor(i / ctx.cols);
+    var col = i % ctx.cols;
+    var dx = (col - cx) / cx;
+    var dy = (row - cy) / cy;
+    var dist = Math.sqrt(dx * dx + dy * dy);
+    var threshold = 0.3 + beat * 0.5;
+    if (dist < threshold * 0.4) {
+      ctx.set(i, WHITE[0], WHITE[1], 100);
+    } else if (dist < threshold) {
+      ctx.set(i, RED[0], RED[1], 100 - (dist - threshold * 0.4) * 100);
+    } else {
+      ctx.set(i, BLUE[0], BLUE[1], 50 - dist * 10);
+    }
+  }
+},
+meta: { name: 'usa-heartbeat' }
+};
+})()`
+  },
+  {
+    name: 'Matrix',
+    gradient: 'linear-gradient(180deg, #002868, #FFFFFF, #002868)',
+    code: `(function(){
+${USA_COLORS_CODE}
+return {
+render: function(ctx) {
+  for (var i = 0; i < ctx.count; i++) {
+    var row = Math.floor(i / ctx.cols);
+    var col = i % ctx.cols;
+    var drop = (ctx.t * 3 + col * 1.7) % ctx.rows;
+    var dist = (row - drop + ctx.rows) % ctx.rows;
+    if (dist < 1) {
+      ctx.set(i, WHITE[0], WHITE[1], 100);
+    } else if (dist < 3) {
+      ctx.set(i, RED[0], RED[1], 90 - dist * 20);
+    } else {
+      ctx.set(i, BLUE[0], BLUE[1], Math.max(20, 50 - dist * 5));
+    }
+  }
+},
+meta: { name: 'usa-matrix' }
+};
+})()`
+  },
+  {
+    name: 'Weave',
+    gradient: 'linear-gradient(45deg, #BF0A30 25%, #FFFFFF 25% 50%, #002868 50% 75%, #FFFFFF 75%)',
+    code: `(function(){
+${USA_COLORS_CODE}
+${lerpColorCode()}
+return {
+render: function(ctx) {
+  for (var i = 0; i < ctx.count; i++) {
+    var row = Math.floor(i / ctx.cols);
+    var col = i % ctx.cols;
+    var warpX = Math.sin(row * 0.8 + ctx.t * 2) * 0.3;
+    var warpY = Math.cos(col * 0.8 + ctx.t * 1.5) * 0.3;
+    var pos = ((col / ctx.cols + warpX) + (row / ctx.rows + warpY)) / 2;
+    var c = colorAt(pos + ctx.t * 0.1);
+    ctx.set(i, c[0], c[1], c[2]);
+  }
+},
+meta: { name: 'usa-weave' }
+};
+})()`
+  },
+  {
+    name: 'Beacon',
+    gradient: 'radial-gradient(circle at 50% 50%, #FFFFFF 10%, #BF0A30 30%, #002868)',
+    code: `(function(){
+${USA_COLORS_CODE}
+return {
+render: function(ctx) {
+  var cx = (ctx.cols - 1) / 2;
+  var cy = (ctx.rows - 1) / 2;
+  var bx = cx + Math.cos(ctx.t * 1.2) * cx * 0.6;
+  var by = cy + Math.sin(ctx.t * 1.2) * cy * 0.6;
+  for (var i = 0; i < ctx.count; i++) {
+    var row = Math.floor(i / ctx.cols);
+    var col = i % ctx.cols;
+    var dx = col - bx;
+    var dy = row - by;
+    var dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < 1.2) {
+      ctx.set(i, WHITE[0], WHITE[1], 100);
+    } else if (dist < 2.5) {
+      ctx.set(i, RED[0], RED[1], 100 - (dist - 1.2) * 50);
+    } else {
+      ctx.set(i, BLUE[0], BLUE[1], 50);
+    }
+  }
+},
+meta: { name: 'usa-beacon' }
+};
+})()`
+  },
+  {
+    name: 'Curtain',
+    gradient: 'linear-gradient(90deg, #002868, #BF0A30, #FFFFFF, #BF0A30, #002868)',
+    code: `(function(){
+${USA_COLORS_CODE}
+${lerpColorCode()}
+return {
+render: function(ctx) {
+  var open = (Math.sin(ctx.t * 0.8) + 1) / 2;
+  var mid = ctx.cols / 2;
+  for (var i = 0; i < ctx.count; i++) {
+    var row = Math.floor(i / ctx.cols);
+    var col = i % ctx.cols;
+    var distFromMid = Math.abs(col - mid) / mid;
+    var curtainEdge = open;
+    if (distFromMid < curtainEdge) {
+      var pos = row / ctx.rows + ctx.t * 0.05;
+      var c = colorAt(pos);
+      ctx.set(i, c[0], c[1], c[2]);
+    } else {
+      ctx.set(i, BLUE[0], BLUE[1], 30 + distFromMid * 30);
+    }
+  }
+},
+meta: { name: 'usa-curtain' }
+};
+})()`
+  },
+  {
+    name: 'Bloom',
+    gradient: 'radial-gradient(circle, #BF0A30, #FFFFFF 50%, #002868)',
+    code: `(function(){
+${USA_COLORS_CODE}
+${lerpColorCode()}
+return {
+render: function(ctx) {
+  var cx = (ctx.cols - 1) / 2;
+  var cy = (ctx.rows - 1) / 2;
+  var radius = ((Math.sin(ctx.t * 1.2) + 1) / 2) * 1.5;
+  for (var i = 0; i < ctx.count; i++) {
+    var row = Math.floor(i / ctx.cols);
+    var col = i % ctx.cols;
+    var dx = (col - cx) / cx;
+    var dy = (row - cy) / cy;
+    var dist = Math.sqrt(dx * dx + dy * dy);
+    var pos = (dist - radius + ctx.t * 0.2) % 1;
+    if (pos < 0) pos += 1;
+    var c = colorAt(pos);
+    ctx.set(i, c[0], c[1], c[2]);
+  }
+},
+meta: { name: 'usa-bloom' }
+};
+})()`
+  },
+  {
+    name: 'Zigzag',
+    gradient: 'linear-gradient(135deg, #BF0A30, #FFFFFF, #002868, #FFFFFF, #BF0A30)',
+    code: `(function(){
+${USA_COLORS_CODE}
+${lerpColorCode()}
+return {
+render: function(ctx) {
+  for (var i = 0; i < ctx.count; i++) {
+    var row = Math.floor(i / ctx.cols);
+    var col = i % ctx.cols;
+    var zigzag = col + (row % 2 === 0 ? 1 : -1) * Math.sin(ctx.t * 2 + row) * 2;
+    var pos = (zigzag / ctx.cols + ctx.t * 0.15) % 1;
+    if (pos < 0) pos += 1;
+    var c = colorAt(pos);
+    ctx.set(i, c[0], c[1], c[2]);
+  }
+},
+meta: { name: 'usa-zigzag' }
+};
+})()`
+  },
+  {
+    name: 'Comet',
+    gradient: 'linear-gradient(225deg, #FFFFFF, #BF0A30, #002868)',
+    code: `(function(){
+${USA_COLORS_CODE}
+return {
+render: function(ctx) {
+  var cx = (ctx.cols - 1) / 2;
+  var cy = (ctx.rows - 1) / 2;
+  var angle = ctx.t * 1.5;
+  var hx = cx + Math.cos(angle) * cx * 0.9;
+  var hy = cy + Math.sin(angle) * cy * 0.9;
+  for (var i = 0; i < ctx.count; i++) {
+    var row = Math.floor(i / ctx.cols);
+    var col = i % ctx.cols;
+    var dx = col - hx;
+    var dy = row - hy;
+    var dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < 0.8) {
+      ctx.set(i, WHITE[0], WHITE[1], 100);
+    } else if (dist < 2.5) {
+      ctx.set(i, RED[0], RED[1], 100 - (dist - 0.8) * 40);
+    } else {
+      var trail = Math.max(0, 1 - dist * 0.15);
+      ctx.set(i, BLUE[0], BLUE[1], 30 + trail * 30);
+    }
+  }
+},
+meta: { name: 'usa-comet' }
+};
+})()`
+  },
+  {
+    name: 'Plasma',
+    gradient: 'radial-gradient(ellipse, #BF0A30, #FFFFFF, #002868)',
+    code: `(function(){
+${USA_COLORS_CODE}
+${lerpColorCode()}
+return {
+render: function(ctx) {
+  for (var i = 0; i < ctx.count; i++) {
+    var row = Math.floor(i / ctx.cols);
+    var col = i % ctx.cols;
+    var v1 = Math.sin(col * 0.8 + ctx.t * 1.5);
+    var v2 = Math.sin(row * 0.8 + ctx.t * 1.2);
+    var v3 = Math.sin((col + row) * 0.5 + ctx.t);
+    var v4 = Math.sin(Math.sqrt(col * col + row * row) * 0.5 - ctx.t * 0.8);
+    var pos = (v1 + v2 + v3 + v4 + 4) / 8;
+    var c = colorAt(pos);
+    ctx.set(i, c[0], c[1], c[2]);
+  }
+},
+meta: { name: 'usa-plasma' }
+};
+})()`
   }
 ];
 
