@@ -1,0 +1,609 @@
+'use client';
+
+import { useCallback, useState } from 'react';
+
+import { ControlGrid, ControlGroup } from './control-grid';
+import { MiniGridPreview } from './mini-grid-preview';
+
+// ── USA Colors (HSB): Red, White, Blue ─────────────────────────────────
+
+const USA_COLORS_CODE = `
+var RED = [0, 100, 100];
+var WHITE = [0, 0, 100];
+var BLUE = [220, 100, 70];
+var COLORS = [RED, WHITE, BLUE];
+`;
+
+function lerpColorCode(): string {
+  return `
+function lerpColor(a, b, t) {
+  var dh = b[0] - a[0];
+  if (dh > 180) dh -= 360;
+  if (dh < -180) dh += 360;
+  return [
+    ((a[0] + dh * t) % 360 + 360) % 360,
+    a[1] + (b[1] - a[1]) * t,
+    a[2] + (b[2] - a[2]) * t
+  ];
+}
+function colorAt(pos) {
+  var p = ((pos % 1) + 1) % 1;
+  var scaled = p * COLORS.length;
+  var idx = Math.floor(scaled);
+  var mix = scaled - idx;
+  var a = COLORS[idx % COLORS.length];
+  var b = COLORS[(idx + 1) % COLORS.length];
+  return lerpColor(a, b, mix);
+}
+`;
+}
+
+interface PatternDef {
+  name: string;
+  gradient: string;
+  code: string;
+}
+
+// ── Helper pattern factories ───────────────────────────────────────────
+
+function makeFlowPattern(colorsCode: string): string {
+  return `(function(){\n${colorsCode}\n${lerpColorCode()}\nreturn {\nrender: function(ctx) {\n  var speed = ctx.t * 0.012;\n  for (var i = 0; i < ctx.count; i++) {\n    var uv = ctx.uv(i);\n    var c = colorAt(uv[1] + speed);\n    ctx.set(i, c[0], c[1], c[2]);\n  }\n},\nmeta: { name: 'usa-flow' }\n};\n})()`;
+}
+
+function makeRotatePattern(colorsCode: string): string {
+  return `(function(){\n${colorsCode}\n${lerpColorCode()}\nreturn {\nrender: function(ctx) {\n  var offset = ctx.t * 0.5;\n  for (var i = 0; i < ctx.count; i++) {\n    var uv = ctx.uv(i);\n    var c = colorAt(uv[0] + offset);\n    ctx.set(i, c[0], c[1], 100);\n  }\n},\nmeta: { name: 'usa-rotate' }\n};\n})()`;
+}
+
+function makeRingPattern(colorsCode: string): string {
+  return `(function(){\n${colorsCode}\n${lerpColorCode()}\nreturn {\nrender: function(ctx) {\n  var speed = ctx.t * 0.15;\n  for (var i = 0; i < ctx.count; i++) {\n    var polar = ctx.polar(i);\n    var c = colorAt(polar[1] / (Math.PI * 2) + speed);\n    ctx.set(i, c[0], c[1], 100);\n  }\n},\nmeta: { name: 'usa-ring' }\n};\n})()`;
+}
+
+function makeBreathePattern(colorsCode: string): string {
+  return `(function(){\n${colorsCode}\n${lerpColorCode()}\nreturn {\nrender: function(ctx) {\n  var speed = ctx.t * 0.008;\n  var brightness = 90 + Math.sin(ctx.t * 0.6) * 10;\n  var c = colorAt(speed);\n  for (var i = 0; i < ctx.count; i++) {\n    ctx.set(i, c[0], c[1], brightness);\n  }\n},\nmeta: { name: 'usa-breathe' }\n};\n})()`;
+}
+
+function makeWavePattern(colorsCode: string): string {
+  return `(function(){\n${colorsCode}\n${lerpColorCode()}\nreturn {\nrender: function(ctx) {\n  for (var i = 0; i < ctx.count; i++) {\n    var uv = ctx.uv(i);\n    var phase = Math.sin(uv[0] * Math.PI * 2 - ctx.t * 2);\n    var c = colorAt(uv[1] + ctx.t * 0.02);\n    var b = 60 + 40 * (0.5 + 0.5 * phase);\n    ctx.set(i, c[0], c[1], b);\n  }\n},\nmeta: { name: 'usa-wave' }\n};\n})()`;
+}
+
+// ── Static Patterns ────────────────────────────────────────────────────
+
+const USA_STATIC: PatternDef[] = [
+  {
+    name: 'Flag',
+    gradient: 'linear-gradient(180deg, #BF0A30, #FFFFFF, #002868)',
+    code: `(function(){
+${USA_COLORS_CODE}
+return {
+render: function(ctx) {
+  for (var i = 0; i < ctx.count; i++) {
+    var uv = ctx.uv(i);
+    var bandIdx = Math.floor(uv[1] * 3);
+    if (bandIdx >= 3) bandIdx = 2;
+    var c = COLORS[bandIdx];
+    ctx.set(i, c[0], c[1], c[2]);
+  }
+},
+meta: { name: 'usa-flag' }
+};
+})()`
+  },
+  {
+    name: 'Columns',
+    gradient: 'linear-gradient(90deg, #BF0A30, #FFFFFF, #002868)',
+    code: `(function(){
+${USA_COLORS_CODE}
+return {
+render: function(ctx) {
+  for (var i = 0; i < ctx.count; i++) {
+    var uv = ctx.uv(i);
+    var bandIdx = Math.floor(uv[0] * 3);
+    if (bandIdx >= 3) bandIdx = 2;
+    var c = COLORS[bandIdx];
+    ctx.set(i, c[0], c[1], c[2]);
+  }
+},
+meta: { name: 'usa-columns' }
+};
+})()`
+  },
+  {
+    name: 'Diagonal',
+    gradient: 'linear-gradient(135deg, #BF0A30, #FFFFFF, #002868)',
+    code: `(function(){
+${USA_COLORS_CODE}
+return {
+render: function(ctx) {
+  for (var i = 0; i < ctx.count; i++) {
+    var uv = ctx.uv(i);
+    var d = (uv[0] + uv[1]) / 2;
+    var bandIdx = Math.floor(d * 3);
+    if (bandIdx >= 3) bandIdx = 2;
+    var c = COLORS[bandIdx];
+    ctx.set(i, c[0], c[1], c[2]);
+  }
+},
+meta: { name: 'usa-diagonal' }
+};
+})()`
+  },
+  {
+    name: 'Solid Red',
+    gradient: 'linear-gradient(135deg, #BF0A30, #990820)',
+    code: `({ render: function(ctx) { ctx.fill(0, 100, 100); }, meta: { name: 'usa-solid-red' } })`
+  },
+  {
+    name: 'Solid Blue',
+    gradient: 'linear-gradient(135deg, #002868, #001845)',
+    code: `({ render: function(ctx) { ctx.fill(220, 100, 70); }, meta: { name: 'usa-solid-blue' } })`
+  },
+  {
+    name: 'Solid White',
+    gradient: 'linear-gradient(135deg, #FFFFFF, #DDDDDD)',
+    code: `({ render: function(ctx) { ctx.fill(0, 0, 100); }, meta: { name: 'usa-solid-white' } })`
+  },
+  {
+    name: 'Checker',
+    gradient: 'conic-gradient(#BF0A30 25%, #002868 25% 50%, #BF0A30 50% 75%, #002868 75%)',
+    code: `(function(){
+${USA_COLORS_CODE}
+return {
+render: function(ctx) {
+  for (var i = 0; i < ctx.count; i++) {
+    var row = Math.floor(i / ctx.cols);
+    var col = i % ctx.cols;
+    var c = (row + col) % 2 === 0 ? RED : BLUE;
+    ctx.set(i, c[0], c[1], c[2]);
+  }
+},
+meta: { name: 'usa-checker' }
+};
+})()`
+  },
+  {
+    name: 'Stars',
+    gradient: 'radial-gradient(circle, #FFFFFF 20%, #002868 20% 100%)',
+    code: `(function(){
+${USA_COLORS_CODE}
+return {
+render: function(ctx) {
+  for (var i = 0; i < ctx.count; i++) {
+    var row = Math.floor(i / ctx.cols);
+    var col = i % ctx.cols;
+    var isStarRow = row % 2 === 0;
+    var isStarCol = col % 2 === 0;
+    if (isStarRow && isStarCol) {
+      ctx.set(i, WHITE[0], WHITE[1], WHITE[2]);
+    } else {
+      ctx.set(i, BLUE[0], BLUE[1], BLUE[2]);
+    }
+  }
+},
+meta: { name: 'usa-stars' }
+};
+})()`
+  },
+  {
+    name: 'Cross',
+    gradient: 'linear-gradient(0deg, #002868 40%, #BF0A30 40% 60%, #002868 60%)',
+    code: `(function(){
+${USA_COLORS_CODE}
+return {
+render: function(ctx) {
+  var mid = Math.floor(ctx.cols / 2);
+  var midRow = Math.floor(ctx.rows / 2);
+  for (var i = 0; i < ctx.count; i++) {
+    var row = Math.floor(i / ctx.cols);
+    var col = i % ctx.cols;
+    if (row === midRow || col === mid) {
+      ctx.set(i, WHITE[0], WHITE[1], WHITE[2]);
+    } else if ((row < midRow && col < mid) || (row > midRow && col > mid)) {
+      ctx.set(i, RED[0], RED[1], RED[2]);
+    } else {
+      ctx.set(i, BLUE[0], BLUE[1], BLUE[2]);
+    }
+  }
+},
+meta: { name: 'usa-cross' }
+};
+})()`
+  },
+  {
+    name: 'Diamond',
+    gradient: 'conic-gradient(#BF0A30, #FFFFFF, #002868, #FFFFFF, #BF0A30)',
+    code: `(function(){
+${USA_COLORS_CODE}
+return {
+render: function(ctx) {
+  var cx = (ctx.cols - 1) / 2;
+  var cy = (ctx.rows - 1) / 2;
+  for (var i = 0; i < ctx.count; i++) {
+    var row = Math.floor(i / ctx.cols);
+    var col = i % ctx.cols;
+    var dist = Math.abs(col - cx) + Math.abs(row - cy);
+    var maxDist = cx + cy;
+    var zone = Math.floor(dist / maxDist * 3);
+    if (zone >= 3) zone = 2;
+    var c = [WHITE, RED, BLUE][zone];
+    ctx.set(i, c[0], c[1], c[2]);
+  }
+},
+meta: { name: 'usa-diamond' }
+};
+})()`
+  }
+];
+
+// ── Animated Patterns ──────────────────────────────────────────────────
+
+const USA_ANIMATED: PatternDef[] = [
+  {
+    name: 'Flow',
+    gradient: 'linear-gradient(180deg, #BF0A30, #FFFFFF, #002868)',
+    code: makeFlowPattern(USA_COLORS_CODE)
+  },
+  {
+    name: 'Rotate',
+    gradient: 'linear-gradient(90deg, #BF0A30, #FFFFFF, #002868, #BF0A30)',
+    code: makeRotatePattern(USA_COLORS_CODE)
+  },
+  {
+    name: 'Ring',
+    gradient: 'conic-gradient(#BF0A30, #FFFFFF, #002868, #BF0A30)',
+    code: makeRingPattern(USA_COLORS_CODE)
+  },
+  {
+    name: 'Breathe',
+    gradient: 'radial-gradient(circle, #FFFFFF, #BF0A30, #002868)',
+    code: makeBreathePattern(USA_COLORS_CODE)
+  },
+  {
+    name: 'Wave',
+    gradient: 'linear-gradient(135deg, #BF0A30, #FFFFFF, #002868)',
+    code: makeWavePattern(USA_COLORS_CODE)
+  },
+  {
+    name: 'Pinwheel',
+    gradient: 'conic-gradient(#BF0A30, #FFFFFF, #002868, #BF0A30)',
+    code: `(function(){
+${USA_COLORS_CODE}
+${lerpColorCode()}
+return {
+render: function(ctx) {
+  var speed = ctx.t * 0.8;
+  for (var i = 0; i < ctx.count; i++) {
+    var polar = ctx.polar(i);
+    var angle = polar[1] / (Math.PI * 2);
+    var c = colorAt(angle * 3 + speed);
+    ctx.set(i, c[0], c[1], c[2]);
+  }
+},
+meta: { name: 'usa-pinwheel' }
+};
+})()`
+  },
+  {
+    name: 'Sparkle',
+    gradient: 'radial-gradient(circle, #FFFFFF 10%, #BF0A30 50%, #002868)',
+    code: `(function(){
+${USA_COLORS_CODE}
+return {
+render: function(ctx) {
+  for (var i = 0; i < ctx.count; i++) {
+    var row = Math.floor(i / ctx.cols);
+    var col = i % ctx.cols;
+    var phase = Math.sin(ctx.t * 3 + row * 1.7 + col * 2.3);
+    if (phase > 0.85) {
+      ctx.set(i, WHITE[0], WHITE[1], WHITE[2]);
+    } else if (phase > 0) {
+      ctx.set(i, RED[0], RED[1], 60 + phase * 40);
+    } else {
+      ctx.set(i, BLUE[0], BLUE[1], 50 + (1 + phase) * 20);
+    }
+  }
+},
+meta: { name: 'usa-sparkle' }
+};
+})()`
+  },
+  {
+    name: 'Cascade',
+    gradient: 'linear-gradient(180deg, #BF0A30 0%, #FFFFFF 50%, #002868 100%)',
+    code: `(function(){
+${USA_COLORS_CODE}
+${lerpColorCode()}
+return {
+render: function(ctx) {
+  for (var i = 0; i < ctx.count; i++) {
+    var row = Math.floor(i / ctx.cols);
+    var col = i % ctx.cols;
+    var offset = row * 0.15;
+    var pos = (col / ctx.cols + ctx.t * 0.4 + offset) % 1;
+    var c = colorAt(pos);
+    ctx.set(i, c[0], c[1], c[2]);
+  }
+},
+meta: { name: 'usa-cascade' }
+};
+})()`
+  },
+  {
+    name: 'Pulse',
+    gradient: 'radial-gradient(circle, #BF0A30, #002868)',
+    code: `(function(){
+${USA_COLORS_CODE}
+${lerpColorCode()}
+return {
+render: function(ctx) {
+  var pulse = (Math.sin(ctx.t * 1.5) + 1) / 2;
+  var cx = (ctx.cols - 1) / 2;
+  var cy = (ctx.rows - 1) / 2;
+  for (var i = 0; i < ctx.count; i++) {
+    var row = Math.floor(i / ctx.cols);
+    var col = i % ctx.cols;
+    var dx = (col - cx) / cx;
+    var dy = (row - cy) / cy;
+    var dist = Math.sqrt(dx * dx + dy * dy);
+    var ring = (dist - pulse + ctx.t * 0.3) % 1;
+    if (ring < 0) ring += 1;
+    var c = colorAt(ring);
+    ctx.set(i, c[0], c[1], c[2]);
+  }
+},
+meta: { name: 'usa-pulse' }
+};
+})()`
+  },
+  {
+    name: 'March',
+    gradient: 'linear-gradient(90deg, #BF0A30, #002868, #BF0A30, #002868)',
+    code: `(function(){
+${USA_COLORS_CODE}
+return {
+render: function(ctx) {
+  var step = Math.floor(ctx.t * 2) % ctx.cols;
+  for (var i = 0; i < ctx.count; i++) {
+    var row = Math.floor(i / ctx.cols);
+    var col = i % ctx.cols;
+    var shifted = (col + step + row) % ctx.cols;
+    var zone = Math.floor(shifted / ctx.cols * 3);
+    if (zone >= 3) zone = 2;
+    var c = COLORS[zone];
+    ctx.set(i, c[0], c[1], c[2]);
+  }
+},
+meta: { name: 'usa-march' }
+};
+})()`
+  },
+  {
+    name: 'Firework',
+    gradient: 'radial-gradient(circle, #FFFFFF, #BF0A30 40%, #002868)',
+    code: `(function(){
+${USA_COLORS_CODE}
+return {
+render: function(ctx) {
+  var cx = (ctx.cols - 1) / 2;
+  var cy = (ctx.rows - 1) / 2;
+  var burst = (ctx.t * 0.7) % 2;
+  for (var i = 0; i < ctx.count; i++) {
+    var row = Math.floor(i / ctx.cols);
+    var col = i % ctx.cols;
+    var dx = (col - cx) / cx;
+    var dy = (row - cy) / cy;
+    var dist = Math.sqrt(dx * dx + dy * dy);
+    var edge = burst > 1 ? 2 - burst : burst;
+    var diff = Math.abs(dist - edge);
+    if (diff < 0.2) {
+      ctx.set(i, WHITE[0], WHITE[1], 100 - diff * 400);
+    } else if (dist < edge) {
+      ctx.set(i, RED[0], RED[1], 80 - dist * 30);
+    } else {
+      ctx.set(i, BLUE[0], BLUE[1], 40 + dist * 20);
+    }
+  }
+},
+meta: { name: 'usa-firework' }
+};
+})()`
+  },
+  {
+    name: 'Spiral',
+    gradient: 'conic-gradient(#BF0A30, #FFFFFF, #002868, #BF0A30)',
+    code: `(function(){
+${USA_COLORS_CODE}
+${lerpColorCode()}
+return {
+render: function(ctx) {
+  var cx = (ctx.cols - 1) / 2;
+  var cy = (ctx.rows - 1) / 2;
+  for (var i = 0; i < ctx.count; i++) {
+    var row = Math.floor(i / ctx.cols);
+    var col = i % ctx.cols;
+    var dx = col - cx;
+    var dy = row - cy;
+    var angle = Math.atan2(dy, dx) / (Math.PI * 2) + 0.5;
+    var dist = Math.sqrt(dx * dx + dy * dy) / cx;
+    var pos = angle + dist * 0.5 + ctx.t * 0.3;
+    var c = colorAt(pos);
+    ctx.set(i, c[0], c[1], c[2]);
+  }
+},
+meta: { name: 'usa-spiral' }
+};
+})()`
+  }
+];
+
+// ── Components ─────────────────────────────────────────────────────────
+
+function PatternTile({
+  pattern,
+  active,
+  onClick,
+  showPreview,
+  speed
+}: {
+  pattern: PatternDef;
+  active: boolean;
+  onClick: () => void;
+  showPreview?: boolean;
+  speed?: number;
+}) {
+  const tileSize = showPreview ? 96 : 72;
+  return (
+    <button
+      onClick={onClick}
+      className="relative overflow-hidden transition-all active:scale-93"
+      style={{
+        width: tileSize,
+        height: tileSize,
+        borderRadius: 16,
+        background: showPreview ? '#0a0a12' : pattern.gradient,
+        border: active ? '2.5px solid #fff' : '2.5px solid transparent'
+      }}
+    >
+      {showPreview ? (
+        <MiniGridPreview
+          source={pattern.code}
+          speed={speed}
+          size={tileSize}
+          isPattern
+        />
+      ) : null}
+      <span
+        className="absolute bottom-1 left-0 right-0 text-center text-white font-semibold"
+        style={{
+          fontSize: 9,
+          textShadow: '0 1px 4px rgba(0,0,0,0.8)',
+          letterSpacing: '0.02em'
+        }}
+      >
+        {pattern.name}
+      </span>
+    </button>
+  );
+}
+
+function PreviewToggle({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) {
+  return (
+    <button
+      onClick={onToggle}
+      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors"
+      style={{
+        background: enabled ? '#2563eb' : '#1a1a25',
+        color: enabled ? '#fff' : '#888898',
+        border: '1px solid ' + (enabled ? '#3b82f6' : '#2a2a35')
+      }}
+      title={enabled ? 'Hide previews' : 'Show animated previews'}
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        {enabled ? (
+          <>
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+            <circle cx="12" cy="12" r="3" />
+          </>
+        ) : (
+          <>
+            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+            <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+            <line x1="1" y1="1" x2="23" y2="23" />
+          </>
+        )}
+      </svg>
+      Preview
+    </button>
+  );
+}
+
+export function UsaTab({
+  send,
+  activePattern,
+  onPatternSelect,
+  animSpeed,
+  onAnimSpeed
+}: {
+  send: (msg: Record<string, unknown>) => void;
+  activePattern: string | null;
+  onPatternSelect: (id: string) => void;
+  animSpeed: number;
+  onAnimSpeed: (v: number) => void;
+}) {
+  const [showPreview, setShowPreview] = useState(true);
+
+  const handleSelect = useCallback((groupPrefix: string, pattern: PatternDef) => {
+    const id = `${groupPrefix}-${pattern.name}`;
+    onPatternSelect(id);
+    send({ type: 'evalPattern', code: pattern.code, params: {} });
+  }, [send, onPatternSelect]);
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center gap-3 px-2">
+        <span className="text-xs font-medium shrink-0" style={{ color: '#888898', textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: 11 }}>
+          Speed
+        </span>
+        <input
+          type="range"
+          className="flex-1"
+          style={{ minWidth: 120, height: 28 }}
+          min={0}
+          max={1000}
+          value={Math.round(Math.log(animSpeed / 0.001) / Math.log(5.0 / 0.001) * 1000)}
+          onChange={(e) => {
+            const t = parseInt(e.target.value, 10) / 1000;
+            onAnimSpeed(0.001 * Math.pow(5.0 / 0.001, t));
+          }}
+        />
+        <span className="text-xs font-mono shrink-0" style={{ color: '#888898', minWidth: 36, textAlign: 'right' }}>
+          {animSpeed < 0.1 ? animSpeed.toFixed(3) : animSpeed < 1 ? animSpeed.toFixed(2) : animSpeed.toFixed(1)}x
+        </span>
+        <button
+          onClick={() => onAnimSpeed(1.0)}
+          title="Reset to 1.0x"
+          style={{
+            width: 22, height: 22, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: Math.abs(animSpeed - 1.0) < 0.01 ? 'transparent' : 'rgba(59,130,246,0.15)',
+            border: 'none', cursor: 'pointer', opacity: Math.abs(animSpeed - 1.0) < 0.01 ? 0.3 : 1
+          }}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#888898" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+          </svg>
+        </button>
+        <PreviewToggle enabled={showPreview} onToggle={() => setShowPreview(!showPreview)} />
+      </div>
+      <ControlGrid minCellWidth={200}>
+        <ControlGroup label="USA 250 — Static">
+          <div className="flex gap-2.5 flex-wrap overflow-y-auto" style={{ maxHeight: showPreview ? 320 : undefined }}>
+            {USA_STATIC.map((p) => (
+              <PatternTile
+                key={`usa-s-${p.name}`}
+                pattern={p}
+                active={activePattern === `usa-s-${p.name}`}
+                onClick={() => handleSelect('usa-s', p)}
+                showPreview={showPreview}
+                speed={animSpeed}
+              />
+            ))}
+          </div>
+        </ControlGroup>
+
+        <ControlGroup label="USA 250 — Animated">
+          <div className="flex gap-2.5 flex-wrap overflow-y-auto" style={{ maxHeight: showPreview ? 320 : undefined }}>
+            {USA_ANIMATED.map((p) => (
+              <PatternTile
+                key={`usa-${p.name}`}
+                pattern={p}
+                active={activePattern === `usa-${p.name}`}
+                onClick={() => handleSelect('usa', p)}
+                showPreview={showPreview}
+                speed={animSpeed}
+              />
+            ))}
+          </div>
+        </ControlGroup>
+      </ControlGrid>
+    </div>
+  );
+}
