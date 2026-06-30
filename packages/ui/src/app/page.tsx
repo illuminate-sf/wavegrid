@@ -18,6 +18,7 @@ import { AnimationPalette, ScenePalette } from '@/components/palette';
 import { PatternsTab } from '@/components/patterns-tab';
 import { PlaylistTab } from '@/components/playlist-tab';
 import { PrideTab } from '@/components/pride-tab';
+import { UsaTab } from '@/components/usa-tab';
 import { SequencesTab } from '@/components/sequences-tab';
 import { SettingsTab } from '@/components/settings-tab';
 import { ShiftDial } from '@/components/shift-dial';
@@ -42,6 +43,7 @@ const tabs: { key: GridMode; label: string }[] = [
   { key: 'scenes', label: 'Scenes' },
   { key: 'animations', label: 'Anim' },
   { key: 'pride', label: 'Pride' },
+  { key: 'usa', label: 'USA' },
   { key: 'patterns', label: 'Patterns' },
   { key: 'sequences', label: 'Sequences' },
   { key: 'playlist', label: 'Playlist' },
@@ -215,6 +217,16 @@ function ToolContent({
 
       {tab === 'pride' && (
         <PrideTab
+          send={send}
+          activePattern={activePattern}
+          onPatternSelect={onPatternSelect}
+          animSpeed={animSpeed}
+          onAnimSpeed={onAnimSpeed}
+        />
+      )}
+
+      {tab === 'usa' && (
+        <UsaTab
           send={send}
           activePattern={activePattern}
           onPatternSelect={onPatternSelect}
