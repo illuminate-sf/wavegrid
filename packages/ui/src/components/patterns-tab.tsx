@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from 'react';
 
+import { ControlGroup } from './control-grid';
 import { MiniGridPreview } from './mini-grid-preview';
 
 interface PatternDef {
@@ -2150,6 +2151,158 @@ const PRESETS: PatternDef[] = [
   },
   meta: { name: 'watercolor' }
 })`
+  },
+
+  // ── Bright patterns — fully lit, no dark holes ──────────────────────
+  {
+    name: 'Full Spectrum',
+    gradient: 'conic-gradient(#ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)',
+    code: `({
+  render(ctx) {
+    for (let i = 0; i < ctx.count; i++) {
+      const [u, v] = ctx.uv(i);
+      var h = (u * 360 + ctx.t * 30) % 360;
+      ctx.set(i, h, 80, 80 + Math.sin(v * 3 + ctx.t) * 15);
+    }
+  },
+  meta: { name: 'full-spectrum' }
+})`
+  },
+  {
+    name: 'Warm Glow',
+    gradient: 'linear-gradient(135deg, #ff4400, #ffaa00, #ffcc44)',
+    code: `({
+  render(ctx) {
+    for (let i = 0; i < ctx.count; i++) {
+      const [u, v] = ctx.uv(i);
+      var wave = Math.sin(u * 5 + ctx.t * 1.5) * Math.sin(v * 3 + ctx.t * 0.8);
+      var h = 20 + wave * 20 + 10;
+      ctx.set(i, h, 90, 70 + wave * 25);
+    }
+  },
+  meta: { name: 'warm-glow' }
+})`
+  },
+  {
+    name: 'Pastel Dream',
+    gradient: 'linear-gradient(135deg, #ffaacc, #aaccff, #aaffcc, #ffccaa)',
+    code: `({
+  render(ctx) {
+    for (let i = 0; i < ctx.count; i++) {
+      const [u, v] = ctx.uv(i);
+      var h = (u * 180 + v * 180 + ctx.t * 20) % 360;
+      ctx.set(i, h, 35, 85 + Math.sin(ctx.t + u * 3 + v * 2) * 10);
+    }
+  },
+  meta: { name: 'pastel-dream' }
+})`
+  },
+  {
+    name: 'Electric Rainbow',
+    gradient: 'linear-gradient(90deg, #ff0044, #ff8800, #ffff00, #00ff44, #0088ff, #8800ff)',
+    code: `({
+  render(ctx) {
+    for (let i = 0; i < ctx.count; i++) {
+      const [u, v] = ctx.uv(i);
+      var h = (u * 200 + v * 160 + ctx.t * 50) % 360;
+      var pulse = Math.sin(ctx.t * 3 + u * 4 + v * 4) * 10;
+      ctx.set(i, h, 100, 80 + pulse);
+    }
+  },
+  meta: { name: 'electric-rainbow' }
+})`
+  },
+  {
+    name: 'Sunrise Blaze',
+    gradient: 'linear-gradient(180deg, #ff2200, #ff6600, #ffaa00, #ffdd44)',
+    code: `({
+  render(ctx) {
+    for (let i = 0; i < ctx.count; i++) {
+      const [u, v] = ctx.uv(i);
+      var band = v + Math.sin(u * 4 + ctx.t) * 0.1;
+      var h = 10 + band * 40;
+      ctx.set(i, h, 100, 75 + (1 - band) * 20);
+    }
+  },
+  meta: { name: 'sunrise-blaze' }
+})`
+  },
+  {
+    name: 'Jewel Tones',
+    gradient: 'linear-gradient(135deg, #cc0044, #8800cc, #0044cc, #00cc88)',
+    code: `({
+  render(ctx) {
+    for (let i = 0; i < ctx.count; i++) {
+      const [u, v] = ctx.uv(i);
+      var sector = Math.floor((u + v + ctx.t * 0.2) * 3) % 4;
+      var hues = [340, 280, 220, 160];
+      var shimmer = Math.sin(ctx.t * 2 + u * 6 + v * 6) * 10;
+      ctx.set(i, hues[sector], 80, 70 + shimmer);
+    }
+  },
+  meta: { name: 'jewel-tones' }
+})`
+  },
+  {
+    name: 'Neon Bloom',
+    gradient: 'linear-gradient(135deg, #ff00ff, #00ffff, #ffff00)',
+    code: `({
+  render(ctx) {
+    for (let i = 0; i < ctx.count; i++) {
+      const [r, theta] = ctx.polar(i);
+      var h = ((theta + Math.PI) / (Math.PI * 2) * 360 + ctx.t * 40) % 360;
+      var bloom = Math.sin(r * 4 - ctx.t * 2) * 10;
+      ctx.set(i, h, 90, 75 + bloom);
+    }
+  },
+  meta: { name: 'neon-bloom' }
+})`
+  },
+  {
+    name: 'Candy Stripe',
+    gradient: 'linear-gradient(45deg, #ff3366, #ffcc00, #33ccff, #ff3366)',
+    code: `({
+  render(ctx) {
+    for (let i = 0; i < ctx.count; i++) {
+      const [u, v] = ctx.uv(i);
+      var stripe = Math.sin((u + v) * 8 - ctx.t * 2);
+      var h = stripe > 0 ? 350 + stripe * 20 : 180 - stripe * 30;
+      ctx.set(i, (h + 360) % 360, 70, 75 + stripe * 15);
+    }
+  },
+  meta: { name: 'candy-stripe' }
+})`
+  },
+  {
+    name: 'Sherbet',
+    gradient: 'linear-gradient(135deg, #ff6688, #ffaa44, #88ff66, #44aaff)',
+    code: `({
+  render(ctx) {
+    for (let i = 0; i < ctx.count; i++) {
+      const [u, v] = ctx.uv(i);
+      var n = ctx.noise(u * 2, v * 2, ctx.t * 0.3);
+      var h = (n * 360 + ctx.t * 15) % 360;
+      ctx.set(i, h, 50, 80 + n * 15);
+    }
+  },
+  meta: { name: 'sherbet' }
+})`
+  },
+  {
+    name: 'Vivid Waves',
+    gradient: 'linear-gradient(90deg, #ff0066, #ff9900, #00ccff)',
+    code: `({
+  render(ctx) {
+    for (let i = 0; i < ctx.count; i++) {
+      const [u, v] = ctx.uv(i);
+      var w1 = Math.sin(u * 6 + ctx.t * 2);
+      var w2 = Math.sin(v * 5 - ctx.t * 1.5);
+      var h = (w1 * 60 + w2 * 60 + 180 + ctx.t * 20) % 360;
+      ctx.set(i, (h + 360) % 360, 85, 75 + (w1 + w2) * 10);
+    }
+  },
+  meta: { name: 'vivid-waves' }
+})`
   }
 ];
 
@@ -2325,19 +2478,51 @@ export function PatternsTab({
         <PreviewToggle enabled={showPreview} onToggle={() => setShowPreview(!showPreview)} />
       </div>
 
-      {/* Pattern tiles */}
-      <div className="flex gap-2.5 flex-wrap overflow-y-auto" style={{ maxHeight: showPreview ? 360 : undefined }}>
-        {PRESETS.map((p) => (
-          <PatternTile
-            key={p.name}
-            pattern={p}
-            active={activePattern === p.name}
-            onClick={() => handleSelect(p)}
-            showPreview={showPreview}
-            speed={animSpeed}
-          />
-        ))}
-      </div>
+      {/* Pattern tiles — grouped */}
+      <ControlGroup label="Solids">
+        <div className="flex gap-2.5 flex-wrap overflow-y-auto" style={{ maxHeight: showPreview ? 320 : undefined }}>
+          {PRESETS.filter(p => p.code.includes('ctx.fill(') && !p.code.includes('ctx.t')).map((p) => (
+            <PatternTile
+              key={p.name}
+              pattern={p}
+              active={activePattern === p.name}
+              onClick={() => handleSelect(p)}
+              showPreview={showPreview}
+              speed={animSpeed}
+            />
+          ))}
+        </div>
+      </ControlGroup>
+
+      <ControlGroup label="Static Layouts">
+        <div className="flex gap-2.5 flex-wrap overflow-y-auto" style={{ maxHeight: showPreview ? 320 : undefined }}>
+          {PRESETS.filter(p => !p.code.includes('ctx.fill(') && !p.code.includes('ctx.t')).map((p) => (
+            <PatternTile
+              key={p.name}
+              pattern={p}
+              active={activePattern === p.name}
+              onClick={() => handleSelect(p)}
+              showPreview={showPreview}
+              speed={animSpeed}
+            />
+          ))}
+        </div>
+      </ControlGroup>
+
+      <ControlGroup label="Animated">
+        <div className="flex gap-2.5 flex-wrap overflow-y-auto" style={{ maxHeight: showPreview ? 360 : undefined }}>
+          {PRESETS.filter(p => p.code.includes('ctx.t')).map((p) => (
+            <PatternTile
+              key={p.name}
+              pattern={p}
+              active={activePattern === p.name}
+              onClick={() => handleSelect(p)}
+              showPreview={showPreview}
+              speed={animSpeed}
+            />
+          ))}
+        </div>
+      </ControlGroup>
 
       {/* Stop button */}
       {status === 'running' && (
