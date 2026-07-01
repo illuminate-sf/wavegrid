@@ -1617,6 +1617,539 @@ const PRESETS: PatternDef[] = [
   },
   meta: { name: 'magnet' }
 })`
+  },
+
+  // ── More patterns — different color palettes ────────────────────────
+  {
+    name: 'Solid Peach',
+    gradient: 'linear-gradient(135deg, #ffccaa, #ff9966)',
+    code: `({ render(ctx) { ctx.fill(25, 40, 100); }, meta: { name: 'solid-peach' } })`
+  },
+  {
+    name: 'Solid Seafoam',
+    gradient: 'linear-gradient(135deg, #66ccbb, #339988)',
+    code: `({ render(ctx) { ctx.fill(165, 50, 80); }, meta: { name: 'solid-seafoam' } })`
+  },
+  {
+    name: 'Solid Mauve',
+    gradient: 'linear-gradient(135deg, #cc88aa, #aa6688)',
+    code: `({ render(ctx) { ctx.fill(330, 35, 80); }, meta: { name: 'solid-mauve' } })`
+  },
+  {
+    name: 'Solid Rust',
+    gradient: 'linear-gradient(135deg, #cc4400, #993300)',
+    code: `({ render(ctx) { ctx.fill(20, 100, 80); }, meta: { name: 'solid-rust' } })`
+  },
+  {
+    name: 'Solid Mint',
+    gradient: 'linear-gradient(135deg, #88ffcc, #44cc88)',
+    code: `({ render(ctx) { ctx.fill(150, 50, 100); }, meta: { name: 'solid-mint' } })`
+  },
+  {
+    name: 'Solid Plum',
+    gradient: 'linear-gradient(135deg, #880066, #660044)',
+    code: `({ render(ctx) { ctx.fill(320, 100, 53); }, meta: { name: 'solid-plum' } })`
+  },
+  {
+    name: 'Solid Sky',
+    gradient: 'linear-gradient(135deg, #66bbff, #3399dd)',
+    code: `({ render(ctx) { ctx.fill(205, 60, 100); }, meta: { name: 'solid-sky' } })`
+  },
+  {
+    name: 'Solid Tangerine',
+    gradient: 'linear-gradient(135deg, #ff8833, #cc6622)',
+    code: `({ render(ctx) { ctx.fill(28, 80, 100); }, meta: { name: 'solid-tangerine' } })`
+  },
+  {
+    name: 'Warm Gradient',
+    gradient: 'linear-gradient(180deg, #ff3300, #ff9900, #ffcc00)',
+    code: `({
+  render(ctx) {
+    for (let i = 0; i < ctx.count; i++) {
+      const [, v] = ctx.uv(i);
+      ctx.set(i, v * 50, 100, 90);
+    }
+  },
+  meta: { name: 'warm-gradient' }
+})`
+  },
+  {
+    name: 'Ocean Gradient',
+    gradient: 'linear-gradient(180deg, #001144, #0066cc, #00cccc)',
+    code: `({
+  render(ctx) {
+    for (let i = 0; i < ctx.count; i++) {
+      const [, v] = ctx.uv(i);
+      ctx.set(i, 180 + v * 40, 80, 30 + v * 60);
+    }
+  },
+  meta: { name: 'ocean-gradient' }
+})`
+  },
+  {
+    name: 'Sunset Gradient',
+    gradient: 'linear-gradient(180deg, #330033, #cc3300, #ffaa00)',
+    code: `({
+  render(ctx) {
+    for (let i = 0; i < ctx.count; i++) {
+      const [, v] = ctx.uv(i);
+      var h = v < 0.4 ? 280 + v * 100 : 30 - (v - 0.4) * 10;
+      ctx.set(i, h, 90, 40 + v * 55);
+    }
+  },
+  meta: { name: 'sunset-gradient' }
+})`
+  },
+  {
+    name: 'Forest Gradient',
+    gradient: 'linear-gradient(180deg, #002200, #006600, #88cc44)',
+    code: `({
+  render(ctx) {
+    for (let i = 0; i < ctx.count; i++) {
+      const [, v] = ctx.uv(i);
+      ctx.set(i, 100 + v * 30, 80, 20 + v * 60);
+    }
+  },
+  meta: { name: 'forest-gradient' }
+})`
+  },
+  {
+    name: 'Cotton Candy',
+    gradient: 'linear-gradient(135deg, #ff99cc, #99ccff, #ff99cc)',
+    code: `({
+  render(ctx) {
+    for (let i = 0; i < ctx.count; i++) {
+      const [u, v] = ctx.uv(i);
+      var blend = Math.sin(u * 4 + v * 3 + ctx.t * 0.8) * 0.5 + 0.5;
+      ctx.set(i, blend * 120 + 240, 40, 80 + blend * 15);
+    }
+  },
+  meta: { name: 'cotton-candy' }
+})`
+  },
+  {
+    name: 'Tropical Storm',
+    gradient: 'linear-gradient(135deg, #ff6600, #00cc66, #0066ff)',
+    code: `({
+  render(ctx) {
+    for (let i = 0; i < ctx.count; i++) {
+      const [r, theta] = ctx.polar(i);
+      var swirl = Math.sin(theta * 3 + r * 5 - ctx.t * 3);
+      var h = swirl > 0 ? 25 + swirl * 20 : 160 + swirl * 40;
+      var b = 40 + Math.abs(swirl) * 55;
+      ctx.set(i, (h + 360) % 360, 90, b);
+    }
+  },
+  meta: { name: 'tropical-storm' }
+})`
+  },
+  {
+    name: 'Cherry Blossom',
+    gradient: 'linear-gradient(135deg, #ffccdd, #ff6699, #cc3366)',
+    code: `({
+  render(ctx) {
+    for (let i = 0; i < ctx.count; i++) {
+      const [u, v] = ctx.uv(i);
+      var petal = ctx.noise(u * 4 + ctx.t * 0.3, v * 4, ctx.t * 0.5);
+      var fall = (v + ctx.t * 0.4 + Math.sin(u * 5) * 0.1) % 1;
+      var bloom = petal > 0.5 ? (petal - 0.5) * 2 : 0;
+      ctx.set(i, 340 + bloom * 15, 50 + bloom * 30, 30 + bloom * 60 + (fall > 0.9 ? 20 : 0));
+    }
+  },
+  meta: { name: 'cherry-blossom' }
+})`
+  },
+  {
+    name: 'Peacock',
+    gradient: 'linear-gradient(135deg, #003366, #00cc88, #6600cc, #003366)',
+    code: `({
+  render(ctx) {
+    for (let i = 0; i < ctx.count; i++) {
+      const [r, theta] = ctx.polar(i);
+      var feather = Math.sin(theta * 5 + r * 3 - ctx.t);
+      var h = 160 + feather * 60;
+      var eye = r < 0.3 ? 1 - r * 3 : 0;
+      ctx.set(i, h, 80 - eye * 60, (feather * 0.5 + 0.5) * 70 + eye * 30);
+    }
+  },
+  meta: { name: 'peacock' }
+})`
+  },
+  {
+    name: 'Bubblegum',
+    gradient: 'radial-gradient(circle, #ff66cc, #ff33aa, #cc0088)',
+    code: `({
+  render(ctx) {
+    var pop = (ctx.t * 0.6) % 4;
+    for (let i = 0; i < ctx.count; i++) {
+      const [r] = ctx.polar(i);
+      var bubble = Math.max(0, 1 - Math.abs(r - pop * 0.25) * 6);
+      var shimmer = Math.sin(ctx.t * 5 + i * 0.5) * 0.2;
+      ctx.set(i, 320 + shimmer * 20, 60, bubble * 90 + 5);
+    }
+  },
+  meta: { name: 'bubblegum' }
+})`
+  },
+  {
+    name: 'Rust & Patina',
+    gradient: 'linear-gradient(135deg, #884400, #cc6633, #44aa88, #226655)',
+    code: `({
+  render(ctx) {
+    for (let i = 0; i < ctx.count; i++) {
+      const [u, v] = ctx.uv(i);
+      var n = ctx.noise(u * 4, v * 4, ctx.t * 0.15);
+      var patina = ctx.noise(u * 3 + 5, v * 3, ctx.t * 0.1);
+      if (n > 0.5) ctx.set(i, 25 + n * 15, 80, 30 + n * 40);
+      else ctx.set(i, 160 + patina * 20, 50, 30 + patina * 35);
+    }
+  },
+  meta: { name: 'rust-patina' }
+})`
+  },
+  {
+    name: 'Neon Sign',
+    gradient: 'linear-gradient(135deg, #0a0a1a, #ff0066, #0a0a1a, #00ffcc, #0a0a1a)',
+    code: `({
+  render(ctx) {
+    for (let i = 0; i < ctx.count; i++) {
+      const [u, v] = ctx.uv(i);
+      var flicker = Math.sin(ctx.t * 12 + i * 0.3) > 0.7 ? 0.3 : 0;
+      var tube1 = Math.abs(Math.sin(u * Math.PI * 2)) < 0.15 && v > 0.2 && v < 0.8;
+      var tube2 = Math.abs(Math.sin(v * Math.PI * 2)) < 0.15 && u > 0.2 && u < 0.8;
+      if (tube1) ctx.set(i, 340, 100, 80 + flicker * 20);
+      else if (tube2) ctx.set(i, 170, 100, 70 + flicker * 20);
+      else ctx.set(i, 0, 0, 3);
+    }
+  },
+  meta: { name: 'neon-sign' }
+})`
+  },
+  {
+    name: 'Autumn Leaves',
+    gradient: 'linear-gradient(135deg, #cc3300, #ff6600, #ffaa00, #886600)',
+    code: `({
+  render(ctx) {
+    for (let i = 0; i < ctx.count; i++) {
+      const [u, v] = ctx.uv(i);
+      var drift = ctx.noise(u * 3 + ctx.t * 0.4, v * 2, ctx.t * 0.2);
+      var fall = (v + ctx.t * 0.3 + drift * 0.3) % 1;
+      var hues = [5, 20, 35, 45];
+      var idx = Math.floor(drift * 4) % 4;
+      ctx.set(i, hues[idx], 90, 30 + fall * 50 + drift * 20);
+    }
+  },
+  meta: { name: 'autumn-leaves' }
+})`
+  },
+  {
+    name: 'Moonrise',
+    gradient: 'linear-gradient(180deg, #000022, #1a1a44, #ccccaa, #ffffdd)',
+    code: `({
+  render(ctx) {
+    var moonY = 0.3 + Math.sin(ctx.t * 0.3) * 0.15;
+    for (let i = 0; i < ctx.count; i++) {
+      const [u, v] = ctx.uv(i);
+      var moonDist = Math.sqrt((u - 0.5) * (u - 0.5) + (v - moonY) * (v - moonY));
+      var moon = Math.max(0, 1 - moonDist * 5);
+      var sky = Math.max(0, 1 - v) * 0.3;
+      var star = ctx.noise(u * 10, v * 10, 0) > 0.85 ? Math.sin(ctx.t * 3 + i) * 0.3 + 0.4 : 0;
+      ctx.set(i, moon > 0.1 ? 50 : 230, moon > 0.1 ? 20 : 50, (moon + sky + star) * 100);
+    }
+  },
+  meta: { name: 'moonrise' }
+})`
+  },
+  {
+    name: 'Fireplace',
+    gradient: 'linear-gradient(180deg, #1a0800, #cc3300, #ff6600, #ffcc00)',
+    code: `({
+  render(ctx) {
+    for (let i = 0; i < ctx.count; i++) {
+      const [u, v] = ctx.uv(i);
+      var base = Math.max(0, 1 - (1 - v) * 1.5);
+      var flicker = ctx.noise(u * 6, v * 3 - ctx.t * 5, ctx.t * 2);
+      var ember = ctx.noise(u * 10, ctx.t * 8, 0) > 0.85 ? 0.5 : 0;
+      var heat = base * (0.6 + flicker * 0.4) + ember * (1 - v);
+      var h = heat > 0.7 ? 45 : heat > 0.4 ? 20 : 5;
+      ctx.set(i, h, 100, Math.min(100, heat * 110));
+    }
+  },
+  meta: { name: 'fireplace' }
+})`
+  },
+  {
+    name: 'Coral Reef',
+    gradient: 'linear-gradient(135deg, #003366, #ff6644, #ffaa66, #00aa88)',
+    code: `({
+  render(ctx) {
+    for (let i = 0; i < ctx.count; i++) {
+      const [u, v] = ctx.uv(i);
+      var n = ctx.noise(u * 3, v * 3, ctx.t * 0.2);
+      var sway = Math.sin(u * 4 + ctx.t * 1.5 + v * 2) * 0.2;
+      var type = n > 0.6 ? 0 : n > 0.35 ? 1 : 2;
+      var hues = [10, 30, 165];
+      var bright = 40 + Math.abs(sway) * 40 + n * 20;
+      ctx.set(i, hues[type] + sway * 15, 70, bright);
+    }
+  },
+  meta: { name: 'coral-reef' }
+})`
+  },
+  {
+    name: 'Ink Wash',
+    gradient: 'linear-gradient(180deg, #f0f0f0, #888888, #222222)',
+    code: `({
+  render(ctx) {
+    for (let i = 0; i < ctx.count; i++) {
+      const [u, v] = ctx.uv(i);
+      var ink = ctx.noise(u * 3 + ctx.t * 0.2, v * 3, ctx.t * 0.15);
+      var drip = Math.sin(v * 6 + ctx.t + u * 3) * 0.2;
+      var density = ink + drip;
+      ctx.set(i, 220, 10, Math.max(5, Math.min(95, (1 - density) * 80)));
+    }
+  },
+  meta: { name: 'ink-wash' }
+})`
+  },
+  {
+    name: 'Hologram',
+    gradient: 'linear-gradient(135deg, #ff00ff, #00ffff, #ff8800, #00ff88)',
+    code: `({
+  render(ctx) {
+    for (let i = 0; i < ctx.count; i++) {
+      const [u, v] = ctx.uv(i);
+      var scan = Math.sin(v * 30 + ctx.t * 5) * 0.5 + 0.5;
+      var shift = Math.sin(ctx.t * 3 + u * 2) * 60;
+      var h = ((u * 360 + shift + ctx.t * 50) % 360 + 360) % 360;
+      var glitch = ctx.noise(u * 8, v * 2, Math.floor(ctx.t * 6)) > 0.8 ? 0.3 : 0;
+      ctx.set(i, h, 60, (scan * 0.6 + 0.2 + glitch) * 100);
+    }
+  },
+  meta: { name: 'hologram' }
+})`
+  },
+  {
+    name: 'Deep Purple',
+    gradient: 'linear-gradient(135deg, #1a0033, #4400aa, #8844cc, #1a0033)',
+    code: `({
+  render(ctx) {
+    for (let i = 0; i < ctx.count; i++) {
+      const [u, v] = ctx.uv(i);
+      var n = ctx.noise(u * 3, v * 3, ctx.t * 0.3);
+      var wave = Math.sin(u * 5 + v * 3 + ctx.t * 1.5) * 0.3;
+      ctx.set(i, 270 + n * 20 + wave * 10, 70 + n * 20, 20 + n * 40 + wave * 20);
+    }
+  },
+  meta: { name: 'deep-purple' }
+})`
+  },
+  {
+    name: 'Jade',
+    gradient: 'linear-gradient(135deg, #003322, #00aa66, #66ffaa, #003322)',
+    code: `({
+  render(ctx) {
+    for (let i = 0; i < ctx.count; i++) {
+      const [u, v] = ctx.uv(i);
+      var vein = Math.sin((u + v) * 8 + ctx.noise(u * 5, v * 5, 0) * 4);
+      var polish = Math.sin(ctx.t * 0.5 + u * 2) * 0.15 + 0.85;
+      ctx.set(i, 150 + vein * 15, 60, (vein * 0.3 + 0.5) * polish * 80);
+    }
+  },
+  meta: { name: 'jade' }
+})`
+  },
+  {
+    name: 'Sapphire',
+    gradient: 'linear-gradient(135deg, #000044, #0044aa, #4488ff, #000044)',
+    code: `({
+  render(ctx) {
+    for (let i = 0; i < ctx.count; i++) {
+      const [r, theta] = ctx.polar(i);
+      var facet = Math.cos(theta * 6 + ctx.t * 0.8) * Math.cos(r * 4);
+      var sparkle = ctx.noise(theta * 5, r * 3, ctx.t * 3) > 0.82 ? 0.5 : 0;
+      ctx.set(i, 220 + facet * 15, 70 - sparkle * 50, 25 + facet * 30 + sparkle * 45);
+    }
+  },
+  meta: { name: 'sapphire' }
+})`
+  },
+  {
+    name: 'Rose Garden',
+    gradient: 'linear-gradient(135deg, #660033, #cc3366, #ff6699, #660033)',
+    code: `({
+  render(ctx) {
+    for (let i = 0; i < ctx.count; i++) {
+      const [r, theta] = ctx.polar(i);
+      var petal = Math.sin(theta * 5 + r * 2 - ctx.t * 0.8);
+      var bloom = Math.max(0, 1 - r * 2) * (petal * 0.3 + 0.7);
+      ctx.set(i, 340 + petal * 15, 60 + bloom * 30, bloom * 80 + 5);
+    }
+  },
+  meta: { name: 'rose-garden' }
+})`
+  },
+  {
+    name: 'Honey',
+    gradient: 'linear-gradient(135deg, #cc8800, #ffaa00, #ffdd44, #cc8800)',
+    code: `({
+  render(ctx) {
+    for (let i = 0; i < ctx.count; i++) {
+      const [u, v] = ctx.uv(i);
+      var hex = Math.sin(u * 8) * Math.sin(v * 8) * 0.5 + 0.5;
+      var drip = Math.sin(v * 4 - ctx.t * 0.8 + u * 2) * 0.3;
+      ctx.set(i, 42 + hex * 10, 85, 40 + hex * 35 + drip * 20);
+    }
+  },
+  meta: { name: 'honey' }
+})`
+  },
+  {
+    name: 'Thundercloud',
+    gradient: 'linear-gradient(180deg, #1a1a2e, #333355, #555577)',
+    code: `({
+  render(ctx) {
+    for (let i = 0; i < ctx.count; i++) {
+      const [u, v] = ctx.uv(i);
+      var cloud = ctx.noise(u * 2 + ctx.t * 0.1, v * 2, ctx.t * 0.05);
+      var flash = ctx.noise(u * 5, v * 3, ctx.t * 8) > 0.92 ? 1 : 0;
+      var rumble = flash * Math.max(0, 1 - v * 1.5);
+      ctx.set(i, 230 + cloud * 20, 20 + cloud * 20, cloud * 30 + rumble * 80 + 5);
+    }
+  },
+  meta: { name: 'thundercloud' }
+})`
+  },
+  {
+    name: 'Borealis',
+    gradient: 'linear-gradient(180deg, #000011, #00aa44, #44ffaa, #aa00ff, #000011)',
+    code: `({
+  render(ctx) {
+    for (let i = 0; i < ctx.count; i++) {
+      const [u, v] = ctx.uv(i);
+      var curtain = ctx.noise(u * 2, ctx.t * 0.2, 0);
+      var band = Math.abs(v - 0.4 - curtain * 0.2);
+      var visible = band < 0.2;
+      var intensity = visible ? (1 - band / 0.2) : 0;
+      var shimmer = ctx.noise(u * 8, v * 3, ctx.t * 2);
+      var h = 130 + shimmer * 130;
+      ctx.set(i, h, 70, intensity * shimmer * 100 + 2);
+    }
+  },
+  meta: { name: 'borealis' }
+})`
+  },
+  {
+    name: 'Candy Cane',
+    gradient: 'linear-gradient(135deg, #ff0000, #ffffff, #ff0000, #ffffff)',
+    code: `({
+  render(ctx) {
+    for (let i = 0; i < ctx.count; i++) {
+      const [u, v] = ctx.uv(i);
+      var stripe = Math.sin((u + v) * 10 - ctx.t * 1.5) > 0;
+      ctx.set(i, stripe ? 0 : 0, stripe ? 100 : 0, stripe ? 85 : 95);
+    }
+  },
+  meta: { name: 'candy-cane' }
+})`
+  },
+  {
+    name: 'Chroma Shift',
+    gradient: 'linear-gradient(90deg, #ff0000, #00ff00, #0000ff, #ff0000)',
+    code: `({
+  render(ctx) {
+    for (let i = 0; i < ctx.count; i++) {
+      const [u, v] = ctx.uv(i);
+      var h = (u * 360 + ctx.t * 60 + Math.sin(v * 6 + ctx.t) * 40) % 360;
+      var b = 60 + Math.sin(u * 4 + v * 4 - ctx.t * 2) * 30;
+      ctx.set(i, h, 90, Math.max(15, b));
+    }
+  },
+  meta: { name: 'chroma-shift' }
+})`
+  },
+  {
+    name: 'Pixel Sort',
+    gradient: 'linear-gradient(90deg, #000000, #ff0088, #ffff00, #00ff88)',
+    code: `({
+  render(ctx) {
+    for (let i = 0; i < ctx.count; i++) {
+      const [x, y] = ctx.xy(i);
+      var n = ctx.noise(y * 0.5, ctx.t * 0.5, 0);
+      var sorted = n > 0.5;
+      var h = sorted ? (x / ctx.cols * 120 + ctx.t * 30) % 360 : ctx.noise(x * 3, y * 3, ctx.t) * 360;
+      var b = sorted ? 40 + (x / ctx.cols) * 50 : ctx.noise(x * 5, y * 5, ctx.t * 2) * 70;
+      ctx.set(i, h, 80, Math.max(5, b));
+    }
+  },
+  meta: { name: 'pixel-sort' }
+})`
+  },
+  {
+    name: 'Lava Lamp',
+    gradient: 'linear-gradient(180deg, #220033, #ff4400, #ff8800, #220033)',
+    code: `({
+  render(ctx) {
+    for (let i = 0; i < ctx.count; i++) {
+      const [u, v] = ctx.uv(i);
+      var blob1 = Math.max(0, 1 - Math.sqrt((u - 0.3 - Math.sin(ctx.t * 0.5) * 0.2) * (u - 0.3 - Math.sin(ctx.t * 0.5) * 0.2) + (v - 0.5 + Math.cos(ctx.t * 0.7) * 0.3) * (v - 0.5 + Math.cos(ctx.t * 0.7) * 0.3)) * 3);
+      var blob2 = Math.max(0, 1 - Math.sqrt((u - 0.7 + Math.cos(ctx.t * 0.6) * 0.15) * (u - 0.7 + Math.cos(ctx.t * 0.6) * 0.15) + (v - 0.4 - Math.sin(ctx.t * 0.4) * 0.25) * (v - 0.4 - Math.sin(ctx.t * 0.4) * 0.25)) * 3);
+      var heat = Math.max(blob1, blob2);
+      ctx.set(i, 15 + heat * 25, 100, heat * 90 + 5);
+    }
+  },
+  meta: { name: 'lava-lamp' }
+})`
+  },
+  {
+    name: 'Mosaic',
+    gradient: 'linear-gradient(135deg, #cc0000, #00cc00, #0000cc, #cccc00)',
+    code: `({
+  render(ctx) {
+    for (let i = 0; i < ctx.count; i++) {
+      const [x, y] = ctx.xy(i);
+      var cell = ((x * 7 + y * 13 + 5) * 37) % 360;
+      var pulse = Math.sin(ctx.t * 1.5 + cell * 0.01) * 0.3 + 0.7;
+      ctx.set(i, cell, 70, pulse * 70);
+    }
+  },
+  meta: { name: 'mosaic' }
+})`
+  },
+  {
+    name: 'Siren',
+    gradient: 'linear-gradient(90deg, #ff0000, #0000ff, #ff0000)',
+    code: `({
+  render(ctx) {
+    var side = Math.sin(ctx.t * 4) > 0;
+    for (let i = 0; i < ctx.count; i++) {
+      const [u] = ctx.uv(i);
+      var leftSide = u < 0.5;
+      var on = (leftSide && side) || (!leftSide && !side);
+      ctx.set(i, leftSide ? 0 : 230, 100, on ? 90 : 10);
+    }
+  },
+  meta: { name: 'siren' }
+})`
+  },
+  {
+    name: 'Watercolor',
+    gradient: 'linear-gradient(135deg, #ff9988, #88ccff, #aaffaa, #ffcc88)',
+    code: `({
+  render(ctx) {
+    for (let i = 0; i < ctx.count; i++) {
+      const [u, v] = ctx.uv(i);
+      var n1 = ctx.noise(u * 2, v * 2, ctx.t * 0.1);
+      var n2 = ctx.noise(u * 2 + 5, v * 2 + 5, ctx.t * 0.1);
+      var n3 = ctx.noise(u * 2 + 10, v * 2 + 10, ctx.t * 0.1);
+      var h = n1 * 120 + n2 * 120;
+      var s = 30 + n3 * 30;
+      var b = 50 + n1 * 30 + Math.sin(ctx.t * 0.3 + u + v) * 10;
+      ctx.set(i, h % 360, s, Math.max(20, b));
+    }
+  },
+  meta: { name: 'watercolor' }
+})`
   }
 ];
 
