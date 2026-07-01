@@ -18,6 +18,7 @@ import { AnimationPalette, ScenePalette } from '@/components/palette';
 import { PatternsTab } from '@/components/patterns-tab';
 import { PlaylistTab } from '@/components/playlist-tab';
 import { PrideTab } from '@/components/pride-tab';
+import { SavedDrawings } from '@/components/saved-drawings';
 import { UsaTab } from '@/components/usa-tab';
 import { SequencesTab } from '@/components/sequences-tab';
 import { SettingsTab } from '@/components/settings-tab';
@@ -26,7 +27,7 @@ import { useAudio } from '@/lib/use-audio';
 import { useAuth } from '@/lib/use-auth';
 import { useConfig } from '@/lib/use-config';
 import { useIsPhone } from '@/lib/use-media-query';
-import { type PlaylistState,useSocket } from '@/lib/use-socket';
+import { type PlaylistState, type SavedDrawing, useSocket } from '@/lib/use-socket';
 
 type PanelLayout = 'bottom' | 'right';
 type TrailFadeEntry = {
@@ -70,7 +71,8 @@ function ToolContent({
   onShift,
   numCannons, gridColumns,
   activePattern, onPatternSelect,
-  playlistState
+  playlistState,
+  drawings
 }: {
   tab: GridMode;
   hue: number; sat: number; bright: number; brushSize: number; softEdge: boolean; trailFade: boolean;
@@ -97,25 +99,33 @@ function ToolContent({
   activePattern: string | null;
   onPatternSelect: (id: string) => void;
   playlistState: PlaylistState | null;
+  drawings: SavedDrawing[];
 }) {
   return (
     <>
       {tab === 'paint' && (
-        <ColorWheel
-          hue={hue}
-          saturation={sat}
-          brightness={bright}
-          brushSize={brushSize}
-          softEdge={softEdge}
-          trailFade={trailFade}
-          onHueChange={setHue}
-          onSatChange={setSat}
-          onBrightChange={setBright}
-          onBrushSizeChange={setBrushSize}
-          onSoftEdgeChange={setSoftEdge}
-          onTrailFadeChange={setTrailFade}
-          compact={isPhone}
-        />
+        <>
+          <ColorWheel
+            hue={hue}
+            saturation={sat}
+            brightness={bright}
+            brushSize={brushSize}
+            softEdge={softEdge}
+            trailFade={trailFade}
+            onHueChange={setHue}
+            onSatChange={setSat}
+            onBrightChange={setBright}
+            onBrushSizeChange={setBrushSize}
+            onSoftEdgeChange={setSoftEdge}
+            onTrailFadeChange={setTrailFade}
+            compact={isPhone}
+          />
+          <SavedDrawings
+            drawings={drawings}
+            gridColumns={gridColumns}
+            send={send}
+          />
+        </>
       )}
 
       {tab === 'gradient' && (
@@ -437,7 +447,7 @@ function MasterSliders({
 export default function Home() {
   const config = useConfig();
   const { user, checked, login } = useAuth();
-  const { connected, grid, orientation, playlistState, settings, send } = useSocket(config?.simulatorUrl ?? 'ws://localhost:3000');
+  const { connected, grid, orientation, playlistState, settings, drawings, send } = useSocket(config?.simulatorUrl ?? 'ws://localhost:3000');
   const isPhone = useIsPhone();
 
   const NUM_CANNONS = config?.numCannons ?? 49;
@@ -750,7 +760,8 @@ export default function Home() {
     gridColumns: GRID_COLUMNS,
     activePattern,
     onPatternSelect: handlePatternSelect,
-    playlistState
+    playlistState,
+    drawings
   };
 
   /* ---------- Loading gates (after all hooks, to respect Rules of Hooks) ---------- */
