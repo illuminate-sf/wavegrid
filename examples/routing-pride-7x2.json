@@ -1,0 +1,27 @@
+{
+  "targets": {
+    "pride": {
+      "type": "beyond",
+      "host": "127.0.0.1",
+      "port": 8000
+    }
+  },
+  "flushHz": 30,
+  "cannons": [
+    { "logical": 0,  "target": "pride", "projectorIndex": 0,  "label": "A1" },
+    { "logical": 1,  "target": "pride", "projectorIndex": 1,  "label": "A2" },
+    { "logical": 2,  "target": "pride", "projectorIndex": 2,  "label": "A3" },
+    { "logical": 3,  "target": "pride", "projectorIndex": 3,  "label": "A4" },
+    { "logical": 4,  "target": "pride", "projectorIndex": 4,  "label": "A5" },
+    { "logical": 5,  "target": "pride", "projectorIndex": 5,  "label": "A6" },
+    { "logical": 6,  "target": "pride", "projectorIndex": 6,  "label": "A7" },
+
+    { "logical": 7,  "target": "pride", "projectorIndex": 7,  "label": "B1" },
+    { "logical": 8,  "target": "pride", "projectorIndex": 8,  "label": "B2" },
+    { "logical": 9,  "target": "pride", "projectorIndex": 9,  "label": "B3" },
+    { "logical": 10, "target": "pride", "projectorIndex": 10, "label": "B4" },
+    { "logical": 11, "target": "pride", "projectorIndex": 11, "label": "B5" },
+    { "logical": 12, "target": "pride", "projectorIndex": 12, "label": "B6" },
+    { "logical": 13, "target": "pride", "projectorIndex": 13, "label": "B7" }
+  ]
+}
