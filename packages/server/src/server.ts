@@ -36,6 +36,34 @@ const LIGHT_MAP_FILE = process.env.LIGHT_MAP_CONFIG || resolve(process.cwd(), '.
 // ── State persistence ─────────────────────────────────────────────
 const STATE_DIR = resolve(process.cwd(), '.state');
 const STATE_FILE = resolve(STATE_DIR, `server-${PORT}.json`);
+const DRAWINGS_FILE = resolve(STATE_DIR, `drawings-${PORT}.json`);
+
+interface SavedDrawing {
+  id: string;
+  name: string;
+  grid: Array<{ h: number; s: number; b: number }>;
+  createdAt: number;
+}
+
+function loadDrawings(): SavedDrawing[] {
+  try {
+    const raw = fs.readFileSync(DRAWINGS_FILE, 'utf8');
+    return JSON.parse(raw) as SavedDrawing[];
+  } catch {
+    return [];
+  }
+}
+
+function saveDrawings(drawings: SavedDrawing[]) {
+  try {
+    fs.mkdirSync(STATE_DIR, { recursive: true });
+    fs.writeFileSync(DRAWINGS_FILE, JSON.stringify(drawings), 'utf8');
+  } catch (e) {
+    console.error('  ◈ Drawings save error:', e instanceof Error ? e.message : String(e));
+  }
+}
+
+let savedDrawings: SavedDrawing[] = loadDrawings();
 
 interface PersistedState {
   currentAnimation: string | null;
@@ -143,6 +171,11 @@ server.on('upgrade', (req, socket, head) => {
     wss.emit('connection', ws, req);
   });
 });
+
+function broadcastDrawingsList() {
+  const msg = JSON.stringify({ type: 'drawings_list', drawings: savedDrawings.map(d => ({ id: d.id, name: d.name, grid: d.grid, createdAt: d.createdAt })) });
+  wss.clients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(msg); });
+}
 
 // Broadcast the current grid snapshot to all UI clients.
 // Used for calibration, orientation changes, and paint/clear — so the
@@ -271,6 +304,8 @@ wss.on('connection', (ws) => {
   if (shiftVx !== 0 || shiftVy !== 0) {
     ws.send(JSON.stringify({ type: 'command', action: 'setShift', vx: shiftVx, vy: shiftVy }));
   }
+  // Send saved drawings list
+  ws.send(JSON.stringify({ type: 'drawings_list', drawings: savedDrawings.map(d => ({ id: d.id, name: d.name, grid: d.grid, createdAt: d.createdAt })) }));
 
   ws.on('message', (raw) => {
     try {
@@ -519,6 +554,52 @@ function handleMessage(msg: any) {
   case 'playlist_get':
     // Respond with current playlist state (handled per-client below)
     break;
+  case 'save_drawing': {
+    const name = typeof msg.name === 'string' && msg.name.trim() ? msg.name.trim() : `Drawing ${savedDrawings.length + 1}`;
+    const snapshot = grid.map(c => ({ h: c.targetH, s: c.targetS, b: c.targetB }));
+    const drawing: SavedDrawing = {
+      id: `d-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name,
+      grid: snapshot,
+      createdAt: Date.now()
+    };
+    savedDrawings.push(drawing);
+    saveDrawings(savedDrawings);
+    broadcastDrawingsList();
+    break;
+  }
+  case 'load_drawing': {
+    const found = savedDrawings.find(d => d.id === msg.id);
+    if (found) {
+      currentAnimation = null;
+      cancelPlaylistIfActive();
+      patternEngine.stop();
+      const cells: Array<{ idx: number; h: number; s: number; b: number }> = [];
+      for (let i = 0; i < found.grid.length && i < grid.length; i++) {
+        setCannonTarget(grid, i, found.grid[i].h, found.grid[i].s, found.grid[i].b, currentAttack);
+        cells.push({ idx: i, h: found.grid[i].h, s: found.grid[i].s, b: found.grid[i].b });
+      }
+      broadcastCommand({ action: 'paint', cells });
+      broadcastState();
+      scheduleSave();
+    }
+    break;
+  }
+  case 'delete_drawing': {
+    savedDrawings = savedDrawings.filter(d => d.id !== msg.id);
+    saveDrawings(savedDrawings);
+    broadcastDrawingsList();
+    break;
+  }
+  case 'rename_drawing': {
+    const target = savedDrawings.find(d => d.id === msg.id);
+    if (target && typeof msg.name === 'string' && msg.name.trim()) {
+      target.name = msg.name.trim();
+      saveDrawings(savedDrawings);
+      broadcastDrawingsList();
+    }
+    break;
+  }
   }
 }
 

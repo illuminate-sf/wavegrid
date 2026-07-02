@@ -32,6 +32,13 @@ export interface Settings {
   animation: string | null;
 }
 
+export interface SavedDrawing {
+  id: string;
+  name: string;
+  grid: Array<{ h: number; s: number; b: number }>;
+  createdAt: number;
+}
+
 export function useSocket(url: string) {
   const wsRef = useRef<WebSocket | null>(null);
   const [connected, setConnected] = useState(false);
@@ -39,6 +46,7 @@ export function useSocket(url: string) {
   const [orientation, setOrientation] = useState<Orientation>({ rotation: 0, flipH: false, flipV: false });
   const [playlistState, setPlaylistState] = useState<PlaylistState | null>(null);
   const [settings, setSettings] = useState<Settings | null>(null);
+  const [drawings, setDrawings] = useState<SavedDrawing[]>([]);
 
   useEffect(() => {
     const ws = new WebSocket(url);
@@ -63,6 +71,8 @@ export function useSocket(url: string) {
           setOrientation({ rotation: msg.rotation ?? 0, flipH: !!msg.flipH, flipV: !!msg.flipV });
         } else if (msg.type === 'playlist_state') {
           setPlaylistState({ active: !!msg.active, currentStep: msg.currentStep ?? 0, playlist: msg.playlist ?? null });
+        } else if (msg.type === 'drawings_list' && Array.isArray(msg.drawings)) {
+          setDrawings(msg.drawings);
         } else if (msg.type === 'settings') {
           setSettings({
             alpha: msg.alpha ?? 0.06,
@@ -88,5 +98,5 @@ export function useSocket(url: string) {
     }
   }, []);
 
-  return { connected, grid, orientation, playlistState, settings, send };
+  return { connected, grid, orientation, playlistState, settings, drawings, send };
 }
